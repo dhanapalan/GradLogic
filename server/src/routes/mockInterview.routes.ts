@@ -1,11 +1,12 @@
 // =============================================================================
 // TalentSecure AI — Mock Interview Routes
-// POST   /api/mock-interviews/start          student starts a session
-// POST   /api/mock-interviews/:id/complete   client reports call finished
-// GET    /api/mock-interviews/my-sessions    student's history
-// GET    /api/mock-interviews/:id            single session
-// GET    /api/mock-interviews/:id/feedback   Claude-generated feedback
-// GET    /api/mock-interviews/config         Vapi public key + assistant config
+// POST   /api/mock-interviews/start                    student starts a session
+// POST   /api/mock-interviews/:id/complete             client reports call finished
+// GET    /api/mock-interviews/my-sessions              student's history
+// GET    /api/mock-interviews/:id                      single session
+// GET    /api/mock-interviews/:id/feedback             Claude-generated feedback
+// GET    /api/mock-interviews/:id/recommended-programs skill-gap → LMS match
+// GET    /api/mock-interviews/config                   Vapi public key
 // =============================================================================
 
 import { Router } from "express";
@@ -233,6 +234,71 @@ router.get("/:id/feedback", authorize("student", "mentor", "super_admin", "hr"),
     }
 
     res.json({ success: true, data: feedback });
+  } catch (err) { next(err); }
+});
+
+// ── GET /:id/recommended-programs ───────────────────────────────────────────
+// Match skill_gaps from interview feedback to real skill_programs in the LMS.
+// For each gap, search programs whose name/description contains the skill term.
+// Also returns enrollment status so the client can show Enroll vs Enrolled.
+router.get("/:id/recommended-programs", authorize("student"), async (req, res, next) => {
+  try {
+    const studentId = req.user!.userId;
+
+    // Load skill_gaps from feedback for this session
+    const feedback = await queryOne(
+      "SELECT skill_gaps FROM mock_interview_feedback WHERE session_id = $1",
+      [req.params.id]
+    );
+
+    if (!feedback) return res.json({ success: true, data: [] });
+
+    const gaps: { skill: string; priority: string }[] = (feedback as any).skill_gaps ?? [];
+    if (!gaps.length) return res.json({ success: true, data: [] });
+
+    // Build ILIKE conditions for each skill term — one OR chain per term
+    // e.g. gaps = [{skill:"System Design"},{skill:"DSA"}]
+    // → WHERE (name ILIKE '%System Design%' OR description ILIKE '%System Design%')
+    //      OR (name ILIKE '%DSA%' OR description ILIKE '%DSA%')
+    const params: string[] = [];
+    const clauses = gaps.map(g => {
+      params.push(`%${g.skill}%`);
+      const i = params.length;
+      return `(sp.name ILIKE $${i} OR sp.description ILIKE $${i} OR sp.name ILIKE $${i})`;
+    });
+
+    const rows = await query(
+      `SELECT
+         sp.id, sp.name, sp.description, sp.program_type, sp.duration_days,
+         sp.banner_url,
+         (SELECT COUNT(*)::int FROM program_modules pm WHERE pm.program_id = sp.id) AS module_count,
+         (SELECT COUNT(*)::int FROM student_program_enrollments e WHERE e.program_id = sp.id) AS enrollment_count,
+         EXISTS(
+           SELECT 1 FROM student_program_enrollments e2
+           WHERE e2.program_id = sp.id AND e2.student_id = $${params.length + 1}
+         ) AS already_enrolled
+       FROM skill_programs sp
+       WHERE sp.is_active = TRUE AND (${clauses.join(" OR ")})
+       ORDER BY sp.name
+       LIMIT 6`,
+      [...params, studentId]
+    );
+
+    // Annotate each result with which gap(s) it matched
+    const results = (rows as any[]).map(row => {
+      const matchedGaps = gaps
+        .filter(g => {
+          const term = g.skill.toLowerCase();
+          return (
+            (row.name ?? "").toLowerCase().includes(term) ||
+            (row.description ?? "").toLowerCase().includes(term)
+          );
+        })
+        .map(g => ({ skill: g.skill, priority: g.priority }));
+      return { ...row, matched_gaps: matchedGaps };
+    });
+
+    res.json({ success: true, data: results });
   } catch (err) { next(err); }
 });
 

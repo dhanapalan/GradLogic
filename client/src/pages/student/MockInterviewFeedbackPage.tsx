@@ -3,17 +3,30 @@
 // Shows Claude-generated analysis after a voice AI interview session
 // =============================================================================
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import toast from "react-hot-toast";
 import api from "../../lib/api";
 import {
   CheckCircle2, AlertTriangle, TrendingUp, BookOpen,
   Mic, ArrowLeft, RefreshCw, Clock, Star,
-  ChevronRight, Zap, MessageSquareQuote,
+  ChevronRight, Zap, MessageSquareQuote, Layers, CheckCheck,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+interface RecommendedProgram {
+  id: string;
+  name: string;
+  description: string;
+  program_type: string;
+  duration_days: number | null;
+  module_count: number;
+  enrollment_count: number;
+  already_enrolled: boolean;
+  matched_gaps: { skill: string; priority: string }[];
+}
 
 interface Feedback {
   overall_score: number;
@@ -86,15 +99,16 @@ function fmtDuration(secs: number) {
 export default function MockInterviewFeedbackPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
-  const { data, isLoading, refetch, dataUpdatedAt } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["interview-feedback", sessionId],
     queryFn: async () => {
       const res = await api.get(`/mock-interviews/${sessionId}/feedback`);
       return res.data;
     },
     refetchInterval: (query) => {
-      // Poll every 3s while feedback is still generating
       const d = query.state.data as any;
       if (!d?.data && d?.status === "completed") return 3000;
       return false;
@@ -102,9 +116,36 @@ export default function MockInterviewFeedbackPage() {
     staleTime: 0,
   });
 
-  // Stop polling once feedback arrives
   const feedback: Feedback | null = data?.data ?? null;
   const sessionStatus: string = data?.status ?? "";
+
+  // Fetch matched LMS programs once feedback is ready
+  const { data: programsData } = useQuery({
+    queryKey: ["interview-programs", sessionId],
+    queryFn: async () => {
+      const res = await api.get(`/mock-interviews/${sessionId}/recommended-programs`);
+      return res.data.data as RecommendedProgram[];
+    },
+    enabled: !!feedback,   // only fetch once feedback is available
+    staleTime: 60_000,
+  });
+  const programs: RecommendedProgram[] = programsData ?? [];
+
+  const enrollMutation = useMutation({
+    mutationFn: (programId: string) =>
+      api.post(`/student-learning/enroll/${programId}`),
+    onMutate: (programId) => setEnrollingId(programId),
+    onSuccess: (_res, programId) => {
+      toast.success("Enrolled successfully!");
+      queryClient.setQueryData(
+        ["interview-programs", sessionId],
+        (old: RecommendedProgram[] | undefined) =>
+          old?.map(p => p.id === programId ? { ...p, already_enrolled: true } : p)
+      );
+    },
+    onError: (err: any) => toast.error(err.response?.data?.error || "Enrolment failed"),
+    onSettled: () => setEnrollingId(null),
+  });
 
   // Redirect if session not found
   useEffect(() => {
@@ -290,33 +331,99 @@ export default function MockInterviewFeedbackPage() {
           </div>
         )}
 
-        {/* Recommended courses */}
-        {feedback.recommended_courses?.length > 0 && (
-          <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5">
-            <h2 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+        {/* Recommended Learning — real LMS programs matched from skill gaps */}
+        <div className="bg-white rounded-2xl border border-indigo-100 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
               <BookOpen className="h-3.5 w-3.5" /> Recommended Learning
             </h2>
+            {programs.length > 0 && (
+              <span className="text-[10px] text-indigo-400 font-semibold">{programs.length} program{programs.length !== 1 ? "s" : ""} matched</span>
+            )}
+          </div>
+
+          {programs.length > 0 ? (
             <div className="space-y-3">
-              {feedback.recommended_courses.map((c, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 group">
-                  <div className="w-7 h-7 shrink-0 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 text-xs font-black">
-                    {i + 1}
+              {programs.map((prog) => (
+                <div key={prog.id} className="flex items-start gap-3 p-3 bg-indigo-50/40 rounded-xl border border-indigo-100">
+                  {/* icon */}
+                  <div className="w-9 h-9 shrink-0 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                    <Layers className="h-4 w-4" />
                   </div>
+
+                  {/* details */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800">{c.title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{c.reason}</p>
+                    <p className="text-sm font-bold text-slate-800 truncate">{prog.name}</p>
+                    {prog.description && (
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">{prog.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <BookOpen className="h-3 w-3" /> {prog.module_count} modules
+                      </span>
+                      {prog.duration_days && (
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {prog.duration_days}d
+                        </span>
+                      )}
+                      {/* matched gap chips */}
+                      {prog.matched_gaps.slice(0, 2).map((g, i) => (
+                        <span key={i} className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600">
+                          {g.skill}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <Link
-                    to="/app/student-portal/programs"
-                    className="shrink-0 text-indigo-400 hover:text-indigo-600 transition-colors"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
+
+                  {/* enroll / enrolled */}
+                  {prog.already_enrolled ? (
+                    <span className="shrink-0 flex items-center gap-1 text-emerald-600 text-xs font-bold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                      <CheckCheck className="h-3.5 w-3.5" /> Enrolled
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => enrollMutation.mutate(prog.id)}
+                      disabled={enrollingId === prog.id}
+                      className="shrink-0 flex items-center gap-1 text-indigo-600 text-xs font-bold bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 transition-colors disabled:opacity-50"
+                    >
+                      {enrollingId === prog.id
+                        ? <span className="h-3 w-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                        : <ChevronRight className="h-3.5 w-3.5" />}
+                      Enroll
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            /* Fallback to Claude's text suggestions when no DB programs match */
+            feedback.recommended_courses?.length > 0 ? (
+              <div className="space-y-3">
+                {feedback.recommended_courses.map((c, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="w-7 h-7 shrink-0 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 text-xs font-black">{i + 1}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800">{c.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{c.reason}</p>
+                    </div>
+                    <Link to="/app/student-portal/programs" className="shrink-0 text-slate-400 hover:text-indigo-600 transition-colors">
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                ))}
+                <p className="text-xs text-slate-400 text-center pt-1">
+                  No matching programs found yet.{" "}
+                  <Link to="/app/student-portal/programs" className="text-indigo-500 hover:underline">Browse all programs →</Link>
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 text-center py-4">
+                No programs available yet.{" "}
+                <Link to="/app/student-portal/programs" className="text-indigo-500 hover:underline">Browse all programs →</Link>
+              </p>
+            )
+          )}
+        </div>
 
         {/* CTA */}
         <div className="flex flex-col sm:flex-row gap-3 pb-8">
