@@ -101,6 +101,7 @@ const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 
 const MockInterviewPage = lazy(() => import("./pages/student/MockInterviewPage"));
 const MockInterviewRoom = lazy(() => import("./pages/student/MockInterviewRoom"));
+const MockInterviewFeedbackPage = lazy(() => import("./pages/student/MockInterviewFeedbackPage"));
 
 const StudentLearningPage = lazy(() => import("./pages/lms/StudentLearningPage"));
 const CourseDetailPage = lazy(() =>
@@ -407,12 +408,11 @@ export default function App() {
                   </RoleGuard>
                 }
               />
-              {/* feedback page — built in Phase 2 */}
               <Route
                 path="student-portal/mock-interview/:sessionId/feedback"
                 element={
                   <RoleGuard allowed={["student"]}>
-                    <MockInterviewPage />
+                    <MockInterviewFeedbackPage />
                   </RoleGuard>
                 }
               />

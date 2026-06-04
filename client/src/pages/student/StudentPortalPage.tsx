@@ -23,6 +23,8 @@ import {
   Zap,
   TrendingUp,
   Target,
+  Mic,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef } from "react";
@@ -449,6 +451,28 @@ export default function StudentPortalPage() {
               ))}
             </div>
           </div>
+
+          {/* ── Voice AI Interview ── */}
+          <Link
+            to="/app/student-portal/mock-interview"
+            className="block group bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 shadow-md hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Mic className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-black text-sm">AI Mock Interview</p>
+                  <p className="text-indigo-200 text-xs mt-0.5">Voice interview · instant feedback · course recommendations</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-white/80 group-hover:text-white group-hover:translate-x-1 transition-all">
+                <span className="text-xs font-bold hidden sm:block">Start now</span>
+                <ChevronRight className="h-5 w-5" />
+              </div>
+            </div>
+          </Link>
 
           {/* ── Past Results Section ── */}
           {completedDrives.length > 0 && (
