@@ -187,8 +187,8 @@ export async function updateDrive(id: string, input: Partial<CreateDriveInput> &
     // Guard: execution config fields are only editable when DRAFT or POOL_APPROVED
     const CONFIG_FIELDS = [
         "scheduled_start", "scheduled_end", "duration_minutes", "attempt_limit",
-        "shuffle_questions", "auto_submit", "proctoring_mode", "tab_switch_limit",
-        "face_detection_required", "max_applicants",
+        "shuffle_questions", "auto_submit", "proctoring_enabled", "proctoring_mode",
+        "tab_switch_limit", "face_detection_required", "max_applicants",
     ];
     const hasConfigChange = CONFIG_FIELDS.some((f) => (input as any)[f] !== undefined);
 
@@ -208,7 +208,7 @@ export async function updateDrive(id: string, input: Partial<CreateDriveInput> &
     const allowed: string[] = [
         "name", "scheduled_start", "scheduled_end", "auto_publish",
         "allow_mock", "attempt_limit", "status", "duration_minutes",
-        "shuffle_questions", "auto_submit", "proctoring_mode",
+        "shuffle_questions", "auto_submit", "proctoring_enabled", "proctoring_mode",
         "tab_switch_limit", "face_detection_required", "max_applicants",
     ];
 

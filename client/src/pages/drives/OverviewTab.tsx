@@ -47,6 +47,7 @@ export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot:
         attempt_limit: "1",
         shuffle_questions: false,
         auto_submit: true,
+        proctoring_enabled: false,
         proctoring_mode: "standard",
         tab_switch_limit: "3",
         face_detection_required: false,
@@ -63,6 +64,7 @@ export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot:
                 attempt_limit: String(drive.attempt_limit ?? 1),
                 shuffle_questions: drive.shuffle_questions ?? false,
                 auto_submit: drive.auto_submit ?? true,
+                proctoring_enabled: drive.proctoring_enabled ?? false,
                 proctoring_mode: drive.proctoring_mode ?? snapshot.proctoring_mode ?? "standard",
                 tab_switch_limit: String(drive.tab_switch_limit ?? snapshot.proctoring_config?.max_tab_switches ?? 3),
                 face_detection_required: drive.face_detection_required ?? snapshot.proctoring_config?.face_detection_mandatory ?? false,
@@ -81,6 +83,7 @@ export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot:
                 attempt_limit: parseInt(config.attempt_limit) || 1,
                 shuffle_questions: config.shuffle_questions,
                 auto_submit: config.auto_submit,
+                proctoring_enabled: config.proctoring_enabled,
                 proctoring_mode: config.proctoring_mode,
                 tab_switch_limit: parseInt(config.tab_switch_limit) || 3,
                 face_detection_required: config.face_detection_required,
@@ -213,32 +216,47 @@ export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot:
                     <div className="bg-indigo-50/40 rounded-2xl p-5 border border-indigo-100 space-y-4">
                         <h3 className="text-sm font-bold text-indigo-700 flex items-center gap-2"><Shield className="h-4 w-4" /> Proctoring & Behavior</h3>
                         <div className="space-y-3">
-                            <label className="block">
-                                <span className="text-xs font-bold text-slate-500">Proctoring Mode</span>
-                                <select title="Proctoring mode" value={config.proctoring_mode} onChange={e => setConfig(c => ({ ...c, proctoring_mode: e.target.value }))}
-                                    className="mt-1 w-full px-3 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                                    <option value="none">None</option>
-                                    <option value="standard">Standard</option>
-                                    <option value="strict">Strict</option>
-                                    <option value="ai_proctored">AI Proctored</option>
-                                </select>
-                            </label>
-                            <label className="block">
-                                <span className="text-xs font-bold text-slate-500">Tab Switch Limit</span>
-                                <input type="number" min={0} max={20} value={config.tab_switch_limit} onChange={e => setConfig(c => ({ ...c, tab_switch_limit: e.target.value }))}
-                                    className="mt-1 w-full px-3 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-                            </label>
-                            <div className="flex items-center justify-between py-2">
+                            {/* Master proctoring switch */}
+                            <div className="flex items-center justify-between py-2 border-b border-indigo-100 mb-1">
+                                <div>
+                                    <span className="text-xs font-bold text-slate-700">Enable Proctoring</span>
+                                    <p className="text-xs text-slate-400 mt-0.5">Turn off for mock interviews and learning drives</p>
+                                </div>
+                                <Toggle value={config.proctoring_enabled} onChange={v => setConfig(c => ({ ...c, proctoring_enabled: v }))} />
+                            </div>
+
+                            {/* Sub-controls — dimmed when proctoring is off */}
+                            <div className={config.proctoring_enabled ? "" : "opacity-40 pointer-events-none"}>
+                                <div className="space-y-3">
+                                    <label className="block">
+                                        <span className="text-xs font-bold text-slate-500">Proctoring Mode</span>
+                                        <select title="Proctoring mode" value={config.proctoring_mode} onChange={e => setConfig(c => ({ ...c, proctoring_mode: e.target.value }))}
+                                            className="mt-1 w-full px-3 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                                            <option value="standard">Standard</option>
+                                            <option value="strict">Strict</option>
+                                            <option value="ai_proctored">AI Proctored</option>
+                                        </select>
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-xs font-bold text-slate-500">Tab Switch Limit</span>
+                                        <input type="number" min={0} max={20} value={config.tab_switch_limit} onChange={e => setConfig(c => ({ ...c, tab_switch_limit: e.target.value }))}
+                                            className="mt-1 w-full px-3 py-2.5 bg-white border border-indigo-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                                    </label>
+                                    <div className="flex items-center justify-between py-2">
+                                        <span className="text-xs font-bold text-slate-500">Face Detection Required</span>
+                                        <Toggle value={config.face_detection_required} onChange={v => setConfig(c => ({ ...c, face_detection_required: v }))} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Behavior settings — always editable */}
+                            <div className="flex items-center justify-between py-2 border-t border-indigo-100 mt-1">
                                 <span className="text-xs font-bold text-slate-500">Shuffle Questions</span>
                                 <Toggle value={config.shuffle_questions} onChange={v => setConfig(c => ({ ...c, shuffle_questions: v }))} />
                             </div>
                             <div className="flex items-center justify-between py-2">
                                 <span className="text-xs font-bold text-slate-500">Auto Submit on Timeout</span>
                                 <Toggle value={config.auto_submit} onChange={v => setConfig(c => ({ ...c, auto_submit: v }))} />
-                            </div>
-                            <div className="flex items-center justify-between py-2">
-                                <span className="text-xs font-bold text-slate-500">Face Detection Required</span>
-                                <Toggle value={config.face_detection_required} onChange={v => setConfig(c => ({ ...c, face_detection_required: v }))} />
                             </div>
                         </div>
                     </div>
@@ -261,11 +279,18 @@ export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot:
                     <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
                         <h3 className="text-sm font-bold text-slate-700 mb-3">Proctoring & Behavior</h3>
                         <div className="space-y-2 text-sm">
-                            <Row label="Mode" value={<span className="capitalize">{drive.proctoring_mode || snapshot.proctoring_mode || "—"}</span>} />
-                            <Row label="Tab Switch Limit" value={String(drive.tab_switch_limit ?? snapshot.proctoring_config?.max_tab_switches ?? "—")} />
+                            <Row label="Proctoring" value={
+                                drive.proctoring_enabled
+                                    ? <span className="text-amber-600 font-semibold">Enabled</span>
+                                    : <span className="text-slate-400">Disabled</span>
+                            } />
+                            {drive.proctoring_enabled && <>
+                                <Row label="Mode" value={<span className="capitalize">{drive.proctoring_mode || snapshot.proctoring_mode || "—"}</span>} />
+                                <Row label="Tab Switch Limit" value={String(drive.tab_switch_limit ?? snapshot.proctoring_config?.max_tab_switches ?? "—")} />
+                                <Row label="Face Detection" value={drive.face_detection_required ? "Required" : "Optional"} />
+                            </>}
                             <Row label="Shuffle Questions" value={drive.shuffle_questions ? "Yes" : "No"} />
                             <Row label="Auto Submit" value={drive.auto_submit !== false ? "Yes" : "No"} />
-                            <Row label="Face Detection" value={drive.face_detection_required ? "Required" : "Optional"} />
                         </div>
                     </div>
 
