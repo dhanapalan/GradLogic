@@ -99,6 +99,9 @@ const GamificationPage = lazy(() => import("./pages/student/GamificationPage"));
 const MentorDashboardPage = lazy(() => import("./pages/mentor/MentorDashboardPage"));
 const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 
+const MockInterviewPage = lazy(() => import("./pages/student/MockInterviewPage"));
+const MockInterviewRoom = lazy(() => import("./pages/student/MockInterviewRoom"));
+
 const StudentLearningPage = lazy(() => import("./pages/lms/StudentLearningPage"));
 const CourseDetailPage = lazy(() =>
   import("./pages/lms/StudentLearningPage").then((m) => ({ default: m.CourseDetailPage }))
@@ -385,6 +388,31 @@ export default function App() {
                 element={
                   <RoleGuard allowed={["student"]}>
                     <PracticePage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="student-portal/mock-interview"
+                element={
+                  <RoleGuard allowed={["student"]}>
+                    <MockInterviewPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="student-portal/mock-interview/room"
+                element={
+                  <RoleGuard allowed={["student"]}>
+                    <MockInterviewRoom />
+                  </RoleGuard>
+                }
+              />
+              {/* feedback page — built in Phase 2 */}
+              <Route
+                path="student-portal/mock-interview/:sessionId/feedback"
+                element={
+                  <RoleGuard allowed={["student"]}>
+                    <MockInterviewPage />
                   </RoleGuard>
                 }
               />

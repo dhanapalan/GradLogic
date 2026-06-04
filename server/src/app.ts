@@ -42,6 +42,7 @@ import skillProgramsRoutes from "./routes/skillPrograms.routes.js";
 import skillPartnersRoutes from "./routes/skillPartners.routes.js";
 import studentLearningRoutes from "./routes/studentLearning.routes.js";
 import collegeSkillsRoutes from "./routes/collegeSkills.routes.js";
+import mockInterviewRoutes from "./routes/mockInterview.routes.js";
 
 const app = express();
 
@@ -142,6 +143,7 @@ app.use("/api/skill-programs", skillProgramsRoutes);
 app.use("/api/skill-partners", skillPartnersRoutes);
 app.use("/api/student-learning", studentLearningRoutes);
 app.use("/api/college-skills", collegeSkillsRoutes);
+app.use("/api/mock-interviews", mockInterviewRoutes);
 
 // ── Error Handling ───────────────────────────────────────────────────────────
 app.use(notFoundHandler);

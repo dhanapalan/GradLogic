@@ -59,9 +59,14 @@ export const env = {
   // AI Engine service-to-service API key
   AI_ENGINE_API_KEY: process.env.AI_ENGINE_API_KEY || "dev-ai-engine-key",
 
-  // Anthropic (Claude) — used for AI plan generation and assessment generation
+  // Anthropic (Claude) — used for AI plan generation, assessment generation, interview feedback
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
   ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+
+  // Vapi.ai — voice AI mock interviews
+  VAPI_API_KEY: process.env.VAPI_API_KEY || "",          // private server key
+  VAPI_PUBLIC_KEY: process.env.VAPI_PUBLIC_KEY || "",    // exposed to client
+  VAPI_WEBHOOK_SECRET: process.env.VAPI_WEBHOOK_SECRET || "",
 
   // OpenAI (kept for backward compat — prefer ANTHROPIC_API_KEY)
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
