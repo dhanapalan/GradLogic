@@ -375,6 +375,7 @@ enum user_role {
   engineer
   cxo
   college_admin
+  company           // recruiting company; manages own drives + views results
 }
 
 enum violation_type {
@@ -506,6 +507,7 @@ model assessment_drives {
   duration_minutes Int?
   shuffle_questions Boolean                  @default(false)
   auto_submit      Boolean                   @default(true)
+  proctoring_enabled Boolean                 @default(false)
   proctoring_mode  String                    @default("standard") @db.VarChar(30)
   tab_switch_limit Int                       @default(3)
   face_detection_required Boolean            @default(false)

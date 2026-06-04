@@ -1,10 +1,13 @@
 // =============================================================================
-// TalentSecure AI — LLM Service (OpenAI Assessment Generator)
+// TalentSecure AI — LLM Service (Claude Assessment Generator)
 // =============================================================================
 
+import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../middleware/errorHandler.js";
+
+const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,14 +148,13 @@ export async function generateAssessment(
   totalQuestions: number = 20,
   durationMinutes: number = 60,
 ): Promise<GeneratedAssessment> {
-  if (!env.OPENAI_API_KEY) {
+  if (!env.ANTHROPIC_API_KEY) {
     throw new AppError(
-      "OpenAI API key is not configured. Set the OPENAI_API_KEY environment variable.",
+      "Anthropic API key is not configured. Set the ANTHROPIC_API_KEY environment variable.",
       500,
     );
   }
 
-  // Validate percentages sum to 100
   const total = categories.reduce((sum, c) => sum + c.percentage, 0);
   if (Math.abs(total - 100) > 0.5) {
     throw new AppError(
@@ -164,50 +166,23 @@ export async function generateAssessment(
   const systemPrompt = buildSystemPrompt(categories, totalQuestions, durationMinutes);
   const userPrompt = `Generate a technical assessment with these category weights:\n${JSON.stringify(categories, null, 2)}\n\nTotal questions: ${totalQuestions}\nDuration: ${durationMinutes} minutes`;
 
-  logger.info("Calling OpenAI to generate assessment", {
-    categories,
-    totalQuestions,
-    model: env.OPENAI_MODEL,
-  });
+  logger.info("Calling Claude to generate assessment", { categories, totalQuestions, model: env.ANTHROPIC_MODEL });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: env.OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 8000,
-        response_format: { type: "json_object" },
-      }),
+    const message = await anthropic.messages.create({
+      model: env.ANTHROPIC_MODEL,
+      max_tokens: 8000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
     });
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      logger.error("OpenAI API error", { status: response.status, body: errBody });
-      throw new AppError(
-        `OpenAI API returned ${response.status}: ${errBody}`,
-        502,
-      );
-    }
+    const content = (message.content[0] as { type: string; text: string }).text;
+    if (!content) throw new AppError("Claude returned empty response", 502);
 
-    const result: any = await response.json();
-    const content = result.choices?.[0]?.message?.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new AppError("Claude response contained no JSON object", 502);
 
-    if (!content) {
-      throw new AppError("OpenAI returned empty response", 502);
-    }
-
-    const parsed: GeneratedAssessment = JSON.parse(content);
-
-    // Attach category metadata
+    const parsed: GeneratedAssessment = JSON.parse(jsonMatch[0]);
     parsed.categories = categories;
     parsed.totalQuestions = parsed.questions.length;
     parsed.totalMarks = parsed.questions.reduce((s, q) => s + q.marks, 0);
@@ -357,21 +332,20 @@ Total exam duration: ${durationMinutes} minutes
 Begin generating now. Output ONLY the JSON.`;
 }
 
-// ── OpenAI Call ──────────────────────────────────────────────────────────────
+// ── Claude Call ──────────────────────────────────────────────────────────────
 
 export async function generateDynamicAssessment(
   weights: DynamicWeight[],
   totalQuestions: number,
   durationMinutes: number = 60,
 ): Promise<DynamicAssessmentResult> {
-  if (!env.OPENAI_API_KEY) {
+  if (!env.ANTHROPIC_API_KEY) {
     throw new AppError(
-      "OpenAI API key is not configured. Set the OPENAI_API_KEY environment variable.",
+      "Anthropic API key is not configured. Set the ANTHROPIC_API_KEY environment variable.",
       500,
     );
   }
 
-  // Validate percentages sum to 100
   const pctTotal = weights.reduce((s, w) => s + w.percentage, 0);
   if (Math.abs(pctTotal - 100) > 0.5) {
     throw new AppError(
@@ -383,59 +357,32 @@ export async function generateDynamicAssessment(
   const systemPrompt = buildDynamicSystemPrompt(weights, totalQuestions, durationMinutes);
   const userPrompt = `Category weights:\n${JSON.stringify(weights, null, 2)}\n\nTotal questions: ${totalQuestions}\nDuration: ${durationMinutes} minutes\n\nGenerate now.`;
 
-  logger.info("Calling OpenAI for dynamic assessment generation", {
-    weights,
-    totalQuestions,
-    model: env.OPENAI_MODEL,
-  });
+  logger.info("Calling Claude for dynamic assessment generation", { weights, totalQuestions, model: env.ANTHROPIC_MODEL });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: env.OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.8,      // slightly higher for originality
-        max_tokens: 16384,     // enough for ~50 questions per batch
-        response_format: { type: "json_object" },
-      }),
+    const message = await anthropic.messages.create({
+      model: env.ANTHROPIC_MODEL,
+      max_tokens: 16000,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
     });
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      logger.error("OpenAI API error (generate-dynamic)", {
-        status: response.status,
-        body: errBody,
-      });
-      throw new AppError(
-        `OpenAI API returned ${response.status}: ${errBody}`,
-        502,
-      );
-    }
-
-    const result: any = await response.json();
-    const content = result.choices?.[0]?.message?.content;
-    const finishReason = result.choices?.[0]?.finish_reason;
-
-    if (finishReason === "length") {
+    if (message.stop_reason === "max_tokens") {
       throw new AppError(
         "Assessment generation exceeded the model's token limit. Try requesting fewer questions or shorter duration.",
         502,
       );
     }
 
+    const content = (message.content[0] as { type: string; text: string }).text;
+
     if (!content) {
-      throw new AppError("OpenAI returned empty response", 502);
+      throw new AppError("Claude returned empty response", 502);
     }
 
-    const parsed: DynamicAssessmentResult = JSON.parse(content);
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new AppError("Claude response contained no JSON object", 502);
+    const parsed: DynamicAssessmentResult = JSON.parse(jsonMatch[0]);
 
     // ── Post-validation & normalization ────────────────────────────────────
     if (!Array.isArray(parsed.questions)) {

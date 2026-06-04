@@ -3,12 +3,15 @@
 // AI Development Plans · Goals · Skill Progress · Skill Gap Analysis
 // =============================================================================
 
+import Anthropic from "@anthropic-ai/sdk";
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
 import { query, queryOne } from "../config/database.js";
 import { env } from "../config/env.js";
 import { awardXP, checkAndAwardBadges, XP_VALUES } from "./gamification.routes.js";
 import { sendNotification } from "../services/notification.service.js";
+
+const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 const router = Router();
 router.use(authenticate);
@@ -52,22 +55,15 @@ Respond ONLY with valid JSON in this exact structure:
 Provide 3-5 skill gaps, 5-8 recommended actions, and 3 milestones (30/60/90 days).
 `.trim();
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: env.OPENAI_MODEL || "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.4,
-    }),
+  const message = await anthropic.messages.create({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: 2048,
+    messages: [{ role: "user", content: prompt }],
   });
 
-  const json = await response.json() as any;
-  return JSON.parse(json.choices[0].message.content || "{}");
+  const text = (message.content[0] as { type: string; text: string }).text || "{}";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  return JSON.parse(jsonMatch ? jsonMatch[0] : "{}");
 }
 
 // =============================================================================

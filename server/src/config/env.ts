@@ -59,7 +59,11 @@ export const env = {
   // AI Engine service-to-service API key
   AI_ENGINE_API_KEY: process.env.AI_ENGINE_API_KEY || "dev-ai-engine-key",
 
-  // OpenAI
+  // Anthropic (Claude) — used for AI plan generation and assessment generation
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
+  ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
+
+  // OpenAI (kept for backward compat — prefer ANTHROPIC_API_KEY)
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o",
 
