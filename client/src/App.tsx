@@ -193,8 +193,9 @@ export default function App() {
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/lateral" element={<LateralPage />} />
-              <Route path="/lateral/contact" element={<LateralContactPage />} />
+              {/* Lateral hiring — hidden, enable later by restoring these routes */}
+              <Route path="/lateral" element={<Navigate to="/" replace />} />
+              <Route path="/lateral/contact" element={<Navigate to="/" replace />} />
               <Route path="/campus" element={<CampusPage />} />
               <Route path="/campus/contact" element={<CampusContactPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />

@@ -3,7 +3,7 @@ import { useState, useEffect, type ReactNode } from "react";
 import Logo from "../components/Logo";
 
 const NAV_LINKS = [
-    { label: "Lateral Hiring", href: "/lateral" },
+    // { label: "Lateral Hiring", href: "/lateral" },  // hidden — enable later
     { label: "Campus Hiring", href: "/campus" },
     { label: "Pricing", href: "/pricing" },
     { label: "About", href: "/about" },
@@ -152,9 +152,9 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Solutions</h4>
                             <ul className="mt-4 space-y-3">
                                 {[
-                                    { label: "Lateral Hiring", href: "/lateral" },
+                                    // { label: "Lateral Hiring", href: "/lateral" },         // hidden — enable later
+                                    // { label: "Submit Your Profile", href: "/lateral/contact" }, // hidden — enable later
                                     { label: "Campus Hiring", href: "/campus" },
-                                    { label: "Submit Your Profile", href: "/lateral/contact" },
                                     { label: "Register Your College", href: "/campus/contact" },
                                 ].map((item) => (
                                     <li key={item.label}>
