@@ -446,6 +446,7 @@ router.get("/courses/:courseId/my-progress", authorize("student"), async (req, r
   try {
     const rows = await query(`
       SELECT l.id AS lesson_id, l.title, l.content_type, l.sort_order,
+             l.content_url, l.content_text, l.video_duration_seconds, l.is_free_preview,
              m.id AS module_id, m.title AS module_title, m.sort_order AS module_order,
              lp.is_completed, lp.watch_seconds, lp.last_accessed
       FROM course_modules m

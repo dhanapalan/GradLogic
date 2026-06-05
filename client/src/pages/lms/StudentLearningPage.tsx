@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, Link } from "react-router";
 import api from "../../lib/api";
+import LessonContentRenderer from "../../components/LessonContentRenderer";
 import {
   BookOpen,
   Play,
@@ -71,6 +72,8 @@ interface Lesson {
   id: string;
   title: string;
   content_type: string;
+  content_url: string | null;
+  content_text: string | null;
   video_duration_seconds: number | null;
   sort_order: number;
   is_free_preview: boolean;
@@ -374,47 +377,44 @@ export function CourseDetailPage() {
         <div className="lg:col-span-2">
           {activeLesson ? (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              {/* Video placeholder */}
-              {activeLesson.content_type === "video" && (
-                <div className="bg-slate-900 aspect-video flex items-center justify-center">
-                  <div className="text-center">
-                    <Video className="h-16 w-16 text-slate-600 mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm">Video lesson</p>
-                    {activeLesson.video_duration_seconds && (
-                      <p className="text-slate-500 text-xs mt-1">
-                        Duration: {fmtDuration(activeLesson.video_duration_seconds)}
-                      </p>
-                    )}
-                  </div>
+              {/* Lesson header */}
+              <div className="px-6 pt-5 pb-4 border-b border-slate-100 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="font-bold text-slate-800 truncate">{activeLesson.title}</h2>
+                  <p className="text-xs text-slate-400 capitalize mt-0.5">
+                    {activeLesson.content_type} lesson
+                    {activeLesson.video_duration_seconds
+                      ? ` · ${fmtDuration(activeLesson.video_duration_seconds)}`
+                      : ""}
+                  </p>
                 </div>
-              )}
-
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="font-bold text-slate-800">{activeLesson.title}</h2>
-                    <p className="text-xs text-slate-400 capitalize mt-0.5">
-                      {activeLesson.content_type} lesson
-                    </p>
-                  </div>
+                {activeLesson.is_completed ? (
+                  <span className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                  </span>
+                ) : (
                   <button
                     onClick={() => markProgress.mutate(activeLesson.id)}
                     disabled={markProgress.isPending}
-                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                    className="shrink-0 flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4" />
-                    Mark Complete
+                    {markProgress.isPending ? "Saving…" : "Mark Complete"}
                   </button>
-                </div>
+                )}
+              </div>
 
-                <div className="bg-slate-50 rounded-xl p-4 text-sm text-slate-600">
-                  <p>
-                    Lesson content will be rendered here based on content type (
-                    {activeLesson.content_type}). For video lessons, a video player will be
-                    embedded. For PDF lessons, a document viewer will be shown. For text
-                    lessons, rich-text content will be displayed.
-                  </p>
-                </div>
+              {/* Actual content */}
+              <div className="p-6">
+                <LessonContentRenderer
+                  contentType={activeLesson.content_type}
+                  contentUrl={activeLesson.content_url}
+                  contentText={activeLesson.content_text}
+                  title={activeLesson.title}
+                  onEnded={() => {
+                    if (!activeLesson.is_completed) markProgress.mutate(activeLesson.id);
+                  }}
+                />
               </div>
             </div>
           ) : (

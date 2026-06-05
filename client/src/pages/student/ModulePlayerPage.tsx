@@ -5,6 +5,7 @@ import {
   ArrowLeft, Play, CheckCircle2, Clock, BookOpen,
   Code2, FileText, Video, Mic, ChevronRight, Award, AlertCircle
 } from "lucide-react";
+import LessonContentRenderer from "../../components/LessonContentRenderer";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 
@@ -181,32 +182,21 @@ export default function ModulePlayerPage() {
               </div>
             ) : (
               <div className="p-6">
-                {/* Content URL embed */}
-                {module.content_url && (
-                  <div className="mb-6">
-                    {module.module_type === "video" ? (
-                      <div className="aspect-video rounded-xl overflow-hidden bg-black">
-                        {module.content_url.includes("youtube") || module.content_url.includes("youtu.be") ? (
-                          <iframe
-                            src={module.content_url.replace("watch?v=", "embed/")}
-                            className="w-full h-full"
-                            allowFullScreen
-                            title={module.title}
-                          />
-                        ) : (
-                          <video src={module.content_url} controls className="w-full h-full" />
-                        )}
-                      </div>
-                    ) : (
-                      <a href={module.content_url} target="_blank" rel="noreferrer"
-                        className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold text-sm hover:bg-indigo-100 transition-colors">
-                        <tc.icon className="h-5 w-5" />
-                        Open {tc.label} Resource
-                        <ChevronRight className="h-4 w-4 ml-auto" />
-                      </a>
-                    )}
-                  </div>
-                )}
+                {/* Content renderer — handles video, PDF, text, quiz, coding, live_session */}
+                <div className="mb-6">
+                  <LessonContentRenderer
+                    contentType={module.module_type}
+                    contentUrl={module.content_url}
+                    contentText={module.description}
+                    title={module.title}
+                    onEnded={() => {
+                      // Auto-mark video modules complete when video ends
+                      if (!isCompleted && module.module_type === "video") {
+                        completeMutation.mutate(undefined);
+                      }
+                    }}
+                  />
+                </div>
 
                 {/* Score input for quiz/coding */}
                 {(module.module_type === "quiz" || module.module_type === "coding_exercise") && !isCompleted && (
