@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import {
     ArrowRight, CheckCircle, Zap, BookOpen, BarChart3,
     Users, Trophy, Target, Brain, Mic,
-    GraduationCap, Building2, UserCircle2, ChevronRight, Star,
+    GraduationCap, Building2, UserCircle2, ChevronRight,
 } from "lucide-react";
 
 // ── Scroll fade-in hook ───────────────────────────────────────────────────────
@@ -177,24 +177,6 @@ const RESULTS = [
     { value: "3×",   label: "More candidates assessed per drive on average",  icon: Users,   iconBg: "bg-blue-100", iconColor: "text-blue-600" },
 ] as const;
 
-const TESTIMONIALS = [
-    {
-        quote: "GradLogic transformed how we run campus drives. We went from managing 10 colleges manually to 40+ on one dashboard — and our placement rates improved by over 22%.",
-        name: "Dr. Priya Menon",
-        role: "Head of Training & Placement",
-        org: "SRM Institute of Science and Technology",
-        initials: "PM",
-        avatarBg: "bg-indigo-100 text-indigo-700",
-    },
-    {
-        quote: "The AI proctoring and live monitoring gave us complete confidence in assessment integrity. Our hiring team reduced candidate screening time by 60% this year.",
-        name: "Rajesh Kumar",
-        role: "Campus Recruitment Head",
-        org: "Infosys BPM",
-        initials: "RK",
-        avatarBg: "bg-blue-100 text-blue-700",
-    },
-];
 
 const PORTALS = [
     {
@@ -441,19 +423,22 @@ export default function LandingPage() {
             </section>
 
             {/* ══════════════════════════════════════════════════════════════
-                6. RESULTS + TESTIMONIALS
+                6. RESULTS
             ══════════════════════════════════════════════════════════════ */}
             <section ref={proofRef} className="bg-white py-24 sm:py-32">
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <div className="text-center mb-16">
-                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-indigo-600">Results That Speak</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.22em] text-indigo-600">Built for Impact</p>
                         <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
-                            Measurable impact, every semester
+                            Everything you need, from day one
                         </h2>
+                        <p className="mx-auto mt-4 max-w-xl text-base text-slate-500">
+                            GradLogic is built to grow with you — whether you're running your first campus drive or managing placements across 50 colleges.
+                        </p>
                     </div>
 
                     {/* Stat cards */}
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-14">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
                         {RESULTS.map((r) => (
                             <div key={r.label} className="flex flex-col items-center rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center">
                                 <div className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl ${r.iconBg}`}>
@@ -461,29 +446,6 @@ export default function LandingPage() {
                                 </div>
                                 <p className="mt-4 text-5xl font-black tracking-tight text-slate-900">{r.value}</p>
                                 <p className="mt-2 max-w-[160px] text-sm text-slate-500">{r.label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Testimonials */}
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        {TESTIMONIALS.map((t) => (
-                            <div key={t.name} className="rounded-3xl border border-slate-100 bg-slate-50 p-8">
-                                <div className="flex gap-0.5 mb-5">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
-                                    ))}
-                                </div>
-                                <p className="text-sm leading-relaxed text-slate-700 italic">"{t.quote}"</p>
-                                <div className="mt-6 flex items-center gap-3">
-                                    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-black ${t.avatarBg}`}>
-                                        {t.initials}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-900">{t.name}</p>
-                                        <p className="text-xs text-slate-500">{t.role} · {t.org}</p>
-                                    </div>
-                                </div>
                             </div>
                         ))}
                     </div>
