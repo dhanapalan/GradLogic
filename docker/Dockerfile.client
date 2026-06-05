@@ -14,9 +14,9 @@ WORKDIR /app
 ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
-# npm ci for reproducible, lock-file-exact installs
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Use npm install — client is a workspace, lock file lives at repo root
+COPY package.json ./
+RUN npm install
 
 COPY . .
 RUN npx vite build
