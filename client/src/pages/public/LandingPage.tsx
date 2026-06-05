@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import {
     ArrowRight, CheckCircle, Zap, BookOpen, BarChart3,
     Users, Trophy, Target, Brain, Mic,
-    GraduationCap, Building2, UserCircle2, ChevronRight,
+    GraduationCap, Building2, UserCircle2, ChevronRight, Shield,
 } from "lucide-react";
 
 // ── Scroll fade-in hook ───────────────────────────────────────────────────────
