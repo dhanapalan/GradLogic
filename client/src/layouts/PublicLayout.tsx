@@ -5,9 +5,9 @@ import Logo from "../components/Logo";
 const NAV_LINKS = [
     // { label: "Lateral Hiring", href: "/lateral" },  // hidden — enable later
     { label: "Campus Hiring", href: "/campus" },
-    { label: "Pricing", href: "/pricing" },
-    { label: "About", href: "/about" },
-    { label: "Contact", href: "/contact" },
+    { label: "Pricing",       href: "/pricing" },
+    { label: "About",         href: "/about" },
+    { label: "Contact",       href: "/contact" },
 ];
 
 export default function PublicLayout({ children }: { children?: ReactNode }) {
@@ -18,64 +18,101 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
     const useLightHeader = isHome && !scrolled;
 
     useEffect(() => {
-        const onScroll = () => setScrolled(window.scrollY > 20);
+        const onScroll = () => setScrolled(window.scrollY > 40);
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    // Close mobile menu on navigation
-    useEffect(() => {
-        setMobileOpen(false);
-    }, [location]);
+    useEffect(() => { setMobileOpen(false); }, [location]);
 
     return (
         <div className="min-h-screen bg-white">
-            {/* ── Sticky Navbar ───────────────────────────────────────────── */}
+
+            {/* ── Navbar ────────────────────────────────────────────────────── */}
             <header
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${!useLightHeader
-                    ? "bg-white/80 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] border-b border-slate-100"
-                    : "bg-transparent"
-                    }`}
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+                    scrolled ? "pt-3 px-4 lg:px-8" : ""
+                }`}
             >
-                <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
+                <nav
+                    className={`mx-auto flex items-center justify-between transition-all duration-500 ${
+                        scrolled
+                            ? "max-w-6xl rounded-2xl bg-white/90 backdrop-blur-xl shadow-xl shadow-black/[0.07] border border-slate-200/70 px-5 py-3"
+                            : "max-w-7xl px-6 py-5 lg:px-8"
+                    }`}
+                >
                     {/* Logo */}
-                    <Link to="/" className="flex items-center gap-2.5 group">
-                        <Logo size={36} className="group-hover:scale-105 transition-transform" />
-                        <span className={`text-lg font-bold tracking-tight transition-colors ${useLightHeader ? "text-white" : "text-slate-900"}`}>
+                    <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+                        <Logo size={34} className="group-hover:scale-105 transition-transform duration-200" />
+                        <span
+                            className={`text-[17px] font-bold tracking-tight transition-colors duration-300 ${
+                                useLightHeader ? "text-white" : "text-slate-900"
+                            }`}
+                        >
                             Grad<span className="text-indigo-500">Logic</span>
                         </span>
                     </Link>
 
-                    {/* Desktop Nav */}
-                    <div className="hidden items-center gap-1 md:flex">
-                        {NAV_LINKS.map((link) => (
-                            <Link
-                                key={link.href}
-                                to={link.href}
-                                className={`rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${useLightHeader
-                                    ? "text-white/80 hover:text-white hover:bg-white/10"
-                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                    {/* Desktop nav links */}
+                    <div className="hidden items-center gap-0.5 md:flex">
+                        {NAV_LINKS.map((link) => {
+                            const isActive = location.pathname === link.href;
+                            return (
+                                <Link
+                                    key={link.href}
+                                    to={link.href}
+                                    className={`relative rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 group ${
+                                        useLightHeader
+                                            ? isActive
+                                                ? "text-white bg-white/15"
+                                                : "text-white/75 hover:text-white hover:bg-white/10"
+                                            : isActive
+                                                ? "text-indigo-600 bg-indigo-50"
+                                                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                                     }`}
-                            >
-                                {link.label}
-                            </Link>
-                        ))}
+                                >
+                                    {link.label}
+                                    <span
+                                        className={`absolute bottom-1 left-4 right-4 h-0.5 rounded-full transition-transform duration-200 origin-left ${
+                                            isActive
+                                                ? "scale-x-100 " + (useLightHeader ? "bg-white/70" : "bg-indigo-500")
+                                                : "scale-x-0 group-hover:scale-x-100 " + (useLightHeader ? "bg-white/50" : "bg-indigo-400")
+                                        }`}
+                                    />
+                                </Link>
+                            );
+                        })}
                     </div>
 
-                    {/* CTA */}
-                    <div className="hidden items-center gap-3 md:flex">
+                    {/* Desktop CTAs */}
+                    <div className="hidden items-center gap-2 md:flex">
                         <Link
                             to="/auth/login"
-                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${useLightHeader
-                                ? "text-white/90 hover:text-white"
-                                : "text-slate-700 hover:text-slate-900"
-                                }`}
+                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+                                useLightHeader
+                                    ? "text-white/80 hover:text-white hover:bg-white/10"
+                                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                            }`}
                         >
                             Sign In
                         </Link>
                         <Link
+                            to="/auth/register"
+                            className={`rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 active:scale-95 ${
+                                useLightHeader
+                                    ? "bg-white text-indigo-700 shadow-lg shadow-white/10 hover:bg-indigo-50"
+                                    : "bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-600/25 hover:shadow-indigo-600/40 hover:from-indigo-500 hover:to-blue-500"
+                            }`}
+                        >
+                            Get Started
+                        </Link>
+                        <Link
                             to="/contact"
-                            className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-700 hover:shadow-indigo-600/40 transition-all active:scale-95"
+                            className={`rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 active:scale-95 border ${
+                                useLightHeader
+                                    ? "border-white/25 text-white hover:bg-white/10"
+                                    : "border-slate-200 text-slate-700 hover:border-indigo-200 hover:text-indigo-600 hover:bg-indigo-50"
+                            }`}
                         >
                             Book a Demo
                         </Link>
@@ -88,38 +125,89 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                         aria-expanded={mobileOpen}
                         aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
                         onClick={() => setMobileOpen(!mobileOpen)}
-                        className={`md:hidden rounded-lg p-2 transition-colors ${useLightHeader ? "text-white hover:bg-white/10" : "text-slate-600 hover:bg-slate-100"
-                            }`}
+                        className={`md:hidden rounded-xl p-2 transition-all duration-200 ${
+                            useLightHeader
+                                ? "text-white hover:bg-white/10"
+                                : "text-slate-600 hover:bg-slate-100"
+                        }`}
                     >
                         {mobileOpen ? (
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                             </svg>
                         ) : (
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6.75h16.5" />
                             </svg>
                         )}
                     </button>
                 </nav>
 
-                {/* Mobile menu */}
+                {/* Mobile menu — floating card beneath nav */}
                 {mobileOpen && (
-                    <div id="mobile-nav-menu" className="border-t border-slate-100 bg-white px-6 py-4 space-y-1 md:hidden animate-in slide-in-from-top-2 duration-200">
-                        {NAV_LINKS.map((link) => (
+                    <div
+                        id="mobile-nav-menu"
+                        className={`md:hidden mx-4 mt-2 overflow-hidden rounded-2xl border shadow-2xl shadow-black/10 animate-in slide-in-from-top-3 duration-200 ${
+                            !scrolled && isHome
+                                ? "border-white/10 bg-slate-900/95 backdrop-blur-xl"
+                                : "border-slate-200/80 bg-white/95 backdrop-blur-xl"
+                        }`}
+                    >
+                        <div className="px-3 py-3 space-y-0.5">
+                            {NAV_LINKS.map((link) => {
+                                const isActive = location.pathname === link.href;
+                                const dark = !scrolled && isHome;
+                                return (
+                                    <Link
+                                        key={link.href}
+                                        to={link.href}
+                                        className={`flex items-center rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
+                                            dark
+                                                ? isActive
+                                                    ? "bg-white/15 text-white"
+                                                    : "text-slate-300 hover:bg-white/10 hover:text-white"
+                                                : isActive
+                                                    ? "bg-indigo-50 text-indigo-700"
+                                                    : "text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                                        }`}
+                                    >
+                                        {link.label}
+                                        {isActive && (
+                                            <span className={`ml-auto h-1.5 w-1.5 rounded-full ${dark ? "bg-indigo-400" : "bg-indigo-500"}`} />
+                                        )}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                        <div
+                            className={`px-3 pb-3 pt-2 border-t flex flex-col gap-2 ${
+                                !scrolled && isHome ? "border-white/10" : "border-slate-100"
+                            }`}
+                        >
                             <Link
-                                key={link.href}
-                                to={link.href}
-                                className="block rounded-lg px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                                to="/auth/login"
+                                className={`rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition-colors ${
+                                    !scrolled && isHome
+                                        ? "text-slate-300 hover:bg-white/10 hover:text-white"
+                                        : "text-slate-700 hover:bg-slate-50"
+                                }`}
                             >
-                                {link.label}
-                            </Link>
-                        ))}
-                        <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
-                            <Link to="/auth/login" className="block rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">
                                 Sign In
                             </Link>
-                            <Link to="/contact" className="block rounded-xl bg-indigo-600 px-4 py-2.5 text-center text-sm font-bold text-white">
+                            <Link
+                                to="/auth/register"
+                                className="rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 px-4 py-2.5 text-center text-sm font-bold text-white shadow-lg shadow-indigo-600/30"
+                            >
+                                Get Started Free
+                            </Link>
+                            <Link
+                                to="/contact"
+                                className={`rounded-xl border px-4 py-2.5 text-center text-sm font-semibold transition-colors ${
+                                    !scrolled && isHome
+                                        ? "border-white/20 text-white hover:bg-white/10"
+                                        : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                                }`}
+                            >
                                 Book a Demo
                             </Link>
                         </div>
@@ -127,12 +215,12 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                 )}
             </header>
 
-            {/* ── Page Content ────────────────────────────────────────────── */}
+            {/* ── Page Content ──────────────────────────────────────────────── */}
             <main>
                 {children || <Outlet />}
             </main>
 
-            {/* ── Footer ──────────────────────────────────────────────────── */}
+            {/* ── Footer ────────────────────────────────────────────────────── */}
             <footer className="bg-indigo-950 text-white">
                 <div className="mx-auto max-w-7xl px-6 py-16 lg:px-8">
                     <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
@@ -152,10 +240,8 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500">Solutions</h4>
                             <ul className="mt-4 space-y-3">
                                 {[
-                                    // { label: "Lateral Hiring", href: "/lateral" },         // hidden — enable later
-                                    // { label: "Submit Your Profile", href: "/lateral/contact" }, // hidden — enable later
-                                    { label: "Campus Hiring", href: "/campus" },
-                                    { label: "Register Your College", href: "/campus/contact" },
+                                    { label: "Campus Hiring",          href: "/campus" },
+                                    { label: "Register Your College",  href: "/campus/contact" },
                                 ].map((item) => (
                                     <li key={item.label}>
                                         <Link to={item.href} className="text-sm text-slate-400 hover:text-white transition-colors">{item.label}</Link>
@@ -170,9 +256,9 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                             <ul className="mt-4 space-y-3">
                                 {[
                                     { label: "About Us", href: "/about" },
-                                    { label: "Pricing", href: "/pricing" },
-                                    { label: "Contact", href: "/contact" },
-                                    { label: "Careers", href: "/contact" },
+                                    { label: "Pricing",  href: "/pricing" },
+                                    { label: "Contact",  href: "/contact" },
+                                    { label: "Careers",  href: "/contact" },
                                 ].map((item) => (
                                     <li key={item.label}>
                                         <Link to={item.href} className="text-sm text-slate-400 hover:text-white transition-colors">{item.label}</Link>
@@ -203,7 +289,7 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                         <p className="text-xs text-slate-500">© 2026 GradLogic Technologies Pvt. Ltd. All rights reserved.</p>
                         <div className="flex gap-6">
                             <Link to="/privacy" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Privacy Policy</Link>
-                            <Link to="/terms" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Terms of Service</Link>
+                            <Link to="/terms"   className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Terms of Service</Link>
                         </div>
                     </div>
                 </div>
