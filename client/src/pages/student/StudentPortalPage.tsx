@@ -225,6 +225,47 @@ export default function StudentPortalPage() {
             ))}
           </div>
 
+          {/* Two-zone entry: Career Prep + Learning Portal */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Career Prep zone */}
+            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Target className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-black text-sm">Career Prep</p>
+                  <p className="text-indigo-200 text-xs">Drives, mock interviews, practice</p>
+                </div>
+              </div>
+              <p className="text-indigo-200 text-xs leading-relaxed mb-4">
+                Take placement drives, practice with AI mock interviews, and track your hiring journey.
+              </p>
+              <Link to="/app/student-portal?tab=exams" className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                Go to drives <ChevronRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {/* Learning zone */}
+            <Link to="/app/learn" className="block bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white hover:opacity-95 transition-opacity group">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <GraduationCap className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="font-black text-sm">Learning Portal</p>
+                  <p className="text-emerald-100 text-xs">Courses, programs, certificates</p>
+                </div>
+              </div>
+              <p className="text-emerald-100 text-xs leading-relaxed mb-4">
+                Upskill with courses recommended from your mock interview feedback. Earn certificates on completion.
+              </p>
+              <span className="inline-flex items-center gap-1.5 bg-white/20 group-hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                Open Learning Portal <ChevronRight className="h-3.5 w-3.5" />
+              </span>
+            </Link>
+          </div>
+
           {/* Two Column: Upcoming + Academic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Upcoming Exams Quick View */}

@@ -512,4 +512,157 @@ router.post("/paths", authorize("super_admin", "hr", "instructor"), async (req, 
   } catch (err) { next(err); }
 });
 
+/**
+ * GET /api/lms/paths/:id
+ * Path detail with courses + student enrollment status per course
+ */
+router.get("/paths/:id", authorize(...READ_ROLES), async (req, res, next) => {
+  try {
+    const studentId = req.user!.role === "student" ? req.user!.userId : null;
+
+    const path = await queryOne(`
+      SELECT lp.*,
+        COALESCE(json_agg(json_build_object(
+          'course_id',   c.id,
+          'title',       c.title,
+          'category',    c.category,
+          'difficulty',  c.difficulty,
+          'total_modules', c.total_modules,
+          'sort_order',  lpc.sort_order,
+          'is_required', lpc.is_required,
+          'enrolled',    (e.id IS NOT NULL)
+        ) ORDER BY lpc.sort_order) FILTER (WHERE c.id IS NOT NULL), '[]') AS courses
+      FROM learning_paths lp
+      LEFT JOIN learning_path_courses lpc ON lpc.path_id = lp.id
+      LEFT JOIN courses c ON c.id = lpc.course_id
+      LEFT JOIN enrollments e ON e.course_id = c.id AND e.student_id = $2
+      WHERE lp.id = $1
+      GROUP BY lp.id
+    `, [req.params.id, studentId]);
+
+    if (!path) return res.status(404).json({ error: "Learning path not found" });
+    res.json({ success: true, data: path });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/lms/paths/:id/enroll
+ * Enroll student in all required courses in the path (skip already enrolled)
+ */
+router.post("/paths/:id/enroll", authorize("student"), async (req, res, next) => {
+  try {
+    const studentId = req.user!.userId;
+    const pathId = req.params.id;
+
+    const pathCourses = await query(`
+      SELECT lpc.course_id
+      FROM learning_path_courses lpc
+      JOIN learning_paths lp ON lp.id = lpc.path_id
+      WHERE lpc.path_id = $1 AND lp.status = 'published'
+    `, [pathId]);
+
+    if (!pathCourses.length) return res.status(404).json({ error: "Path not found or has no courses" });
+
+    let enrolled = 0;
+    let skipped = 0;
+    for (const row of pathCourses) {
+      const courseId = (row as any).course_id;
+      const existing = await queryOne(
+        "SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2",
+        [studentId, courseId]
+      );
+      if (existing) { skipped++; continue; }
+      await queryOne(
+        "INSERT INTO enrollments (student_id, course_id) VALUES ($1,$2) RETURNING id",
+        [studentId, courseId]
+      );
+      await query("UPDATE courses SET total_enrollments = total_enrollments + 1 WHERE id = $1", [courseId]);
+      enrolled++;
+    }
+
+    res.status(201).json({ success: true, data: { enrolled, skipped, total: pathCourses.length } });
+  } catch (err) { next(err); }
+});
+
+// =============================================================================
+// CERTIFICATES
+// =============================================================================
+
+/**
+ * POST /api/lms/courses/:courseId/certificate
+ * Issue a certificate when enrollment is 100% complete
+ */
+router.post("/courses/:courseId/certificate", authorize("student"), async (req, res, next) => {
+  try {
+    const studentId = req.user!.userId;
+    const { courseId } = req.params;
+
+    // Verify 100% completion
+    const enrollment = await queryOne(
+      "SELECT e.*, c.title FROM enrollments e JOIN courses c ON c.id = e.course_id WHERE e.student_id = $1 AND e.course_id = $2",
+      [studentId, courseId]
+    );
+    if (!enrollment) return res.status(404).json({ error: "Not enrolled in this course" });
+    if ((enrollment as any).progress_percent < 100) {
+      return res.status(400).json({ error: "Course not yet completed (progress < 100%)" });
+    }
+
+    const cert = await queryOne(
+      `INSERT INTO certificates (student_id, course_id, title)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (student_id, course_id) DO UPDATE SET issued_at = EXCLUDED.issued_at
+       RETURNING *`,
+      [studentId, courseId, (enrollment as any).title]
+    );
+
+    // Fetch student name for the certificate render
+    const student = await queryOne("SELECT name FROM users WHERE id = $1", [studentId]);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...(cert as any),
+        student_name: (student as any)?.name,
+        course_title: (enrollment as any).title,
+      }
+    });
+  } catch (err) { next(err); }
+});
+
+/**
+ * GET /api/lms/certificates/my
+ * Student: list all their certificates
+ */
+router.get("/certificates/my", authorize("student"), async (req, res, next) => {
+  try {
+    const rows = await query(`
+      SELECT cert.*, u.name AS student_name
+      FROM certificates cert
+      JOIN users u ON u.id = cert.student_id
+      WHERE cert.student_id = $1
+      ORDER BY cert.issued_at DESC
+    `, [req.user!.userId]);
+    res.json({ success: true, data: rows });
+  } catch (err) { next(err); }
+});
+
+/**
+ * GET /api/lms/certificates/:id
+ * Get single certificate (for the certificate page render)
+ */
+router.get("/certificates/:id", authorize("student", "super_admin", "hr"), async (req, res, next) => {
+  try {
+    const cert = await queryOne(`
+      SELECT cert.*, u.name AS student_name,
+             c.title AS course_title, c.category, c.difficulty
+      FROM certificates cert
+      JOIN users u ON u.id = cert.student_id
+      LEFT JOIN courses c ON c.id = cert.course_id
+      WHERE cert.id = $1
+    `, [req.params.id]);
+    if (!cert) return res.status(404).json({ error: "Certificate not found" });
+    res.json({ success: true, data: cert });
+  } catch (err) { next(err); }
+});
+
 export default router;

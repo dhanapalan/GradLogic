@@ -194,7 +194,13 @@ const navigation: NavItem[] = [
     roles: ["student"],
   },
   {
-    name: "My Learning",
+    name: "Learning Portal",
+    href: "/app/learn",
+    icon: AcademicCapIcon,
+    roles: ["student"],
+  },
+  {
+    name: "Course Catalog",
     href: "/app/lms/catalog",
     icon: BookOpenIcon,
     roles: ["student"],

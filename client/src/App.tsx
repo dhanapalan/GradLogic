@@ -99,6 +99,11 @@ const GamificationPage = lazy(() => import("./pages/student/GamificationPage"));
 const MentorDashboardPage = lazy(() => import("./pages/mentor/MentorDashboardPage"));
 const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 
+// ── Learning Portal ───────────────────────────────────────────────────────────
+const LearnHomePage          = lazy(() => import("./pages/learn/LearnHomePage"));
+const LearningPathDetailPage = lazy(() => import("./pages/learn/LearningPathDetailPage"));
+const CertificatePage        = lazy(() => import("./pages/learn/CertificatePage"));
+
 // ── Company Portal ────────────────────────────────────────────────────────────
 const CompanyDashboardPage   = lazy(() => import("./pages/company/CompanyDashboardPage"));
 const CompanyCandidatesPage  = lazy(() => import("./pages/company/CompanyCandidatesPage"));
@@ -451,6 +456,32 @@ export default function App() {
                 element={
                   <RoleGuard allowed={["super_admin", "hr", "college_admin"]}>
                     <PlacementPage />
+                  </RoleGuard>
+                }
+              />
+
+              {/* ── Learning Portal ─────────────────────────────────── */}
+              <Route
+                path="learn"
+                element={
+                  <RoleGuard allowed={["student"]}>
+                    <LearnHomePage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="learn/paths/:pathId"
+                element={
+                  <RoleGuard allowed={["student"]}>
+                    <LearningPathDetailPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="certificate/:certId"
+                element={
+                  <RoleGuard allowed={["student", "super_admin", "hr"]}>
+                    <CertificatePage />
                   </RoleGuard>
                 }
               />
