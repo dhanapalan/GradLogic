@@ -32,12 +32,6 @@ function useFadeIn() {
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-const STATS = [
-    { value: "500+",    label: "Partner Companies" },
-    { value: "50+",     label: "Colleges Onboarded" },
-    { value: "50,000+", label: "Candidates Assessed" },
-    { value: "10,000+", label: "Placements Tracked" },
-];
 
 const ROLES = [
     {
@@ -205,7 +199,6 @@ const PORTALS = [
 // ── Page component ────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-    const statsRef    = useFadeIn();
     const rolesRef    = useFadeIn();
     const featuresRef = useFadeIn();
     const stepsRef    = useFadeIn();
@@ -290,21 +283,6 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ══════════════════════════════════════════════════════════════
-                2. STATS TRUST BAR
-            ══════════════════════════════════════════════════════════════ */}
-            <section ref={statsRef} className="border-b border-slate-100 bg-white py-16">
-                <div className="mx-auto max-w-5xl px-6 lg:px-8">
-                    <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
-                        {STATS.map((s) => (
-                            <div key={s.label} className="text-center">
-                                <p className="text-3xl font-black tracking-tight text-indigo-600 sm:text-4xl">{s.value}</p>
-                                <p className="mt-1.5 text-sm font-medium text-slate-500">{s.label}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
 
             {/* ══════════════════════════════════════════════════════════════
                 3. FOR YOUR ROLE
