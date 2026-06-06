@@ -1,0 +1,16 @@
+.git
+.github
+node_modules
+client/node_modules
+server/node_modules
+server/src
+server/dist
+ai-engine
+prisma
+docker
+backups
+deploy
+scripts
+test-results
+client/tests
+*.md

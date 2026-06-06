@@ -21,14 +21,15 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install only production deps from scratch — avoids ghost dev-dep layer
-# that results from copying all node_modules then pruning
+# Copy Prisma schema first so @prisma/client postinstall can generate the client
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/package.json
 COPY client/package.json ./client/package.json
+COPY --from=builder /app/prisma ./prisma
+
+# Install only production deps (@prisma/client postinstall generates the client)
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/server/dist ./server/dist
 
 WORKDIR /app/server

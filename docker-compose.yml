@@ -104,8 +104,8 @@ services:
   # ── Client (React / Vite → nginx) ─────────────────────────────────────────
   client:
     build:
-      context: ./client
-      dockerfile: ../docker/Dockerfile.client
+      context: .
+      dockerfile: docker/Dockerfile.client
     container_name: talentsecure-client
     ports:
       - "3000:80"
@@ -118,61 +118,34 @@ services:
       - talentsecure
 
   # ── Judge0 CE (Code Execution Sandbox) ─────────────────────────────────────
+  # Opt-in — only starts when you pass --profile judge0:
+  #   docker compose --profile judge0 up
+  # Uses the shared postgres (judge0_db database, judge0 user — see init-db/12-judge0-db.sql)
+  # and the shared redis on DB index 1 (main app uses DB 0).
   judge0:
     image: judge0/judge0:1.13.0
     container_name: talentsecure-judge0
+    profiles: [judge0]
     ports:
       - "2358:2358"
     environment:
-      REDIS_URL: redis://judge0-redis:6379
-      POSTGRES_HOST: judge0-postgres
+      REDIS_URL: redis://redis:6379/1
+      POSTGRES_HOST: postgres
       POSTGRES_USER: judge0
       POSTGRES_PASSWORD: judge0secret
       POSTGRES_DB: judge0_db
     depends_on:
-      judge0-postgres:
+      postgres:
         condition: service_healthy
-      judge0-redis:
+      redis:
         condition: service_healthy
     restart: unless-stopped
     privileged: true
     networks:
-      - judge0
-
-  judge0-postgres:
-    image: postgres:16-alpine
-    container_name: talentsecure-judge0-postgres
-    environment:
-      POSTGRES_USER: judge0
-      POSTGRES_PASSWORD: judge0secret
-      POSTGRES_DB: judge0_db
-    volumes:
-      - judge0pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U judge0"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - judge0
-
-  judge0-redis:
-    image: redis:7-alpine
-    container_name: talentsecure-judge0-redis
-    volumes:
-      - judge0redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - judge0
+      - talentsecure
 
 networks:
   talentsecure:
-    driver: bridge
-  judge0:
     driver: bridge
 
 volumes:
@@ -187,11 +160,3 @@ volumes:
   miniodata:
     external: true
     name: talentsecure-ai_miniodata
-
-  judge0pgdata:
-    external: true
-    name: talentsecure-ai_judge0pgdata
-
-  judge0redisdata:
-    external: true
-    name: talentsecure-ai_judge0redisdata

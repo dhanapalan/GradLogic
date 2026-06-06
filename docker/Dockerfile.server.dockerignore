@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+client/node_modules
+server/node_modules
+ai-engine
+client/dist
+client/tests
+backups
+deploy
+scripts
+test-results
+*.md

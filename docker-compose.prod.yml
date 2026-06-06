@@ -87,8 +87,8 @@ services:
   # ── Client (React / Vite → nginx) ────────────────────────────────────────────
   client:
     build:
-      context: ./client
-      dockerfile: ../docker/Dockerfile.client
+      context: .
+      dockerfile: docker/Dockerfile.client
       args:
         VITE_API_URL: ""   # empty = relative /api paths proxied by nginx
     container_name: talentsecure-client
@@ -116,9 +116,13 @@ services:
       - talentsecure
 
   # ── Judge0 CE (Code Execution Sandbox) ─────────────────────────────────────
+  # Opt-in — only starts when you pass --profile judge0:
+  #   docker compose --profile judge0 up
+  # In production, judge0 keeps its own isolated postgres + redis for sandbox safety.
   judge0:
     image: judge0/judge0:1.13.0
     container_name: talentsecure-judge0
+    profiles: [judge0]
     environment:
       REDIS_URL: redis://judge0-redis:6379
       POSTGRES_HOST: judge0-postgres
@@ -138,6 +142,7 @@ services:
   judge0-postgres:
     image: postgres:16-alpine
     container_name: talentsecure-judge0-postgres
+    profiles: [judge0]
     environment:
       POSTGRES_USER: judge0
       POSTGRES_PASSWORD: ${JUDGE0_PG_PASSWORD}
@@ -156,6 +161,7 @@ services:
   judge0-redis:
     image: redis:7-alpine
     container_name: talentsecure-judge0-redis
+    profiles: [judge0]
     volumes:
       - judge0redisdata:/data
     healthcheck:

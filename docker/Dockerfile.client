@@ -1,6 +1,6 @@
 # =============================================================================
 # TalentSecure AI — Client Dockerfile (multi-stage: build → nginx)
-# Build context: ./client
+# Build context: . (repo root) — required to access the root package-lock.json
 # =============================================================================
 
 # ── Stage 1: Build ────────────────────────────────────────────────────────────
@@ -14,17 +14,23 @@ WORKDIR /app
 ARG VITE_API_URL=""
 ENV VITE_API_URL=$VITE_API_URL
 
-# Use npm install — client is a workspace, lock file lives at repo root
-COPY package.json ./
-RUN npm install
+# Copy workspace manifests so npm can resolve the monorepo workspaces
+COPY package.json package-lock.json ./
+COPY client/package.json ./client/package.json
+COPY server/package.json ./server/package.json
 
-COPY . .
+# Install client workspace dependencies using the root lock file (deterministic)
+RUN npm ci --workspace=client
+
+COPY client/ ./client/
+
+WORKDIR /app/client
 RUN npx vite build
 
 # ── Stage 2: Serve with nginx ────────────────────────────────────────────────
 FROM nginx:1.27-alpine
 
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/client/dist /usr/share/nginx/html
 
 # nginx.conf is mounted at runtime via docker-compose volume
 # (docker/nginx.conf → /etc/nginx/conf.d/default.conf)
