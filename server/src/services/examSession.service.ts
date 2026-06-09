@@ -7,6 +7,8 @@
 
 import { query, queryOne, pool } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { scheduleAutoSubmit, cancelAutoSubmit } from "../queues/examTimer.queue.js";
+import { eventBus } from "../shared/event-bus.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -144,12 +146,10 @@ export async function startSession(driveId: string, studentId: string): Promise<
             }
         }
 
-        // Recalculate time remaining from server side
-        const elapsedSeconds = ds.started_at
-            ? Math.floor((Date.now() - new Date(ds.started_at).getTime()) / 1000)
-            : 0;
-        const totalSeconds = ds.duration_minutes * 60;
-        const timeRemaining = Math.max(0, totalSeconds - elapsedSeconds);
+        // Derive remaining time from server_deadline (authoritative) or fall back to started_at
+        const timeRemaining = ds.server_deadline
+            ? Math.max(0, Math.floor((new Date(ds.server_deadline).getTime() - Date.now()) / 1000))
+            : Math.max(0, ds.duration_minutes * 60 - Math.floor((Date.now() - new Date(ds.started_at).getTime()) / 1000));
 
         // If time expired, auto-submit
         if (timeRemaining <= 0) {
@@ -219,8 +219,9 @@ export async function startSession(driveId: string, studentId: string): Promise<
     }
 
     const totalSeconds = ds.duration_minutes * 60;
+    const serverDeadline = new Date(Date.now() + totalSeconds * 1000);
 
-    // 4. Lock the paper — update drive_students
+    // 4. Lock the paper — update drive_students with authoritative server_deadline
     const updated = await queryOne<any>(
         `UPDATE drive_students
          SET status = 'in_progress',
@@ -228,11 +229,18 @@ export async function startSession(driveId: string, studentId: string): Promise<
              started_at = NOW(),
              saved_answers = '{}',
              current_question_index = 0,
-             time_remaining_seconds = $2
-         WHERE id = $3
+             time_remaining_seconds = $2,
+             server_deadline = $3
+         WHERE id = $4
          RETURNING *`,
-        [JSON.stringify(questionMapping), totalSeconds, ds.id],
+        [JSON.stringify(questionMapping), totalSeconds, serverDeadline.toISOString(), ds.id],
     );
+
+    // 5. Enqueue authoritative auto-submit job at deadline (idempotent)
+    await scheduleAutoSubmit(
+        { sessionId: updated.id, driveId, studentId },
+        serverDeadline,
+    ).catch(() => { /* non-fatal: scheduler unavailable, fallback to heartbeat check */ });
 
     return {
         session_id: updated.id,
@@ -276,12 +284,12 @@ export async function getSession(driveId: string, studentId: string): Promise<{
     if (!ds) throw new AppError("Session not found", 404);
     if (ds.status === "assigned") throw new AppError("Exam not started yet", 400);
 
-    // Calculate real time remaining server-side
-    let timeRemaining = ds.time_remaining_seconds || 0;
-    if (ds.status === "in_progress" && ds.started_at) {
-        const elapsedSeconds = Math.floor((Date.now() - new Date(ds.started_at).getTime()) / 1000);
-        const totalSeconds = ds.duration_minutes * 60;
-        timeRemaining = Math.max(0, totalSeconds - elapsedSeconds);
+    // Derive time remaining from server_deadline (authoritative) — never trust the client clock
+    let timeRemaining = 0;
+    if (ds.status === "in_progress") {
+        timeRemaining = ds.server_deadline
+            ? Math.max(0, Math.floor((new Date(ds.server_deadline).getTime() - Date.now()) / 1000))
+            : Math.max(0, ds.duration_minutes * 60 - Math.floor((Date.now() - new Date(ds.started_at).getTime()) / 1000));
     }
 
     const session: SessionState = {
@@ -369,7 +377,11 @@ export async function saveAnswer(
 
 // ── Submit Exam ──────────────────────────────────────────────────────────────
 
-export async function submitExam(driveId: string, studentId: string): Promise<SessionState> {
+export async function submitExam(
+    driveId: string,
+    studentId: string,
+    opts?: { triggeredBy?: "student" | "timer" },
+): Promise<SessionState> {
     // 1. Get session
     const ds = await queryOne<any>(
         `SELECT ds.*, ad.name AS drive_name,
@@ -384,6 +396,9 @@ export async function submitExam(driveId: string, studentId: string): Promise<Se
 
     if (!ds) throw new AppError("Session not found", 404);
     if (ds.status === "completed") throw new AppError("Already submitted", 409);
+
+    // Cancel the scheduled auto-submit job since we're submitting now
+    await cancelAutoSubmit(ds.id).catch(() => { /* non-fatal */ });
 
     // 2. Auto-grade MCQ questions
     const savedAnswers: Record<string, { selected: string[] }> = ds.saved_answers || {};
@@ -442,7 +457,16 @@ export async function submitExam(driveId: string, studentId: string): Promise<Se
         [totalScore, ds.id],
     );
 
-    // 4. Auto-update student skills from drive's target_skill_ids
+    // 4. Emit domain event — subscribers (Learning, Notifications, Hiring) react independently
+    eventBus.emit("ExamSubmitted", {
+        sessionId: ds.id,
+        driveId,
+        studentId,
+        score: totalScore,
+        triggeredBy: opts?.triggeredBy ?? "student",
+    });
+
+    // 5. Auto-update student skills from drive's target_skill_ids
     try {
         const drive = await queryOne<any>(
             `SELECT target_skill_ids, overall_cutoff FROM assessment_drives WHERE id = $1`,

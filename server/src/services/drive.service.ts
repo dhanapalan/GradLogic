@@ -1,5 +1,6 @@
 import { query, queryOne } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { DriveStateMachine } from "../shared/drive-state-machine.js";
 import { generateDynamicAssessment } from "./llm.service.js";
 import { sendNotification } from "./notification.service.js";
 import {
@@ -887,19 +888,34 @@ export async function publishDrive(id: string) {
 // ── Auto-Transition: READY → LIVE (when NOW >= scheduled_start) ──────────────
 
 export async function transitionDrivesToLive() {
-    const result = await query(
-        `UPDATE assessment_drives
-         SET status = 'LIVE', actual_start = NOW(), updated_at = NOW()
+    const candidates = await query<{ id: string; name: string; status: string; created_by: string | null }>(
+        `SELECT id, name, status, created_by FROM assessment_drives
          WHERE UPPER(status) = 'SCHEDULED'
            AND scheduled_start IS NOT NULL
-           AND scheduled_start <= NOW()
-         RETURNING id, name, created_by`,
+           AND scheduled_start <= NOW()`,
     );
+
+    const result: typeof candidates = [];
+    for (const drive of candidates) {
+        try {
+            // State machine guard — throws on illegal transition
+            DriveStateMachine.guard({ id: drive.id, status: drive.status.toLowerCase() as any }, "active");
+        } catch (err) {
+            logger.warn(`Skipping drive ${drive.id} LIVE transition: ${(err as Error).message}`);
+            continue;
+        }
+        await query(
+            `UPDATE assessment_drives SET status = 'LIVE', actual_start = NOW(), updated_at = NOW() WHERE id = $1`,
+            [drive.id],
+        );
+        DriveStateMachine.emitEvent(drive.id, "active", { driveName: drive.name });
+        result.push(drive);
+    }
+
     if (result.length > 0) {
         logger.info(`Auto-transitioned ${result.length} drive(s) to LIVE`, {
-            drives: result.map((d: any) => d.id),
+            drives: result.map((d) => d.id),
         });
-
         for (const drive of result) {
             if (drive.created_by) {
                 await sendNotification(drive.created_by, "Drive Live", `The drive "${drive.name}" is now live and accepting participants.`, "success");

@@ -1,13 +1,11 @@
 // =============================================================================
 // TalentSecure AI — LLM Service (Claude Assessment Generator)
 // =============================================================================
+// All AI provider calls go through ai.service.ts — never call the SDK directly.
 
-import Anthropic from "@anthropic-ai/sdk";
-import { env } from "../config/env.js";
+import { generateJSON } from "./ai.service.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../middleware/errorHandler.js";
-
-const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,13 +146,6 @@ export async function generateAssessment(
   totalQuestions: number = 20,
   durationMinutes: number = 60,
 ): Promise<GeneratedAssessment> {
-  if (!env.ANTHROPIC_API_KEY) {
-    throw new AppError(
-      "Anthropic API key is not configured. Set the ANTHROPIC_API_KEY environment variable.",
-      500,
-    );
-  }
-
   const total = categories.reduce((sum, c) => sum + c.percentage, 0);
   if (Math.abs(total - 100) > 0.5) {
     throw new AppError(
@@ -166,23 +157,14 @@ export async function generateAssessment(
   const systemPrompt = buildSystemPrompt(categories, totalQuestions, durationMinutes);
   const userPrompt = `Generate a technical assessment with these category weights:\n${JSON.stringify(categories, null, 2)}\n\nTotal questions: ${totalQuestions}\nDuration: ${durationMinutes} minutes`;
 
-  logger.info("Calling Claude to generate assessment", { categories, totalQuestions, model: env.ANTHROPIC_MODEL });
+  logger.info("Generating assessment via AI service", { categories, totalQuestions });
 
   try {
-    const message = await anthropic.messages.create({
-      model: env.ANTHROPIC_MODEL,
-      max_tokens: 8000,
+    const parsed = await generateJSON<GeneratedAssessment>(userPrompt, {
       system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
+      maxTokens: 8000,
+      riskLevel: "draft", // question generation → goes to review queue before use
     });
-
-    const content = (message.content[0] as { type: string; text: string }).text;
-    if (!content) throw new AppError("Claude returned empty response", 502);
-
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new AppError("Claude response contained no JSON object", 502);
-
-    const parsed: GeneratedAssessment = JSON.parse(jsonMatch[0]);
     parsed.categories = categories;
     parsed.totalQuestions = parsed.questions.length;
     parsed.totalMarks = parsed.questions.reduce((s, q) => s + q.marks, 0);
@@ -339,13 +321,6 @@ export async function generateDynamicAssessment(
   totalQuestions: number,
   durationMinutes: number = 60,
 ): Promise<DynamicAssessmentResult> {
-  if (!env.ANTHROPIC_API_KEY) {
-    throw new AppError(
-      "Anthropic API key is not configured. Set the ANTHROPIC_API_KEY environment variable.",
-      500,
-    );
-  }
-
   const pctTotal = weights.reduce((s, w) => s + w.percentage, 0);
   if (Math.abs(pctTotal - 100) > 0.5) {
     throw new AppError(
@@ -357,32 +332,14 @@ export async function generateDynamicAssessment(
   const systemPrompt = buildDynamicSystemPrompt(weights, totalQuestions, durationMinutes);
   const userPrompt = `Category weights:\n${JSON.stringify(weights, null, 2)}\n\nTotal questions: ${totalQuestions}\nDuration: ${durationMinutes} minutes\n\nGenerate now.`;
 
-  logger.info("Calling Claude for dynamic assessment generation", { weights, totalQuestions, model: env.ANTHROPIC_MODEL });
+  logger.info("Generating dynamic assessment via AI service", { weights, totalQuestions });
 
   try {
-    const message = await anthropic.messages.create({
-      model: env.ANTHROPIC_MODEL,
-      max_tokens: 16000,
+    const parsed = await generateJSON<DynamicAssessmentResult>(userPrompt, {
       system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
+      maxTokens: 16000,
+      riskLevel: "draft",
     });
-
-    if (message.stop_reason === "max_tokens") {
-      throw new AppError(
-        "Assessment generation exceeded the model's token limit. Try requesting fewer questions or shorter duration.",
-        502,
-      );
-    }
-
-    const content = (message.content[0] as { type: string; text: string }).text;
-
-    if (!content) {
-      throw new AppError("Claude returned empty response", 502);
-    }
-
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new AppError("Claude response contained no JSON object", 502);
-    const parsed: DynamicAssessmentResult = JSON.parse(jsonMatch[0]);
 
     // ── Post-validation & normalization ────────────────────────────────────
     if (!Array.isArray(parsed.questions)) {

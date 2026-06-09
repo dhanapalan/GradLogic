@@ -5,6 +5,8 @@ import {
   QuestionType,
   DifficultyLevel,
 } from "../types/index.js";
+import { embed } from "./ai.service.js";
+import { logger } from "../config/logger.js";
 
 // ── Filters for listing / filtering ──────────────────────────────────────────
 
@@ -107,10 +109,10 @@ export async function getQuestionById(id: string) {
 }
 
 /**
- * Create a new question.
+ * Create a new question and asynchronously index its embedding for dedup/search.
  */
 export async function createQuestion(input: CreateQuestionInput) {
-  return queryOne<QuestionBankRow>(
+  const row = await queryOne<QuestionBankRow>(
     `INSERT INTO question_bank
        (category, type, difficulty_level, question_text, options, correct_answer,
         test_cases, starter_code, time_limit_ms, memory_limit_kb, marks, tags,
@@ -133,6 +135,45 @@ export async function createQuestion(input: CreateQuestionInput) {
       input.explanation ?? null,
       input.created_by ?? null,
     ],
+  );
+
+  // Fire-and-forget: store embedding for semantic dedup/search.
+  // Non-fatal — a missing embedding only degrades search quality, not correctness.
+  if (row) {
+    embed(input.question_text)
+      .then(({ vector }) => {
+        if (vector.length === 0) return; // AI engine unavailable
+        return queryOne(
+          `UPDATE question_bank SET embedding = $1 WHERE id = $2`,
+          [`[${vector.join(",")}]`, row.id],
+        );
+      })
+      .catch((err) => logger.warn("[QB] Embedding store failed", { id: row?.id, error: err.message }));
+  }
+
+  return row;
+}
+
+/**
+ * Find questions semantically similar to the given text (dedup check).
+ * Returns questions with cosine similarity above the threshold.
+ */
+export async function findSimilarQuestions(
+  text: string,
+  opts: { threshold?: number; limit?: number } = {},
+) {
+  const { threshold = 0.92, limit = 5 } = opts;
+  const { vector } = await embed(text);
+  if (vector.length === 0) return []; // embedding unavailable
+
+  return query<QuestionBankRow & { similarity: number }>(
+    `SELECT *, 1 - (embedding <=> $1::vector) AS similarity
+     FROM question_bank
+     WHERE embedding IS NOT NULL
+       AND 1 - (embedding <=> $1::vector) >= $2
+     ORDER BY similarity DESC
+     LIMIT $3`,
+    [`[${vector.join(",")}]`, threshold, limit],
   );
 }
 

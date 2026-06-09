@@ -8,6 +8,11 @@ import { initSocketIO } from "./config/socket.js";
 import { ensureAuditTable } from "./services/audit.service.js";
 import { ensureNotificationTable } from "./services/notification.service.js";
 import { startDriveScheduler } from "./scheduler/driveScheduler.js";
+import { startExamTimerWorker, stopExamTimerWorker } from "./workers/examTimer.worker.js";
+// Bootstrap module event subscriptions (side-effect imports — order matters)
+import "./modules/learning/index.js";
+import "./modules/integrity/index.js";
+import "./modules/notifications/index.js";
 import http from "http";
 
 const server = http.createServer(app);
@@ -44,6 +49,9 @@ async function bootstrap(): Promise<void> {
 
     // 7. Start drive scheduler (READY→LIVE and LIVE→COMPLETED auto-transitions)
     startDriveScheduler();
+
+    // 8. Start exam timer worker (BullMQ — auto-submits sessions at server_deadline)
+    startExamTimerWorker();
   } catch (error) {
     logger.error("Failed to start server:", error);
     process.exit(1);
@@ -53,6 +61,7 @@ async function bootstrap(): Promise<void> {
 // Graceful shutdown
 const shutdown = async (signal: string) => {
   logger.info(`${signal} received — shutting down gracefully`);
+  await stopExamTimerWorker();
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);

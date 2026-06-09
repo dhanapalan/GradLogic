@@ -1,10 +1,12 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector"), uuid_ossp(map: "uuid-ossp")]
 }
 
 model User {
@@ -232,6 +234,8 @@ model question_bank {
   marks            Decimal           @default(5.00) @db.Decimal(5, 2)
   tags             String[]          @default([])
   explanation      String?
+  // pgvector: semantic embedding for duplicate detection and RAG-based search
+  embedding        Unsupported("vector(1536)")?
   created_by       String?           @db.Uuid
   is_active        Boolean           @default(true)
   created_at       DateTime          @default(now()) @db.Timestamptz(6)
@@ -470,9 +474,12 @@ model drive_pool_questions {
   id              String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   drive_id        String               @db.Uuid
   pool_id         String               @db.Uuid
+  // ★ Full content snapshot — editing question_bank can never alter a running exam
   question_text   String
   options         Json?
   correct_answer  String?
+  test_cases      Json?
+  starter_code    Json?
   skill           String?              @db.VarChar(100)
   difficulty      String?              @db.VarChar(20)
   marks           Decimal              @default(1.00) @db.Decimal(5, 2)
@@ -558,6 +565,8 @@ model drive_students {
   saved_answers          Json?             @default("{}")
   current_question_index Int               @default(0)
   time_remaining_seconds Int?
+  // ★ Authoritative server-side deadline — client clock is never trusted
+  server_deadline        DateTime?         @db.Timestamptz(6)
 
   drive                  assessment_drives @relation(fields: [drive_id], references: [id], onDelete: Cascade)
 
