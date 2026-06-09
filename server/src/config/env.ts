@@ -89,3 +89,28 @@ export const env = {
   SMTP_PASS: process.env.SMTP_PASS || "",
   EMAIL_FROM: process.env.EMAIL_FROM || "GradLogic <noreply@nallas.com>",
 } as const;
+
+// ── Production secrets guard ──────────────────────────────────────────────────
+// Fail fast if the app boots in production while any sensitive value is still the
+// built-in development default. Booting with a publicly-known JWT_SECRET would let
+// anyone forge valid tokens, so we refuse to start rather than run insecurely.
+if (env.NODE_ENV === "production") {
+  const insecureDefaults: Array<[string, string, string]> = [
+    ["JWT_SECRET", env.JWT_SECRET, "dev-jwt-secret-talentsecure-2026"],
+    ["AI_ENGINE_API_KEY", env.AI_ENGINE_API_KEY, "dev-ai-engine-key"],
+    ["PG_PASSWORD", env.PG_PASSWORD, "secret"],
+    ["S3_ACCESS_KEY", env.S3_ACCESS_KEY, "minioadmin"],
+    ["S3_SECRET_KEY", env.S3_SECRET_KEY, "minioadmin"],
+  ];
+
+  const offenders = insecureDefaults
+    .filter(([, value, fallback]) => value === fallback)
+    .map(([name]) => name);
+
+  if (offenders.length > 0) {
+    throw new Error(
+      `Refusing to start in production: the following secrets are still set to their ` +
+        `insecure development defaults — ${offenders.join(", ")}. Set them via environment variables.`,
+    );
+  }
+}

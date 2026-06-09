@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validate } from "../middleware/validate.js";
 import { authenticate } from "../middleware/auth.js";
 import * as authController from "../controllers/auth.controller.js";
+import { passwordSchema, setupPasswordSchema } from "../validators/password.js";
 
 const router = Router();
 
@@ -14,7 +15,7 @@ const loginSchema = z.object({
 const studentRegisterSchema = z.object({
   name:           z.string().min(2, "Name must be at least 2 characters").max(200),
   email:          z.string().email("Invalid email"),
-  password:       z.string().min(8, "Password must be at least 8 characters"),
+  password:       passwordSchema,
   phone:          z.string().optional(),
   degree:         z.string().optional(),
   specialization: z.string().optional(),
@@ -25,7 +26,7 @@ const studentRegisterSchema = z.object({
 const companyRegisterSchema = z.object({
   name:         z.string().min(2, "Name must be at least 2 characters").max(200),
   email:        z.string().email("Invalid email"),
-  password:     z.string().min(8, "Password must be at least 8 characters"),
+  password:     passwordSchema,
   company_name: z.string().min(2, "Company name required").max(255),
   industry:     z.string().optional(),
   headquarters: z.string().optional(),
@@ -54,7 +55,7 @@ router.get("/me", authenticate, authController.me);
 /**
  * POST /api/auth/setup-password — force password change on first login
  */
-router.post("/setup-password", authenticate, authController.setupPassword);
+router.post("/setup-password", authenticate, validate(setupPasswordSchema), authController.setupPassword);
 
 /**
  * GET /api/auth/microsoft/url — returns MS Login URL

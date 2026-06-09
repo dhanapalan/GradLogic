@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import { AppError } from "../middleware/errorHandler.js";
 import multer from "multer";
 import { uploadFile } from "../config/storage.js";
+import { passwordSchema } from "../validators/password.js";
 
 const mouUpload = multer({
   storage: multer.memoryStorage(),
@@ -86,7 +87,7 @@ const createCampusSchema = z.object({
 
   adminName: z.string().min(1, "Admin full name is required"),
   adminEmail: z.string().email("Valid admin email is required"),
-  adminPassword: z.string().min(6, "Password must be at least 6 characters"),
+  adminPassword: passwordSchema,
 });
 
 const updateCampusSchema = createCampusSchema.omit({

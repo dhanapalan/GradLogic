@@ -5,6 +5,7 @@ import { pool } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
 import * as collegeService from "../services/college.service.js";
+import { passwordSchema } from "../validators/password.js";
 
 const studentInputSchema = z.object({
   student_id: z.string().trim().min(1, "student_id is required"),
@@ -314,7 +315,7 @@ export const addStaff = async (
     const schema = z.object({
       name: z.string().min(1),
       email: z.string().email(),
-      password: z.string().min(6),
+      password: passwordSchema,
     });
 
     const { name, email, password } = schema.parse(req.body);

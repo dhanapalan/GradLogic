@@ -1,6 +1,7 @@
 import {
   Controller, Post, Get, Body, Req, HttpCode, HttpStatus, BadRequestException,
 } from "@nestjs/common";
+import { Throttle } from "@nestjs/throttler";
 import { Request } from "express";
 import crypto from "crypto";
 import * as authService from "../../../services/auth.service.js";
@@ -8,6 +9,11 @@ import { Public } from "../../common/decorators/public.decorator.js";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { AuthPayload } from "../../../types/index.js";
 import { env } from "../../../config/env.js";
+import { setupPasswordSchema } from "../../../validators/password.js";
+
+// Strict brute-force guard for credential endpoints: 10 attempts / 15 min per IP.
+// Mirrors the legacy Express authLimiter that the global 100/15min throttle replaced.
+const AUTH_THROTTLE = { default: { limit: 10, ttl: 15 * 60 * 1000 } };
 
 function generateOAuthState(): string {
   const nonce = crypto.randomBytes(16).toString("hex");
@@ -34,6 +40,7 @@ function verifyOAuthState(state: string): boolean {
 @Controller("api/auth")
 export class AuthController {
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: { email: string; password: string }, @Req() req: Request) {
@@ -63,8 +70,12 @@ export class AuthController {
 
   @Post("setup-password")
   @HttpCode(HttpStatus.OK)
-  async setupPassword(@Body() body: { password: string }, @CurrentUser() user: AuthPayload) {
-    await authService.updatePassword(user.userId, body.password);
+  async setupPassword(@Body() body: unknown, @CurrentUser() user: AuthPayload) {
+    const parsed = setupPasswordSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.errors.map((e) => e.message).join("; "));
+    }
+    await authService.updatePassword(user.userId, parsed.data.password);
     return { success: true, message: "Password updated successfully" };
   }
 
@@ -77,6 +88,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @Post("microsoft")
   @HttpCode(HttpStatus.OK)
   async microsoftLogin(@Body() body: { code: string; state: string }, @Req() req: Request) {

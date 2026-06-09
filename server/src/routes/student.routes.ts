@@ -4,6 +4,7 @@ import { z } from "zod";
 import { validate } from "../middleware/validate.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import * as studentController from "../controllers/student.controller.js";
+import { passwordSchema } from "../validators/password.js";
 
 const router = Router();
 
@@ -65,7 +66,7 @@ const emptyToUndefined = (value: unknown) => {
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: passwordSchema,
   college_id: z.string().uuid("college_id must be a valid UUID"),
 });
 
