@@ -70,17 +70,19 @@ class NotificationService {
     }
   }
 
-  /**
-   * Delete announcement
-   */
-  async deleteAnnouncement(id: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await api.delete(`/superadmin/announcements/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to delete announcement ${id}:`, error);
-      throw error;
-    }
+  async deactivateAnnouncement(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.delete(`/superadmin/announcements/${id}`);
+    return response.data;
+  }
+
+  /** @deprecated use deactivateAnnouncement */
+  async deleteAnnouncement(id: string) {
+    return this.deactivateAnnouncement(id);
+  }
+
+  async activateAnnouncement(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post(`/superadmin/announcements/${id}/activate`);
+    return response.data;
   }
 
   /**

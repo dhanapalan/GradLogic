@@ -358,10 +358,11 @@ function SkillsSection({ drive }: { drive: any }) {
     });
 
     const addMutation = useMutation({
-        mutationFn: (skillId: string) => {
+        mutationFn: async (skillId: string) => {
             const current: string[] = drive.target_skill_ids || [];
-            if (current.includes(skillId)) return Promise.resolve();
-            return api.put(`/drives/${drive.id}`, { target_skill_ids: [...current, skillId] });
+            if (!current.includes(skillId)) {
+                await api.put(`/drives/${drive.id}`, { target_skill_ids: [...current, skillId] });
+            }
         },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ["drive", drive.id] });

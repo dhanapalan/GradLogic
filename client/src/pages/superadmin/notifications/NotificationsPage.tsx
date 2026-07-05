@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlusIcon, TrashIcon, EnvelopeIcon, BellIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, EnvelopeIcon, BellIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import notificationService, { Announcement, EmailTemplate } from "../../../services/notificationService";
 
@@ -58,14 +58,19 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleDeleteAnnouncement = async (id: string) => {
+  const handleToggleAnnouncement = async (ann: Announcement) => {
     try {
-      await notificationService.deleteAnnouncement(id);
-      setAnnouncements(announcements.filter((a) => a.id !== id));
-      toast.success("Announcement deleted");
+      if (ann.active) {
+        await notificationService.deactivateAnnouncement(ann.id);
+        setAnnouncements(announcements.map((a) => (a.id === ann.id ? { ...a, active: false } : a)));
+        toast.success("Announcement deactivated");
+      } else {
+        await notificationService.activateAnnouncement(ann.id);
+        setAnnouncements(announcements.map((a) => (a.id === ann.id ? { ...a, active: true } : a)));
+        toast.success("Announcement activated");
+      }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete announcement");
-      console.error(error);
+      toast.error(error.response?.data?.message || "Action failed");
     }
   };
 
@@ -220,10 +225,14 @@ export default function NotificationsPage() {
                     <p className="text-xs text-gray-500 mt-2">Created: {ann.createdAt}</p>
                   </div>
                   <button
-                    onClick={() => handleDeleteAnnouncement(ann.id)}
-                    className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={() => handleToggleAnnouncement(ann)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+                      ann.active
+                        ? "border-red-300 text-red-700 hover:bg-red-50"
+                        : "border-green-300 text-green-700 hover:bg-green-50"
+                    }`}
                   >
-                    <TrashIcon className="w-5 h-5" />
+                    {ann.active ? "Deactivate" : "Activate"}
                   </button>
                 </div>
               </div>

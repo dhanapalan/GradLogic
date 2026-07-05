@@ -52,9 +52,6 @@ function toVimeoEmbed(url: string): string {
   return `https://player.vimeo.com/video/${id}`;
 }
 
-function isPDF(url: string) {
-  return url.toLowerCase().endsWith(".pdf") || url.includes("/pdf") || url.includes("application/pdf");
-}
 
 // ── Video player ──────────────────────────────────────────────────────────────
 
@@ -145,7 +142,7 @@ function PDFViewer({ url, title }: { url: string; title?: string }) {
 
 // ── Text / reading content ────────────────────────────────────────────────────
 
-function TextContent({ text, contentUrl, title }: { text?: string | null; contentUrl?: string | null; title?: string }) {
+function TextContent({ text, contentUrl }: { text?: string | null; contentUrl?: string | null; title?: string }) {
   const isHTML = text?.trim().startsWith("<");
 
   return (

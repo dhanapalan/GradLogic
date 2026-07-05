@@ -4,7 +4,6 @@ import {
   FunnelIcon,
   DocumentChartBarIcon, 
   MagnifyingGlassIcon,
-  ChevronUpIcon,
   ChevronDownIcon
 } from "@heroicons/react/24/outline";
 

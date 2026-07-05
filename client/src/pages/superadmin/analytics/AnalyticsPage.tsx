@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import analyticsService, {
   PlatformAnalytics,
   CollegeAnalytics,
+  StudentPerformance,
 } from "../../../services/analyticsService";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import ChartCard from "../../../components/superadmin/ChartCard";
@@ -43,20 +44,23 @@ export default function AnalyticsPage() {
   const view: View = (searchParams.get("view") as View) || "platform";
 
   const [days, setDays] = useState(30);
+  const [collegeId, setCollegeId] = useState("");
   const [platform, setPlatform] = useState<PlatformAnalytics | null>(null);
   const [colleges, setColleges] = useState<CollegeAnalytics[]>([]);
+  const [students, setStudents] = useState<StudentPerformance[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        // Reports view needs both datasets for its exports.
+        // The colleges list doubles as the filter's options, so it's always needed.
+        setColleges(await analyticsService.getColleges());
         if (view === "platform" || view === "reports") {
-          setPlatform(await analyticsService.getPlatform(days));
+          setPlatform(await analyticsService.getPlatform(days, collegeId || undefined));
         }
-        if (view === "colleges" || view === "reports") {
-          setColleges(await analyticsService.getColleges());
+        if (view === "reports") {
+          setStudents(await analyticsService.getStudentPerformance(collegeId || undefined));
         }
       } catch (error) {
         toast.error("Failed to load analytics");
@@ -66,7 +70,7 @@ export default function AnalyticsPage() {
       }
     };
     load();
-  }, [view, days]);
+  }, [view, days, collegeId]);
 
   const meta = VIEW_TITLES[view] || VIEW_TITLES.platform;
 
@@ -82,9 +86,16 @@ export default function AnalyticsPage() {
       ) : view === "colleges" ? (
         <CollegesView colleges={colleges} />
       ) : view === "reports" ? (
-        <ReportsView platform={platform} colleges={colleges} />
+        <ReportsView platform={platform} colleges={colleges} students={students} />
       ) : (
-        <PlatformView platform={platform} days={days} setDays={setDays} />
+        <PlatformView
+          platform={platform}
+          days={days}
+          setDays={setDays}
+          collegeId={collegeId}
+          setCollegeId={setCollegeId}
+          colleges={colleges}
+        />
       )}
     </div>
   );
@@ -94,10 +105,16 @@ function PlatformView({
   platform,
   days,
   setDays,
+  collegeId,
+  setCollegeId,
+  colleges,
 }: {
   platform: PlatformAnalytics | null;
   days: number;
   setDays: (d: number) => void;
+  collegeId: string;
+  setCollegeId: (id: string) => void;
+  colleges: CollegeAnalytics[];
 }) {
   const s = platform?.summary;
   const cards = [
@@ -111,8 +128,8 @@ function PlatformView({
 
   return (
     <>
-      <div className="mb-6 flex gap-2">
-        {[7, 30, 90].map((d) => (
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        {[7, 30, 90, 365].map((d) => (
           <button
             key={d}
             onClick={() => setDays(d)}
@@ -125,6 +142,18 @@ function PlatformView({
             Last {d} days
           </button>
         ))}
+        <select
+          value={collegeId}
+          onChange={(e) => setCollegeId(e.target.value)}
+          className="ml-auto px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Colleges</option>
+          {colleges.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -217,11 +246,55 @@ function CollegesView({ colleges }: { colleges: CollegeAnalytics[] }) {
 function ReportsView({
   platform,
   colleges,
+  students,
 }: {
   platform: PlatformAnalytics | null;
   colleges: CollegeAnalytics[];
+  students: StudentPerformance[];
 }) {
   const reports = [
+    {
+      name: "Student Performance",
+      description: "Per-student exams taken, average score, and last exam date across all colleges.",
+      disabled: students.length === 0,
+      onDownload: () =>
+        downloadCsv(
+          "student-performance.csv",
+          ["Student", "Email", "College", "Exams Taken", "Avg Score", "Last Exam"],
+          students.map((s) => [
+            s.name,
+            s.email,
+            s.college_name || "",
+            s.exams_taken,
+            s.avg_score,
+            s.last_exam_at ? new Date(s.last_exam_at).toLocaleDateString() : "",
+          ])
+        ),
+    },
+    {
+      name: "Question Usage",
+      description: "Question bank distribution per category.",
+      disabled: !platform || platform.questions_by_category.length === 0,
+      onDownload: () =>
+        downloadCsv(
+          "question-usage.csv",
+          ["Category", "Questions"],
+          platform!.questions_by_category.map((r) => [r.category, r.count])
+        ),
+    },
+    {
+      name: "College Comparison",
+      description: "Per-college students, attempts, average score and fees collected.",
+      disabled: colleges.length === 0,
+      onDownload: () =>
+        downloadCsv(
+          "college-comparison.csv",
+          ["College", "Status", "Students", "Attempts", "Avg Score", "Paid Students", "Collected (INR)"],
+          colleges.map((c) => [
+            c.name, c.status, c.student_count, c.attempts, c.avg_score, c.paid_students, c.collected,
+          ])
+        ),
+    },
     {
       name: "Platform Summary",
       description: "Headline totals: users, colleges, questions, attempts, scores.",
@@ -235,34 +308,10 @@ function ReportsView({
         );
       },
     },
-    {
-      name: "College Performance",
-      description: "Per-college students, attempts, average score and fees collected.",
-      disabled: colleges.length === 0,
-      onDownload: () =>
-        downloadCsv(
-          "college-performance.csv",
-          ["College", "Status", "Students", "Attempts", "Avg Score", "Paid Students", "Collected (INR)"],
-          colleges.map((c) => [
-            c.name, c.status, c.student_count, c.attempts, c.avg_score, c.paid_students, c.collected,
-          ])
-        ),
-    },
-    {
-      name: "Question Bank by Category",
-      description: "Question counts per category.",
-      disabled: !platform || platform.questions_by_category.length === 0,
-      onDownload: () =>
-        downloadCsv(
-          "questions-by-category.csv",
-          ["Category", "Questions"],
-          platform!.questions_by_category.map((r) => [r.category, r.count])
-        ),
-    },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {reports.map((r) => (
         <div key={r.name} className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col">
           <h3 className="font-semibold text-gray-900">{r.name}</h3>

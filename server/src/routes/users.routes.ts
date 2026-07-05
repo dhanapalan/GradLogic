@@ -27,6 +27,17 @@ router.get(
 );
 
 /**
+ * Create user (invite)
+ * POST /api/superadmin/users
+ */
+router.post(
+  "/",
+  authenticate,
+  authorize("super_admin"),
+  usersController.createUser
+);
+
+/**
  * Get single user details
  * GET /api/superadmin/users/:id
  */
@@ -49,7 +60,7 @@ router.put(
 );
 
 /**
- * Delete user (soft delete)
+ * Deactivate user (sets is_active=false, status=inactive)
  * DELETE /api/superadmin/users/:id
  */
 router.delete(
@@ -57,6 +68,17 @@ router.delete(
   authenticate,
   authorize("super_admin"),
   usersController.deleteUser
+);
+
+/**
+ * Activate user
+ * POST /api/superadmin/users/:id/activate
+ */
+router.post(
+  "/:id/activate",
+  authenticate,
+  authorize("super_admin"),
+  usersController.activateUser
 );
 
 /**

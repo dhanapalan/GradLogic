@@ -2,7 +2,7 @@ import { useParams, useNavigate, Link } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, BookOpen, Clock, CheckCircle2, Play, Lock,
-  GraduationCap, Award, Users, ChevronRight, AlertCircle, Video,
+  GraduationCap, Award, ChevronRight, AlertCircle, Video,
   Code2, FileText, Mic
 } from "lucide-react";
 import api from "../../lib/api";

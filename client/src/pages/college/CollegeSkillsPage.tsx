@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  GraduationCap, Users, BookOpen, TrendingUp, Award, Target,
+  GraduationCap, Users, BookOpen, Award, Target,
   CheckCircle2, AlertTriangle, ChevronRight, Zap, BarChart3
 } from "lucide-react";
 import api from "../../lib/api";

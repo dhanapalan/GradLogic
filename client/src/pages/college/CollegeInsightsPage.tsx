@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChartBarIcon,
@@ -24,7 +23,6 @@ import {
   Line,
   Legend
 } from "recharts";
-import api from "../../lib/api";
 
 const MOCK_DEPARTMENT_DATA = [
   { name: "Computer Science", employability: 85, skill_score: 82, students: 450 },

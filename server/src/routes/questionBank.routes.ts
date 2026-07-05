@@ -14,11 +14,23 @@ const categoryEnum = z.enum([
   "aptitude",
   "data_structures",
   "programming",
+  "python_coding",
+  "java_coding",
+  "data_science",
 ]);
 
 const questionTypeEnum = z.enum(["multiple_choice", "coding_challenge"]);
 
 const difficultyEnum = z.enum(["easy", "medium", "hard"]);
+
+const bloomLevelEnum = z.enum([
+  "remember",
+  "understand",
+  "apply",
+  "analyze",
+  "evaluate",
+  "create",
+]);
 
 const createQuestionSchema = z
   .object({
@@ -44,6 +56,8 @@ const createQuestionSchema = z
     marks: z.number().min(0).max(100).optional(),
     tags: z.array(z.string()).optional(),
     explanation: z.string().nullable().optional(),
+    bloom_level: bloomLevelEnum.nullable().optional(),
+    status: z.string().optional(),
   })
   .refine(
     (q) =>

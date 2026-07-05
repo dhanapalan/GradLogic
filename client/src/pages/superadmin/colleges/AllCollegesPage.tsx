@@ -1,42 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
-
-interface College {
-  id: string;
-  name: string;
-  email: string;
-  city: string;
-  status: "active" | "pending" | "suspended";
-  students: number;
-  admins: number;
-  createdAt: string;
-}
+import collegeService, { College } from "../../../services/collegeService";
 
 export default function AllCollegesPage() {
-  const [colleges] = useState<College[]>([
-    {
-      id: "1",
-      name: "Demo College",
-      email: "college@democollege.edu",
-      city: "Bangalore",
-      status: "active",
-      students: 150,
-      admins: 3,
-      createdAt: "2025-06-15",
-    },
-  ]);
-
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "suspended">("all");
 
-  const filtered = colleges.filter((c) => {
-    const matchSearch =
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const { colleges: data } = await collegeService.getAllColleges(
+          statusFilter === "all" ? undefined : statusFilter,
+          search || undefined
+        );
+        setColleges(data);
+      } catch {
+        setColleges([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    const debounce = setTimeout(load, 300);
+    return () => clearTimeout(debounce);
+  }, [search, statusFilter]);
 
   return (
     <div className="p-8">
@@ -100,32 +91,45 @@ export default function AllCollegesPage() {
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">City</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Students</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Admins</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
               <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filtered.map((college) => (
-              <tr key={college.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">{college.name}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{college.email}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{college.city}</td>
-                <td className="px-6 py-4 text-sm text-gray-900 font-medium">{college.students}</td>
-                <td className="px-6 py-4 text-sm text-gray-900 font-medium">{college.admins}</td>
-                <td className="px-6 py-4">
-                  <StatusBadge status={college.status} size="sm" />
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  <button className="text-blue-600 hover:text-blue-700 font-medium">View</button>
-                </td>
-              </tr>
-            ))}
+            {loading ? (
+              [1, 2, 3].map((i) => (
+                <tr key={i} className="animate-pulse">
+                  <td className="px-6 py-4" colSpan={6}>
+                    <div className="h-4 bg-gray-200 rounded w-1/3" />
+                  </td>
+                </tr>
+              ))
+            ) : (
+              colleges.map((college) => (
+                <tr key={college.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{college.name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{college.email || "—"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{college.city || "—"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900 font-medium">{college.student_count}</td>
+                  <td className="px-6 py-4">
+                    <StatusBadge status={college.status} size="sm" />
+                  </td>
+                  <td className="px-6 py-4 text-sm">
+                    <Link
+                      to={`/app/superadmin/colleges/${college.id}`}
+                      className="text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {filtered.length === 0 && (
+      {!loading && colleges.length === 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
           <p className="text-gray-600">No colleges found</p>
         </div>

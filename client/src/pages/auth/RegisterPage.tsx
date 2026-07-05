@@ -12,7 +12,7 @@ import { getLandingPath } from "../../components/ProtectedRoute";
 import {
   GraduationCap, Building2, Eye, EyeOff, Loader2,
   CheckCircle2, User, Mail, Lock, Phone, BookOpen, Calendar,
-  Briefcase, Globe, MapPin,
+  Briefcase, MapPin,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

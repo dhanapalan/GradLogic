@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   TrendingUp, Users, GraduationCap, BookOpen, Award, Building2,
-  Target, Zap, BarChart3, CheckCircle2, ChevronRight, ArrowUpRight
+  Target, Zap, BarChart3, CheckCircle2, ArrowUpRight
 } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import api from "../../lib/api";

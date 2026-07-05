@@ -4,7 +4,7 @@ import api from "../../lib/api";
 import {
   Briefcase, Users, Star, Gift, TrendingUp,
   Plus, ChevronRight, Clock, CheckCircle2, Circle, AlertCircle,
-  GraduationCap, Upload,
+  GraduationCap,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

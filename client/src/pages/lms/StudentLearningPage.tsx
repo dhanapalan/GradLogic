@@ -55,10 +55,6 @@ interface Enrollment {
   status: string;
 }
 
-interface CourseWithProgress extends Course {
-  enrollment?: Enrollment;
-}
-
 interface Module {
   id: string;
   title: string;

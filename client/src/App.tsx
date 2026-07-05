@@ -23,8 +23,6 @@ import LandingPage from "./pages/public/LandingPage";
 import PricingPage from "./pages/public/PricingPage";
 import AboutPage from "./pages/public/AboutPage";
 import ContactPage from "./pages/public/ContactPage";
-import LateralPage from "./pages/public/LateralPage";
-import LateralContactPage from "./pages/public/LateralContactPage";
 import CampusPage from "./pages/public/CampusPage";
 import CampusContactPage from "./pages/public/CampusContactPage";
 import PrivacyPage from "./pages/public/PrivacyPage";
@@ -132,7 +130,6 @@ const CourseDetailBuilder = lazy(() =>
 );
 const StudentProgramPage = lazy(() => import("./pages/student/StudentProgramPage"));
 const ModulePlayerPage = lazy(() => import("./pages/student/ModulePlayerPage"));
-const CollegeSkillsPage = lazy(() => import("./pages/college/CollegeSkillsPage"));
 
 const NotAuthorizedPage = lazy(() => import("./pages/NotAuthorizedPage"));
 const StudentOnboardingWizard = lazy(() => import("./components/StudentOnboardingWizard"));
@@ -151,9 +148,18 @@ const SuperAdminDashboard = lazy(() => import("./pages/superadmin/dashboard/Dash
 const SuperAdminColleges = lazy(() => import("./pages/superadmin/colleges/AllCollegesPage"));
 const SuperAdminCollegeRequests = lazy(() => import("./pages/superadmin/colleges/CollegeRequestsPage"));
 const SuperAdminAddCollege = lazy(() => import("./pages/superadmin/colleges/AddCollegePage"));
+const SuperAdminCollegeDetail = lazy(() => import("./pages/superadmin/colleges/CollegeDetailPage"));
+
+// Students (global roster across all colleges)
+const SuperAdminStudents = lazy(() => import("./pages/superadmin/students/AllStudentsPage"));
+const SuperAdminStudentDetail = lazy(() => import("./pages/superadmin/students/StudentDetailPage"));
+
+// Approvals (dedicated cross-cutting page)
+const SuperAdminApprovals = lazy(() => import("./pages/superadmin/approvals/ApprovalsPage"));
 
 // Users
 const SuperAdminUsers = lazy(() => import("./pages/superadmin/users/AllUsersPage"));
+const SuperAdminUserDetail = lazy(() => import("./pages/superadmin/users/UserDetailPage"));
 
 // Roles
 const SuperAdminRoleManagement = lazy(() => import("./pages/superadmin/roles/RoleManagementPage"));
@@ -170,6 +176,7 @@ const SuperAdminImportBooks = lazy(() => import("./pages/superadmin/question-ban
 
 // Workflows
 const SuperAdminWorkflows = lazy(() => import("./pages/superadmin/workflows/WorkflowsPage"));
+const SuperAdminWorkflowDetail = lazy(() => import("./pages/superadmin/workflows/WorkflowDetailPage"));
 
 // Analytics
 const SuperAdminAnalytics = lazy(() => import("./pages/superadmin/analytics/AnalyticsPage"));
@@ -284,9 +291,18 @@ export default function App() {
               <Route path="colleges" element={<SuperAdminColleges />} />
               <Route path="colleges/requests" element={<SuperAdminCollegeRequests />} />
               <Route path="colleges/new" element={<SuperAdminAddCollege />} />
+              <Route path="colleges/:id" element={<SuperAdminCollegeDetail />} />
+
+              {/* Students */}
+              <Route path="students" element={<SuperAdminStudents />} />
+              <Route path="students/:id" element={<SuperAdminStudentDetail />} />
+
+              {/* Approvals */}
+              <Route path="approvals" element={<SuperAdminApprovals />} />
 
               {/* Users */}
               <Route path="users" element={<SuperAdminUsers />} />
+              <Route path="users/:id" element={<SuperAdminUserDetail />} />
 
               {/* Roles */}
               <Route path="roles" element={<SuperAdminRoleManagement />} />
@@ -303,6 +319,7 @@ export default function App() {
 
               {/* Workflows */}
               <Route path="workflows" element={<SuperAdminWorkflows />} />
+              <Route path="workflows/:id" element={<SuperAdminWorkflowDetail />} />
 
               {/* Analytics */}
               <Route path="analytics" element={<SuperAdminAnalytics />} />

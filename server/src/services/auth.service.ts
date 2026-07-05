@@ -85,6 +85,7 @@ export async function loginUser(email: string, password: string, ip?: string) {
 
   // Audit: successful login
   logLogin(user.id, user.email, user.role, ip).catch(() => { });
+  queryOne("UPDATE users SET last_login = NOW() WHERE id = $1", [user.id]).catch(() => { });
 
   return {
     accessToken,
@@ -241,8 +242,7 @@ export async function loginWithMicrosoft(code: string, ip?: string) {
       throw new AppError("User not found or inactive. Please contact an administrator.", 401);
     }
 
-    // Update login_type and last_login_at
-    await queryOne("UPDATE users SET last_login_at = NOW(), login_type = 'Microsoft_SSO' WHERE id = $1", [user.id]);
+    await queryOne("UPDATE users SET last_login = NOW() WHERE id = $1", [user.id]);
 
     const payload: AuthPayload = {
       userId: user.id,

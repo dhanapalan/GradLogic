@@ -6,6 +6,7 @@ import NotificationBell from "../../components/NotificationBell";
 import {
   HomeIcon,
   UsersIcon,
+  UserGroupIcon,
   ClipboardDocumentListIcon,
   ArrowRightOnRectangleIcon,
   AcademicCapIcon,
@@ -16,6 +17,7 @@ import {
   Cog6ToothIcon,
   EnvelopeIcon,
   ChevronRightIcon,
+  CheckBadgeIcon,
 } from "@heroicons/react/24/outline";
 
 type IconType = React.ForwardRefExoticComponent<
@@ -47,6 +49,8 @@ const navigation: NavEntry[] = [
       { name: "College Requests", href: `${BASE}/colleges/requests` },
     ],
   },
+  { name: "Students", icon: UserGroupIcon, href: `${BASE}/students` },
+  { name: "Approvals", icon: CheckBadgeIcon, href: `${BASE}/approvals` },
   {
     name: "Users",
     icon: UsersIcon,
@@ -88,9 +92,11 @@ const navigation: NavEntry[] = [
     name: "AI Configuration",
     icon: Cog6ToothIcon,
     children: [
+      { name: "API Keys & Services", href: `${BASE}/ai-config?tab=services` },
       { name: "Model Settings", href: `${BASE}/ai-config` },
       { name: "Prompt Templates", href: `${BASE}/ai-config?tab=prompts` },
       { name: "Usage Quotas", href: `${BASE}/ai-config?tab=quotas` },
+      { name: "Usage Monitoring", href: `${BASE}/ai-config?tab=usage` },
     ],
   },
   { name: "Notifications", icon: EnvelopeIcon, href: `${BASE}/notifications` },

@@ -189,10 +189,6 @@ export default function MockInterviewFeedbackPage() {
     );
   }
 
-  const overallColor =
-    feedback.overall_score >= 75 ? "#22c55e" :
-    feedback.overall_score >= 50 ? "#f59e0b" : "#ef4444";
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Top bar */}

@@ -108,14 +108,52 @@ class UserService {
   }
 
   /**
-   * Delete user
+   * Deactivate user (sets is_active=false)
    */
-  async deleteUser(userId: string): Promise<{ success: boolean; message: string }> {
+  async deactivateUser(userId: string): Promise<{ success: boolean; message: string }> {
     try {
       const response = await api.delete(`/superadmin/users/${userId}`);
       return response.data;
     } catch (error) {
-      console.error(`Failed to delete user ${userId}:`, error);
+      console.error(`Failed to deactivate user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /** @deprecated use deactivateUser */
+  async deleteUser(userId: string) {
+    return this.deactivateUser(userId);
+  }
+
+  /**
+   * Activate user
+   */
+  async activateUser(userId: string): Promise<{ success: boolean; message: string; data?: User }> {
+    try {
+      const response = await api.post(`/superadmin/users/${userId}/activate`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to activate user ${userId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create / invite user
+   */
+  async createUser(data: {
+    full_name: string;
+    email: string;
+    password: string;
+    role: string;
+    phone?: string;
+    college_id?: string;
+  }): Promise<User> {
+    try {
+      const response = await api.post("/superadmin/users", data);
+      return response.data?.data;
+    } catch (error) {
+      console.error("Failed to create user:", error);
       throw error;
     }
   }
@@ -153,7 +191,7 @@ class UserService {
    */
   async bulkUserAction(
     userIds: string[],
-    action: "suspend" | "delete" | "activate",
+    action: "suspend" | "delete" | "deactivate" | "activate",
     reason?: string
   ): Promise<{ success: boolean; message: string; affected_rows: number }> {
     try {

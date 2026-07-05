@@ -9,8 +9,21 @@ export interface Question {
   difficulty_level: "easy" | "medium" | "hard";
   tags: string[] | null;
   status: string;
+  bloom_level: string | null;
   is_active: boolean;
   created_at: string;
+}
+
+export interface QuestionSearchFilters {
+  search?: string;
+  category?: string;
+  type?: string;
+  difficulty?: string;
+  bloomLevel?: string;
+  source?: "ai-generated" | "manual";
+  status?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface Category {
@@ -19,6 +32,7 @@ export interface Category {
   slug: string;
   description: string;
   question_count: number;
+  is_active?: boolean;
   topics?: Topic[];
 }
 
@@ -47,20 +61,22 @@ class QuestionBankService {
    * Search questions with filters
    */
   async searchQuestions(
-    search?: string,
-    category?: string,
-    difficulty?: string,
-    page = 1,
-    limit = 50
+    filters: QuestionSearchFilters = {}
   ): Promise<{ questions: Question[]; total: number }> {
     try {
+      const page = filters.page || 1;
+      const limit = filters.limit || 50;
       const params = new URLSearchParams({
         limit: limit.toString(),
         offset: ((page - 1) * limit).toString(),
       });
-      if (search) params.append("search", search);
-      if (category) params.append("category", category);
-      if (difficulty) params.append("difficulty_level", difficulty);
+      if (filters.search) params.append("search", filters.search);
+      if (filters.category) params.append("category", filters.category);
+      if (filters.type) params.append("type", filters.type);
+      if (filters.difficulty) params.append("difficulty_level", filters.difficulty);
+      if (filters.bloomLevel) params.append("bloom_level", filters.bloomLevel);
+      if (filters.source) params.append("source", filters.source);
+      if (filters.status) params.append("status", filters.status);
 
       const response = await api.get(`/superadmin/question-bank?${params}`);
       return {
@@ -71,6 +87,20 @@ class QuestionBankService {
       console.error("Failed to search questions:", error);
       throw error;
     }
+  }
+
+  /**
+   * Bulk publish or archive questions
+   */
+  async bulkAction(
+    action: "publish" | "archive",
+    questionIds: string[]
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await api.post("/superadmin/question-bank/bulk-action", {
+      action,
+      questionIds,
+    });
+    return response.data;
   }
 
   /**
@@ -155,16 +185,34 @@ class QuestionBankService {
   }
 
   /**
-   * Delete category
+   * Update category
    */
-  async deleteCategory(id: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await api.delete(`/superadmin/categories/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Failed to delete category ${id}:`, error);
-      throw error;
-    }
+  async updateCategory(
+    id: string,
+    data: { name?: string; description?: string; is_active?: boolean }
+  ): Promise<Category> {
+    const response = await api.put(`/superadmin/categories/${id}`, data);
+    return response.data?.data;
+  }
+
+  /**
+   * Deactivate category
+   */
+  async deactivateCategory(id: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.delete(`/superadmin/categories/${id}`);
+    return response.data;
+  }
+
+  /** @deprecated use deactivateCategory */
+  async deleteCategory(id: string) {
+    return this.deactivateCategory(id);
+  }
+
+  /**
+   * Deactivate question (sets is_active=false)
+   */
+  async deactivateQuestion(id: string): Promise<{ success: boolean; message: string }> {
+    return this.deleteQuestion(id);
   }
 
   /**
@@ -184,7 +232,7 @@ class QuestionBankService {
   }
 
   /**
-   * Bulk-create questions (used by book pack imports)
+   * Bulk-create questions (used by book pack imports and CSV import)
    */
   async bulkCreateQuestions(
     questions: Array<{
@@ -197,10 +245,14 @@ class QuestionBankService {
       explanation?: string;
       tags?: string[];
       marks?: number;
+      bloom_level?: string;
     }>
-  ): Promise<{ created: number }> {
+  ): Promise<{ created: number; errors: Array<{ index: number; error: string }> }> {
     const response = await api.post("/superadmin/question-bank/bulk", { questions });
-    return { created: response.data?.data?.length ?? questions.length };
+    return {
+      created: response.data?.data?.length ?? 0,
+      errors: response.data?.errors || [],
+    };
   }
 
   /**
@@ -258,9 +310,9 @@ class QuestionBankService {
   /**
    * Approve AI-generated question
    */
-  async approveQuestion(id: string): Promise<{ success: boolean; message: string }> {
+  async approveQuestion(id: string, note?: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post(`/superadmin/review-queue/${id}/approve`);
+      const response = await api.post(`/superadmin/review-queue/${id}/approve`, { note });
       return response.data;
     } catch (error) {
       console.error(`Failed to approve question ${id}:`, error);

@@ -4,7 +4,7 @@
 // =============================================================================
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "../../lib/api";
 import {
   Code2,
@@ -16,7 +16,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Clock,
-  Zap,
   Trophy,
   Target,
   BookOpen,
@@ -24,7 +23,6 @@ import {
   RefreshCw,
   Terminal,
   Send,
-  AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 

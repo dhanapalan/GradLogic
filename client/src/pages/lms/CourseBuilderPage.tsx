@@ -16,17 +16,14 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
-  Clock,
   Users,
   Eye,
-  EyeOff,
   Save,
   Video,
   FileText,
   Code2,
   BarChart3,
   GripVertical,
-  MoreHorizontal,
   Check,
   X,
 } from "lucide-react";
@@ -85,60 +82,6 @@ const STATUS_BADGE: Record<string, string> = {
   published: "bg-green-100 text-green-700",
   archived: "bg-red-100 text-red-700",
 };
-
-// ─── InlineEdit ───────────────────────────────────────────────────────────────
-
-function InlineEdit({
-  value,
-  onSave,
-  placeholder = "Click to edit",
-  className = "",
-}: {
-  value: string;
-  onSave: (v: string) => void;
-  placeholder?: string;
-  className?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(value);
-
-  if (!editing) {
-    return (
-      <button
-        onClick={() => setEditing(true)}
-        className={`text-left hover:bg-slate-100 rounded px-1 py-0.5 cursor-pointer ${className}`}
-      >
-        {value || <span className="text-slate-400">{placeholder}</span>}
-      </button>
-    );
-  }
-  return (
-    <div className="flex items-center gap-1">
-      <input
-        autoFocus
-        className={`border-b border-indigo-500 focus:outline-none bg-transparent ${className}`}
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { onSave(val); setEditing(false); }
-          if (e.key === "Escape") { setVal(value); setEditing(false); }
-        }}
-      />
-      <button
-        onClick={() => { onSave(val); setEditing(false); }}
-        className="text-green-600 hover:text-green-700"
-      >
-        <Check className="h-4 w-4" />
-      </button>
-      <button
-        onClick={() => { setVal(value); setEditing(false); }}
-        className="text-slate-400 hover:text-slate-600"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
 
 // ─── CourseForm ───────────────────────────────────────────────────────────────
 

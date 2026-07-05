@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlusIcon, TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, PencilIcon } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import questionBankService from "../../../services/questionBankService";
 
@@ -9,6 +9,7 @@ interface Category {
   slug: string;
   description: string;
   question_count: number;
+  is_active?: boolean;
   topics?: Topic[];
 }
 
@@ -26,6 +27,8 @@ export default function CategoriesPage() {
     name: "",
     description: "",
   });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "" });
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -65,14 +68,41 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleDeleteCategory = async (id: string) => {
+  const handleDeactivateCategory = async (id: string) => {
+    if (!confirm("Deactivate this category? It can be reactivated later.")) return;
     try {
-      await questionBankService.deleteCategory(id);
-      setCategories(categories.filter((c) => c.id !== id));
-      toast.success("Category deleted");
+      await questionBankService.deactivateCategory(id);
+      setCategories(categories.map((c) => (c.id === id ? { ...c, is_active: false } : c)));
+      toast.success("Category deactivated");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete category");
-      console.error(error);
+      toast.error(error.response?.data?.message || "Failed to deactivate category");
+    }
+  };
+
+  const handleActivateCategory = async (id: string) => {
+    try {
+      await questionBankService.updateCategory(id, { is_active: true });
+      setCategories(categories.map((c) => (c.id === id ? { ...c, is_active: true } : c)));
+      toast.success("Category activated");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to activate category");
+    }
+  };
+
+  const startEdit = (category: Category) => {
+    setEditingId(category.id);
+    setEditForm({ name: category.name, description: category.description || "" });
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    try {
+      const updated = await questionBankService.updateCategory(editingId, editForm);
+      setCategories(categories.map((c) => (c.id === editingId ? { ...c, ...updated } : c)));
+      setEditingId(null);
+      toast.success("Category updated");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update category");
     }
   };
 
@@ -144,24 +174,65 @@ export default function CategoriesPage() {
       ) : (
         <div className="space-y-6">
           {categories.map((category) => (
-          <div key={category.id} className="bg-white rounded-lg border border-gray-200 p-6">
+          <div key={category.id} className={`bg-white rounded-lg border p-6 ${category.is_active === false ? "border-gray-200 opacity-75" : "border-gray-200"}`}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-900">{category.name}</h3>
-                <p className="text-sm text-gray-600 mt-1">{category.description}</p>
-                <p className="text-xs text-gray-500 mt-2">{category.question_count ?? 0} questions</p>
+                {editingId === category.id ? (
+                  <div className="space-y-2">
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg font-semibold"
+                    />
+                    <textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={saveEdit} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm">Save</button>
+                      <button onClick={() => setEditingId(null)} className="px-3 py-1.5 border rounded-lg text-sm">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xl font-semibold text-gray-900">{category.name}</h3>
+                      {category.is_active === false && (
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">Inactive</span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{category.description}</p>
+                    <p className="text-xs text-gray-500 mt-2">{category.question_count ?? 0} questions</p>
+                  </>
+                )}
               </div>
-              <div className="flex gap-2">
-                <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                  <PencilIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleDeleteCategory(category.id)}
-                  className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-              </div>
+              {editingId !== category.id && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => startEdit(category)}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <PencilIcon className="w-5 h-5" />
+                  </button>
+                  {category.is_active === false ? (
+                    <button
+                      onClick={() => handleActivateCategory(category.id)}
+                      className="px-3 py-1.5 text-sm text-green-700 border border-green-300 rounded-lg hover:bg-green-50"
+                    >
+                      Activate
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleDeactivateCategory(category.id)}
+                      className="px-3 py-1.5 text-sm text-red-700 border border-red-300 rounded-lg hover:bg-red-50"
+                    >
+                      Deactivate
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Topics */}
@@ -175,9 +246,6 @@ export default function CategoriesPage() {
                         <p className="text-sm font-medium text-gray-900">{topic.name}</p>
                         <p className="text-xs text-gray-500">{topic.questionCount} questions</p>
                       </div>
-                      <button className="text-red-500 hover:text-red-700">
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
                     </div>
                   ))}
                 </div>

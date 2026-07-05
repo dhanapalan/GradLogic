@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import bcrypt from "bcryptjs";
 import { query } from "../config/database.js";
 
 /**
@@ -248,13 +249,12 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 /**
- * Delete user (soft delete)
+ * Deactivate user (soft delete via is_active / status flags)
  */
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Check if user exists
     const userCheck = await query(
       "SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL",
       [id]
@@ -267,21 +267,120 @@ export const deleteUser = async (req: Request, res: Response) => {
       });
     }
 
-    // Soft delete
     await query(
-      "UPDATE users SET deleted_at = NOW(), status = 'deleted' WHERE id = $1",
+      `UPDATE users SET status = 'inactive', is_active = FALSE, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL`,
       [id]
+    );
+
+    await query(
+      `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.user?.userId || "system", "DEACTIVATE_USER", "user", id, req.ip]
     );
 
     res.json({
       success: true,
-      message: "User deleted successfully",
+      message: "User deactivated successfully",
     });
   } catch (error: any) {
-    console.error("Error deleting user:", error);
+    console.error("Error deactivating user:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to delete user",
+      message: "Failed to deactivate user",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Activate a previously deactivated user
+ */
+export const activateUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      `UPDATE users SET status = 'active', is_active = TRUE, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING id, full_name, email, status`,
+      [id]
+    );
+
+    if (result.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await query(
+      `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [req.user?.userId || "system", "ACTIVATE_USER", "user", id, req.ip]
+    );
+
+    res.json({
+      success: true,
+      message: "User activated successfully",
+      data: result[0],
+    });
+  } catch (error: any) {
+    console.error("Error activating user:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to activate user",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Create a new platform user (invite)
+ */
+export const createUser = async (req: Request, res: Response) => {
+  try {
+    const { full_name, email, password, role, phone, college_id } = req.body;
+
+    if (!full_name || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "full_name, email, password, and role are required",
+      });
+    }
+
+    const emailCheck = await query(
+      "SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL",
+      [email]
+    );
+    if (emailCheck.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already in use",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const isCollegeRole = ["college_admin", "college_staff", "college", "student"].includes(role);
+    const finalCollegeId = isCollegeRole && college_id ? college_id : null;
+
+    const result = await query(
+      `INSERT INTO users (full_name, name, email, password, role, phone, college_id, is_active, status)
+       VALUES ($1, $1, $2, $3, $4::user_role, $5, $6, TRUE, 'active')
+       RETURNING id, full_name, email, phone, role, status, college_id, created_at`,
+      [full_name, email, hashedPassword, role, phone ?? null, finalCollegeId]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      data: result[0],
+    });
+  } catch (error: any) {
+    console.error("Error creating user:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create user",
       error: error.message,
     });
   }
@@ -411,20 +510,20 @@ export const bulkUserAction = async (req: Request, res: Response) => {
       });
     }
 
-    if (!action || !["suspend", "delete", "activate"].includes(action)) {
+    if (!action || !["suspend", "delete", "deactivate", "activate"].includes(action)) {
       return res.status(400).json({
         success: false,
-        message: "Valid action (suspend, delete, activate) is required",
+        message: "Valid action (suspend, deactivate, activate) is required",
       });
     }
 
     let updateQuery = "";
     if (action === "suspend") {
       updateQuery = "UPDATE users SET status = 'suspended', updated_at = NOW() WHERE id = ANY($1) AND deleted_at IS NULL";
-    } else if (action === "delete") {
-      updateQuery = "UPDATE users SET deleted_at = NOW(), status = 'deleted' WHERE id = ANY($1) AND deleted_at IS NULL";
+    } else if (action === "delete" || action === "deactivate") {
+      updateQuery = "UPDATE users SET status = 'inactive', is_active = FALSE, updated_at = NOW() WHERE id = ANY($1) AND deleted_at IS NULL";
     } else if (action === "activate") {
-      updateQuery = "UPDATE users SET status = 'active', updated_at = NOW() WHERE id = ANY($1) AND deleted_at IS NULL";
+      updateQuery = "UPDATE users SET status = 'active', is_active = TRUE, updated_at = NOW() WHERE id = ANY($1) AND deleted_at IS NULL";
     }
 
     const result = await query(updateQuery, [user_ids]);

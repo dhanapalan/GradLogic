@@ -159,12 +159,13 @@ router.post(
         )
         .min(1)
         .max(50),
+      college_ids: z.array(z.string().uuid()).max(100).optional(),
     })
   ),
   async (req, res, next) => {
     try {
       const userId = (req as any).user?.userId;
-      const { questions } = req.body as {
+      const { questions, college_ids } = req.body as {
         questions: Array<{
           question: string;
           options?: string[];
@@ -175,17 +176,22 @@ router.post(
           tags?: string[];
           marks: number;
         }>;
+        college_ids?: string[];
       };
 
       let imported = 0;
+      let assigned = 0;
       for (const q of questions) {
         const category = VALID_CATEGORIES.has(q.category) ? q.category : "aptitude";
+        // Guarantee the 'ai-generated' provenance tag regardless of client input.
+        const tags = Array.from(new Set([...(q.tags || []), "ai-generated"]));
         try {
-          await query(
+          const rows = await query<{ id: string }>(
             `INSERT INTO question_bank
                (category, type, difficulty_level, question_text, options, correct_answer,
                 explanation, marks, tags, created_by, is_active)
-             VALUES ($1, 'multiple_choice', $2, $3, $4, $5, $6, $7, $8, $9, TRUE)`,
+             VALUES ($1, 'multiple_choice', $2, $3, $4, $5, $6, $7, $8, $9, TRUE)
+             RETURNING id`,
             [
               category,
               q.difficulty,
@@ -194,20 +200,47 @@ router.post(
               q.correct_answer,
               q.explanation || null,
               q.marks,
-              q.tags || ["ai-generated"],
+              tags,
               userId || null,
             ]
           );
           imported++;
+
+          const questionId = rows[0]?.id;
+          if (questionId && college_ids && college_ids.length > 0) {
+            for (const collegeId of college_ids) {
+              await query(
+                `INSERT INTO question_college_assignments (question_id, college_id, assigned_by)
+                 VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+                [questionId, collegeId, userId || null]
+              );
+              assigned++;
+            }
+          }
         } catch (e) {
           logger.error("Failed to import AI question:", e);
         }
       }
 
+      await query(
+        `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address, changes)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          userId || "system",
+          "IMPORT_AI_QUESTIONS",
+          "question_bank",
+          null,
+          req.ip,
+          JSON.stringify({ imported, total: questions.length, college_count: college_ids?.length || 0 }),
+        ]
+      ).catch((e) => logger.error("Audit log failed for AI import:", e));
+
       res.status(201).json({
         success: true,
-        message: `Imported ${imported} of ${questions.length} question(s) into the question bank`,
-        data: { imported, total: questions.length },
+        message:
+          `Imported ${imported} of ${questions.length} question(s) into the question bank` +
+          (college_ids && college_ids.length > 0 ? ` and assigned to ${college_ids.length} college(s)` : ""),
+        data: { imported, total: questions.length, assignments: assigned },
       });
     } catch (err) {
       next(err);

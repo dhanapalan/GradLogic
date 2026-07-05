@@ -6,8 +6,14 @@ import rolesRoutes from "./roles.routes.js";
 import auditTrailRoutes from "./auditTrail.routes.js";
 import workflowsRoutes from "./workflows.routes.js";
 import questionBankRoutes from "./questionBank.routes.js";
+import superadminStudentsRoutes from "./superadminStudents.routes.js";
 
 const router = Router();
+
+// ────────────────────────────────────────────────────────────────────
+// PHASE 3: GLOBAL STUDENTS
+// ────────────────────────────────────────────────────────────────────
+router.use("/students", superadminStudentsRoutes);
 
 // ────────────────────────────────────────────────────────────────────
 // PHASE 2: USERS MANAGEMENT
@@ -34,6 +40,15 @@ router.use("/workflows", workflowsRoutes);
 // ────────────────────────────────────────────────────────────────────
 router.use("/question-bank", questionBankRoutes);
 
+// Superadmin-only bulk actions — declared after the shared router above so
+// generic /question-bank/:id routes there don't shadow this literal path.
+router.post(
+  "/question-bank/bulk-action",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.bulkQuestionAction
+);
+
 // ────────────────────────────────────────────────────────────────────
 // ANALYTICS ENDPOINTS
 // ────────────────────────────────────────────────────────────────────
@@ -49,6 +64,50 @@ router.get(
   authenticate,
   authorize("super_admin"),
   superadminController.getAnalyticsColleges
+);
+
+router.get(
+  "/analytics/students",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.getAnalyticsStudents
+);
+
+// ────────────────────────────────────────────────────────────────────
+// AI USAGE MONITORING
+// ────────────────────────────────────────────────────────────────────
+router.get(
+  "/ai-usage",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.getAIUsage
+);
+
+// ────────────────────────────────────────────────────────────────────
+// AI SERVICES REGISTRY (key status)
+// ────────────────────────────────────────────────────────────────────
+router.get(
+  "/ai-services",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.getAIServices
+);
+
+router.post(
+  "/ai-services/:key/test",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.testAIService
+);
+
+// ────────────────────────────────────────────────────────────────────
+// BACKUP EXPORT
+// ────────────────────────────────────────────────────────────────────
+router.get(
+  "/backup/export",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.exportBackup
 );
 
 // ────────────────────────────────────────────────────────────────────
@@ -103,6 +162,20 @@ router.get(
   superadminController.getSystemAlerts
 );
 
+router.get(
+  "/metrics/live",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.getLiveDashboard
+);
+
+router.get(
+  "/metrics/dashboard",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.getDashboard
+);
+
 // ────────────────────────────────────────────────────────────────────
 // COLLEGES ENDPOINTS
 // ────────────────────────────────────────────────────────────────────
@@ -135,6 +208,13 @@ router.get(
   authenticate,
   authorize("super_admin"),
   superadminController.getCollege
+);
+
+router.get(
+  "/colleges/:id/students",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.getCollegeStudents
 );
 
 router.put(
@@ -190,6 +270,13 @@ router.post(
   superadminController.createCategory
 );
 
+router.put(
+  "/categories/:id",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.updateCategory
+);
+
 router.delete(
   "/categories/:id",
   authenticate,
@@ -238,6 +325,13 @@ router.post(
   authenticate,
   authorize("super_admin"),
   superadminController.createAnnouncement
+);
+
+router.post(
+  "/announcements/:id/activate",
+  authenticate,
+  authorize("super_admin"),
+  superadminController.activateAnnouncement
 );
 
 router.delete(

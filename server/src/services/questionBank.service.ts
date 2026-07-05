@@ -17,6 +17,9 @@ export interface QuestionFilters {
   tags?: string[];
   search?: string; // full-text search on question_text
   is_active?: boolean;
+  status?: string;
+  bloom_level?: string;
+  source?: "ai-generated" | "manual";
   limit?: number;
   offset?: number;
 }
@@ -38,6 +41,8 @@ export interface CreateQuestionInput {
   tags?: string[];
   explanation?: string | null;
   created_by?: string | null;
+  status?: string;
+  bloom_level?: string | null;
 }
 
 // ── QUERIES ──────────────────────────────────────────────────────────────────
@@ -69,6 +74,19 @@ export async function filterQuestions(filters: QuestionFilters = {}) {
   if (filters.tags && filters.tags.length > 0) {
     conditions.push(`tags && $${idx++}`); // overlap operator
     params.push(filters.tags);
+  }
+  if (filters.status) {
+    conditions.push(`status = $${idx++}`);
+    params.push(filters.status);
+  }
+  if (filters.bloom_level) {
+    conditions.push(`bloom_level = $${idx++}`);
+    params.push(filters.bloom_level);
+  }
+  if (filters.source === "ai-generated") {
+    conditions.push(`'ai-generated' = ANY(tags)`);
+  } else if (filters.source === "manual") {
+    conditions.push(`NOT ('ai-generated' = ANY(tags))`);
   }
   if (filters.search) {
     conditions.push(`to_tsvector('english', question_text) @@ plainto_tsquery('english', $${idx++})`);
@@ -116,8 +134,8 @@ export async function createQuestion(input: CreateQuestionInput) {
     `INSERT INTO question_bank
        (category, type, difficulty_level, question_text, options, correct_answer,
         test_cases, starter_code, time_limit_ms, memory_limit_kb, marks, tags,
-        explanation, created_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        explanation, created_by, bloom_level, status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
      RETURNING *`,
     [
       input.category,
@@ -134,6 +152,8 @@ export async function createQuestion(input: CreateQuestionInput) {
       input.tags ?? [],
       input.explanation ?? null,
       input.created_by ?? null,
+      input.bloom_level ?? null,
+      input.status ?? "published",
     ],
   );
 
@@ -200,6 +220,8 @@ export async function updateQuestion(id: string, input: Partial<CreateQuestionIn
     tags: (v) => v,
     explanation: (v) => v,
     created_by: (v) => v,
+    status: (v) => v,
+    bloom_level: (v) => v,
   };
 
   for (const [key, transform] of Object.entries(fieldMap)) {
@@ -239,15 +261,22 @@ export async function deleteQuestion(id: string) {
 }
 
 /**
- * Bulk insert questions (for AI-generated batches).
+ * Bulk insert questions (for AI-generated batches or CSV imports).
+ * Each row is inserted independently so one malformed row (e.g. from a
+ * hand-edited CSV) doesn't abort the rest of the batch.
  */
 export async function bulkInsert(inputs: CreateQuestionInput[]) {
   const rows: QuestionBankRow[] = [];
-  for (const input of inputs) {
-    const row = await createQuestion(input);
-    if (row) rows.push(row);
+  const errors: Array<{ index: number; error: string }> = [];
+  for (let i = 0; i < inputs.length; i++) {
+    try {
+      const row = await createQuestion(inputs[i]);
+      if (row) rows.push(row);
+    } catch (err) {
+      errors.push({ index: i, error: err instanceof Error ? err.message : String(err) });
+    }
   }
-  return rows;
+  return { rows, errors };
 }
 
 /**

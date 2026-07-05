@@ -44,7 +44,7 @@ export default function LearningPathDetailPage() {
   const enrollMutation = useMutation({
     mutationFn: () => api.post(`/lms/paths/${pathId}/enroll`),
     onSuccess: (res) => {
-      const { enrolled, skipped } = res.data.data;
+      const { enrolled } = res.data.data;
       if (enrolled > 0) toast.success(`Enrolled in ${enrolled} course${enrolled > 1 ? "s" : ""}!`);
       else toast.success("Already enrolled in all courses");
       setEnrolledAll(true);

@@ -1,9 +1,23 @@
 import api from "../lib/api";
 
+// Learning-pipeline stages (learn/practice/exam/certify) plus automation step
+// types; the backend stores type as a plain varchar so unknown values render too.
+export type WorkflowStepType =
+  | "learn"
+  | "practice"
+  | "exam"
+  | "certify"
+  | "assessment"
+  | "email"
+  | "notification"
+  | "approval"
+  | "delay"
+  | (string & {});
+
 export interface WorkflowStep {
   id?: string;
   name: string;
-  type: "assessment" | "email" | "notification" | "approval" | "delay";
+  type: WorkflowStepType;
   config: Record<string, any>;
   order?: number;
 }

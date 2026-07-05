@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   MagnifyingGlassIcon,
   PlusIcon,
   PencilIcon,
-  TrashIcon,
   CheckIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
-import workflowService, { Workflow, WorkflowFilters } from "../../../services/workflowService";
+import workflowService, { Workflow, WorkflowFilters, WorkflowStep } from "../../../services/workflowService";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 
 const TRIGGER_OPTIONS = [
@@ -26,8 +25,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   technical: "Technical Skills",
 };
 
+// The standard learning pipeline new workflows start with.
+const DEFAULT_STAGES: WorkflowStep[] = [
+  { name: "Learn", type: "learn", config: { description: "Study modules, videos, and reading material" } },
+  { name: "Practice", type: "practice", config: { description: "Practice questions with instant feedback" } },
+  { name: "Exam", type: "exam", config: { description: "Timed, proctored assessment" } },
+  { name: "Certify", type: "certify", config: { description: "Certificate issued on passing" } },
+];
+
 export default function WorkflowsPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const category = searchParams.get("category") || "";
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +46,7 @@ export default function WorkflowsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [seedDefaultStages, setSeedDefaultStages] = useState(true);
 
   const [newWorkflow, setNewWorkflow] = useState({
     name: "",
@@ -87,24 +96,19 @@ export default function WorkflowsPage() {
 
     setSubmitLoading(true);
     try {
-      await workflowService.createWorkflow({
+      const created = await workflowService.createWorkflow({
         name: newWorkflow.name,
         description: newWorkflow.description,
         trigger_event: newWorkflow.trigger_event,
         category: newWorkflow.category,
-        steps: [],
+        steps: seedDefaultStages ? DEFAULT_STAGES : [],
         conditions: [],
       });
 
       toast.success("Workflow created successfully");
-      setNewWorkflow({
-        name: "",
-        description: "",
-        trigger_event: "assessment_completed",
-        category: category || "aptitude",
-      });
       setShowCreateModal(false);
-      await loadWorkflows();
+      // Take the admin straight into the stage editor for the new workflow.
+      navigate(`/app/superadmin/workflows/${created.id}`);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to create workflow");
       console.error(error);
@@ -114,29 +118,18 @@ export default function WorkflowsPage() {
   };
 
   const handleToggleActive = async (workflow: Workflow) => {
+    const action = workflow.is_active ? "deactivate" : "activate";
+    if (!confirm(`${action === "deactivate" ? "Deactivate" : "Activate"} this workflow?`)) return;
     try {
       await workflowService.updateWorkflow(workflow.id, {
         is_active: !workflow.is_active,
       });
 
-      toast.success(`Workflow ${!workflow.is_active ? "activated" : "deactivated"}`);
+      toast.success(`Workflow ${action}d`);
       await loadWorkflows();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update workflow");
       console.error(error);
-    }
-  };
-
-  const handleDeleteWorkflow = async (workflowId: string) => {
-    if (confirm("Are you sure you want to delete this workflow?")) {
-      try {
-        await workflowService.deleteWorkflow(workflowId);
-        toast.success("Workflow deleted successfully");
-        await loadWorkflows();
-      } catch (error: any) {
-        toast.error(error.response?.data?.message || "Failed to delete workflow");
-        console.error(error);
-      }
     }
   };
 
@@ -211,7 +204,14 @@ export default function WorkflowsPage() {
             <tbody className="divide-y divide-gray-200">
               {workflows.map((workflow) => (
                 <tr key={workflow.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{workflow.name}</td>
+                  <td className="px-6 py-4 text-sm font-medium">
+                    <Link
+                      to={`/app/superadmin/workflows/${workflow.id}`}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      {workflow.name}
+                    </Link>
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {workflow.trigger_event.replace(/_/g, " ")}
                   </td>
@@ -227,18 +227,19 @@ export default function WorkflowsPage() {
                     {new Date(workflow.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-sm flex gap-2">
-                    <button className="text-blue-600 hover:text-blue-700">
+                    <button
+                      onClick={() => navigate(`/app/superadmin/workflows/${workflow.id}`)}
+                      className="text-blue-600 hover:text-blue-700"
+                      title="Edit stages"
+                    >
                       <PencilIcon className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleToggleActive(workflow)}>
+                    <button onClick={() => handleToggleActive(workflow)} title={workflow.is_active ? "Deactivate" : "Activate"}>
                       {workflow.is_active ? (
                         <XMarkIcon className="w-4 h-4 text-yellow-600" />
                       ) : (
                         <CheckIcon className="w-4 h-4 text-green-600" />
                       )}
-                    </button>
-                    <button onClick={() => handleDeleteWorkflow(workflow.id)}>
-                      <TrashIcon className="w-4 h-4 text-red-600" />
                     </button>
                   </td>
                 </tr>
@@ -356,6 +357,21 @@ export default function WorkflowsPage() {
                   ))}
                 </select>
               </div>
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={seedDefaultStages}
+                  onChange={(e) => setSeedDefaultStages(e.target.checked)}
+                  className="mt-1"
+                />
+                <span className="text-sm text-gray-700">
+                  Start with the default learning pipeline
+                  <span className="block text-xs text-gray-500">
+                    Learn → Practice → Exam → Certify (editable after creation)
+                  </span>
+                </span>
+              </label>
             </div>
 
             <div className="flex gap-3 mt-6">

@@ -12,8 +12,10 @@ export const list = async (
   next: NextFunction,
 ) => {
   try {
-    const { category, type, difficulty_level, tags, search, is_active, limit, offset } =
-      req.query as Record<string, string | undefined>;
+    const {
+      category, type, difficulty_level, tags, search, is_active,
+      status, bloom_level, source, limit, offset,
+    } = req.query as Record<string, string | undefined>;
 
     const result = await qbService.filterQuestions({
       category: category as QuestionCategory | undefined,
@@ -22,6 +24,9 @@ export const list = async (
       tags: tags ? (tags as string).split(",") : undefined,
       search: search as string | undefined,
       is_active: is_active !== undefined ? is_active === "true" : undefined,
+      status: status as string | undefined,
+      bloom_level: bloom_level as string | undefined,
+      source: source as "ai-generated" | "manual" | undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
     });
@@ -131,13 +136,18 @@ export const bulkCreate = async (
   next: NextFunction,
 ) => {
   try {
-    const rows = await qbService.bulkInsert(
+    const { rows, errors } = await qbService.bulkInsert(
       req.body.questions.map((q: any) => ({
         ...q,
         created_by: (req as any).user?.userId ?? null,
       })),
     );
-    res.status(201).json({ success: true, data: rows, message: `${rows.length} questions created` });
+    res.status(201).json({
+      success: true,
+      data: rows,
+      errors,
+      message: `${rows.length} question(s) created${errors.length > 0 ? `, ${errors.length} failed` : ""}`,
+    });
   } catch (err) {
     next(err);
   }

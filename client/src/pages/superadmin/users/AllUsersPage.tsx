@@ -20,11 +20,20 @@ export default function AllUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(50);
+  const [limit] = useState(50);
   const [total, setTotal] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<string>("");
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    role: "college_admin",
+    phone: "",
+  });
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -85,7 +94,7 @@ export default function AllUsersPage() {
     try {
       await userService.bulkUserAction(
         Array.from(selectedUsers),
-        bulkAction as "suspend" | "delete" | "activate"
+        bulkAction as "suspend" | "delete" | "deactivate" | "activate"
       );
 
       toast.success(`${bulkAction} completed for ${selectedUsers.size} users`);
@@ -111,16 +120,60 @@ export default function AllUsersPage() {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (confirm("Are you sure? This will soft delete the user.")) {
-      try {
-        await userService.deleteUser(userId);
-        toast.success("User deleted");
-        setUsers((prev) => prev.filter((u) => u.id !== userId));
-      } catch (error: any) {
-        toast.error(error.response?.data?.message || "Failed to delete user");
-        console.error(error);
+  const handleToggleActive = async (user: User) => {
+    const deactivate = user.status === "active" || user.status === "suspended";
+    if (
+      !confirm(
+        deactivate
+          ? "Deactivate this user? They can be reactivated later."
+          : "Activate this user?"
+      )
+    ) {
+      return;
+    }
+    try {
+      if (deactivate) {
+        await userService.deactivateUser(user.id);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: "inactive" } : u))
+        );
+        toast.success("User deactivated");
+      } else {
+        await userService.activateUser(user.id);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === user.id ? { ...u, status: "active" } : u))
+        );
+        toast.success("User activated");
       }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Action failed");
+    }
+  };
+
+  const handleInviteUser = async () => {
+    if (!inviteForm.full_name.trim() || !inviteForm.email.trim() || !inviteForm.password) {
+      toast.error("Name, email, and password are required");
+      return;
+    }
+    setInviteLoading(true);
+    try {
+      await userService.createUser({
+        full_name: inviteForm.full_name.trim(),
+        email: inviteForm.email.trim(),
+        password: inviteForm.password,
+        role: inviteForm.role,
+        phone: inviteForm.phone || undefined,
+      });
+      toast.success("User invited successfully");
+      setShowInvite(false);
+      setInviteForm({ full_name: "", email: "", password: "", role: "college_admin", phone: "" });
+      const response = await userService.listUsers({ page, limit });
+      setUsers(response.data);
+      setTotal(response.pagination.total);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to invite user");
+    } finally {
+      setInviteLoading(false);
     }
   };
 
@@ -161,11 +214,64 @@ export default function AllUsersPage() {
           <h2 className="text-3xl font-bold text-gray-900">All Users</h2>
           <p className="text-gray-600 mt-1">Manage platform users ({total} total)</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+        <button
+          onClick={() => setShowInvite(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+        >
           <PlusIcon className="w-5 h-5" />
           Invite User
         </button>
       </div>
+
+      {showInvite && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Invite User</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              placeholder="Full name *"
+              value={inviteForm.full_name}
+              onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
+              className="px-4 py-2 border border-gray-200 rounded-lg"
+            />
+            <input
+              type="email"
+              placeholder="Email *"
+              value={inviteForm.email}
+              onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+              className="px-4 py-2 border border-gray-200 rounded-lg"
+            />
+            <input
+              type="password"
+              placeholder="Temporary password *"
+              value={inviteForm.password}
+              onChange={(e) => setInviteForm({ ...inviteForm, password: e.target.value })}
+              className="px-4 py-2 border border-gray-200 rounded-lg"
+            />
+            <select
+              value={inviteForm.role}
+              onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
+              className="px-4 py-2 border border-gray-200 rounded-lg"
+            >
+              <option value="college_admin">College Admin</option>
+              <option value="super_admin">Super Admin</option>
+              <option value="hr">HR</option>
+              <option value="student">Student</option>
+            </select>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={handleInviteUser}
+              disabled={inviteLoading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+            >
+              {inviteLoading ? "Creating..." : "Create User"}
+            </button>
+            <button onClick={() => setShowInvite(false)} className="px-4 py-2 border border-gray-300 rounded-lg">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
         <div className="grid grid-cols-3 gap-4">
@@ -226,7 +332,7 @@ export default function AllUsersPage() {
             <option value="">-- Action --</option>
             <option value="suspend">Suspend</option>
             <option value="activate">Activate</option>
-            <option value="delete">Delete</option>
+            <option value="deactivate">Deactivate</option>
           </select>
           <button
             onClick={handleBulkAction}
@@ -304,8 +410,12 @@ export default function AllUsersPage() {
                           <NoSymbolIcon className="w-4 h-4 text-yellow-600" />
                         </button>
                       )}
-                      <button onClick={() => handleDeleteUser(user.id)}>
-                        <TrashIcon className="w-4 h-4 text-red-600" />
+                      <button onClick={() => handleToggleActive(user)} title={user.status === "inactive" ? "Activate" : "Deactivate"}>
+                        {user.status === "inactive" ? (
+                          <CheckIcon className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <TrashIcon className="w-4 h-4 text-red-600" />
+                        )}
                       </button>
                     </td>
                   </tr>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
+import api from "../../../lib/api";
 import settingsService, { SystemSettings } from "../../../services/settingsService";
 
 type Tab = "system" | "backup";
@@ -203,6 +204,24 @@ function SystemTab({ settings, set, save, saving }: TabProps) {
         </div>
       </div>
 
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900">System Logs</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Every admin action is recorded in the audit trail — logins, approvals, imports,
+              backups, and configuration changes.
+            </p>
+          </div>
+          <Link
+            to="/app/superadmin/audit-trail"
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+          >
+            View Audit Logs
+          </Link>
+        </div>
+      </div>
+
       <button
         onClick={() => save(KEYS)}
         disabled={saving}
@@ -223,6 +242,30 @@ function BackupSecurityTab({ settings, set, save, saving }: TabProps) {
     "backup.frequency",
     "backup.retention_days",
   ];
+
+  const [exporting, setExporting] = useState(false);
+  const lastBackup = settings["backup.last_run_at"]
+    ? new Date(String(settings["backup.last_run_at"])).toLocaleString()
+    : null;
+
+  const handleBackupNow = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get("/superadmin/backup/export", { responseType: "blob" });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gradlogic-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      set("backup.last_run_at", new Date().toISOString());
+      toast.success("Backup exported");
+    } catch {
+      toast.error("Backup export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -258,7 +301,26 @@ function BackupSecurityTab({ settings, set, save, saving }: TabProps) {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">Backups</h3>
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900">Backups</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              {lastBackup ? `Last backup: ${lastBackup}` : "No backup has been run yet"}
+            </p>
+          </div>
+          <button
+            onClick={handleBackupNow}
+            disabled={exporting}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+          >
+            {exporting ? "Exporting..." : "Download Backup Now"}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500">
+          Downloads a JSON export of colleges, users (no passwords), the question bank, workflows,
+          and settings. Scheduled server-side dumps are configured below and run at the
+          infrastructure level.
+        </p>
         <Toggle
           checked={settings["backup.auto_enabled"] === true}
           onChange={(v) => set("backup.auto_enabled", v)}

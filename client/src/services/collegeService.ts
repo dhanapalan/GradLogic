@@ -3,15 +3,29 @@ import api from "../lib/api";
 export interface College {
   id: string;
   name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
+  college_code: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
   status: "active" | "pending" | "suspended";
-  students: number;
-  admins: number;
-  createdAt: string;
+  student_count: number;
+  created_at: string;
+}
+
+export interface CollegeStudent {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  is_active: boolean;
+  created_at: string;
+  student_identifier: string | null;
+  degree: string | null;
+  specialization: string | null;
+  passing_year: number | null;
+  cgpa: number | null;
 }
 
 export interface CreateCollegeInput {
@@ -29,10 +43,9 @@ export interface CreateCollegeInput {
 export interface CollegeRequest {
   id: string;
   name: string;
-  contact: string;
-  email: string;
-  city: string;
-  submittedAt: string;
+  email: string | null;
+  city: string | null;
+  created_at: string;
   status: "pending" | "approved" | "rejected";
 }
 
@@ -91,12 +104,36 @@ class CollegeService {
   /**
    * Update college
    */
-  async updateCollege(id: string, data: Partial<CreateCollegeInput>): Promise<College> {
+  async updateCollege(id: string, data: Partial<CreateCollegeInput & { status?: string }>): Promise<College> {
     try {
       const response = await api.put(`/superadmin/colleges/${id}`, data);
       return response.data?.data;
     } catch (error) {
       console.error(`Failed to update college ${id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the real student roster for a college
+   */
+  async getCollegeStudents(
+    id: string,
+    search?: string,
+    page = 1,
+    limit = 50
+  ): Promise<{ college: { id: string; name: string }; students: CollegeStudent[]; total: number }> {
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      if (search) params.append("search", search);
+
+      const response = await api.get(`/superadmin/colleges/${id}/students?${params}`);
+      return response.data?.data || { college: { id, name: "" }, students: [], total: 0 };
+    } catch (error) {
+      console.error(`Failed to fetch students for college ${id}:`, error);
       throw error;
     }
   }
@@ -117,9 +154,9 @@ class CollegeService {
   /**
    * Approve college registration
    */
-  async approveCollege(id: string): Promise<{ success: boolean; message: string }> {
+  async approveCollege(id: string, note?: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await api.post(`/superadmin/colleges/${id}/approve`);
+      const response = await api.post(`/superadmin/colleges/${id}/approve`, { note });
       return response.data;
     } catch (error) {
       console.error(`Failed to approve college ${id}:`, error);
@@ -146,16 +183,28 @@ class CollegeService {
   }
 
   /**
-   * Delete college (soft delete)
+   * Deactivate college (status → suspended)
    */
-  async deleteCollege(id: string): Promise<{ success: boolean; message: string }> {
+  async deactivateCollege(id: string): Promise<{ success: boolean; message: string }> {
     try {
       const response = await api.delete(`/superadmin/colleges/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Failed to delete college ${id}:`, error);
+      console.error(`Failed to deactivate college ${id}:`, error);
       throw error;
     }
+  }
+
+  /** @deprecated use deactivateCollege */
+  async deleteCollege(id: string) {
+    return this.deactivateCollege(id);
+  }
+
+  /**
+   * Reactivate college
+   */
+  async activateCollege(id: string): Promise<College> {
+    return this.updateCollege(id, { status: "active" } as Partial<CreateCollegeInput & { status: string }>);
   }
 }
 

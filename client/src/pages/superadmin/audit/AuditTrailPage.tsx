@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  MagnifyingGlassIcon,
   ArrowDownTrayIcon,
-  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import auditService, { AuditLog, AuditFilters, AuditStats } from "../../../services/auditService";
@@ -33,19 +31,6 @@ const RESOURCE_TYPE_OPTIONS = [
 
 const SEVERITY_OPTIONS = ["all", "LOW", "MEDIUM", "HIGH"];
 
-function getSeverityColor(severity: string) {
-  switch (severity) {
-    case "HIGH":
-      return "red";
-    case "MEDIUM":
-      return "yellow";
-    case "LOW":
-      return "green";
-    default:
-      return "gray";
-  }
-}
-
 function formatDate(dateString: string) {
   const date = new Date(dateString);
   return date.toLocaleDateString() + " " + date.toLocaleTimeString();
@@ -57,7 +42,7 @@ export default function AuditTrailPage() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(50);
+  const [limit] = useState(50);
   const [total, setTotal] = useState(0);
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [showDetails, setShowDetails] = useState(false);

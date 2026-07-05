@@ -269,7 +269,7 @@ export const deleteWorkflow = async (req: Request, res: Response) => {
     }
 
     await query(
-      `UPDATE workflows SET deleted_at = NOW() WHERE id = $1`,
+      `UPDATE workflows SET is_active = FALSE, updated_at = NOW() WHERE id = $1 AND deleted_at IS NULL`,
       [id]
     );
 
@@ -277,12 +277,12 @@ export const deleteWorkflow = async (req: Request, res: Response) => {
     await query(
       `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user?.userId || "system", "DELETE_WORKFLOW", "workflow", id, req.ip]
+      [req.user?.userId || "system", "DEACTIVATE_WORKFLOW", "workflow", id, req.ip]
     );
 
     res.json({
       success: true,
-      message: "Workflow deleted successfully",
+      message: "Workflow deactivated successfully",
     });
   } catch (error: any) {
     console.error("Error deleting workflow:", error);

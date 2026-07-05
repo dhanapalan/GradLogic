@@ -190,6 +190,8 @@ export interface QuestionBankRow {
   explanation: string | null;
   created_by: string | null;
   is_active: boolean;
+  status: string;
+  bloom_level: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -239,6 +241,7 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
+  errors?: Array<{ index: number; error: string }>;
   meta?: {
     page: number;
     limit: number;

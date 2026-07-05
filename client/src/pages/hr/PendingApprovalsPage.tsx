@@ -3,7 +3,6 @@ import { useState } from "react";
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { CheckCircleIcon, XCircleIcon, EyeIcon } from "@heroicons/react/24/outline";
-import clsx from "clsx";
 
 interface PendingCollege {
   id: string;

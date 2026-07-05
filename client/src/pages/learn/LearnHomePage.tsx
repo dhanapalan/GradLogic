@@ -4,13 +4,13 @@
 // =============================================================================
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../../lib/api";
 import {
   BookOpen, Award, ChevronRight, Play, CheckCircle2,
-  Layers, Clock, Star, GraduationCap, Route, Zap, Download, Loader2,
+  Layers, Clock, GraduationCap, Route, Zap, Download, Loader2,
 } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -72,8 +72,6 @@ function CertificateButton({ courseId, onIssued }: { courseId: string; onIssued:
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function LearnHomePage() {
-  const navigate = useNavigate();
-  const qc = useQueryClient();
   const [tab, setTab] = useState<"progress" | "programs" | "paths" | "certificates">("progress");
 
   const { data: coursesData } = useQuery({
@@ -230,7 +228,7 @@ export default function LearnHomePage() {
                         {c.completed_at ? `Completed ${new Date(c.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` : "Completed"}
                       </p>
                     </div>
-                    <CertificateButton courseId={c.course_id ?? c.id} onIssued={(id) => { refetchCerts(); setTab("certificates"); }} />
+                    <CertificateButton courseId={c.course_id ?? c.id} onIssued={() => { refetchCerts(); setTab("certificates"); }} />
                   </div>
                 ))}
               </div>
