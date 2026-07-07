@@ -45,7 +45,10 @@ services:
 
   # ── MinIO (S3-compatible file storage) ──────────────────────────────────────
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    # Must be >= the version that wrote the data volume — an older binary can't
+    # read a newer on-disk format ("Unknown xl meta version"). Using latest to
+    # stay forward-compatible; pin to a specific RELEASE once verified.
+    image: minio/minio:latest
     container_name: talentsecure-minio
     command: server /data --console-address ":9001"
     environment:
