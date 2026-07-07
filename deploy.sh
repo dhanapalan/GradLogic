@@ -45,7 +45,9 @@ DB_USER="${PG_USER:-talentsecure}"
 DB_NAME="${PG_DATABASE:-talentsecure_db}"
 
 # ── 1. Pull latest code ──────────────────────────────────────────────────────
-if [ "${NO_PULL:-0}" != "1" ] && [ "$TARGET" != "migrate" ]; then
+# Runs for "migrate" too — migration files live in the git checkout, so a
+# migrate-only run must fetch them or it silently re-applies the old set.
+if [ "${NO_PULL:-0}" != "1" ]; then
   # Resolve the branch to deploy (don't assume 'master' — this repo's remote
   # may use 'main'). Precedence: BRANCH env → current upstream → remote default.
   if [ -z "$BRANCH" ]; then
@@ -102,15 +104,23 @@ if [ "$TARGET" = "all" ] || [ "$TARGET" = "migrate" ]; then
   done
   log "Applying migrations (docker/init-db/*.sql → $DB_NAME)…"
   shopt -s nullglob
+  MIGRATE_FAILURES=0
   for f in docker/init-db/*.sql; do
     printf '  → %-40s ' "$(basename "$f")"
-    if docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -q \
-         -U "$DB_USER" -d "$DB_NAME" < "$f" >/dev/null 2>&1; then
+    if err=$(docker exec -i "$DB_CONTAINER" psql -v ON_ERROR_STOP=1 -q \
+         -U "$DB_USER" -d "$DB_NAME" < "$f" 2>&1 >/dev/null); then
       echo "applied"
+    elif echo "$err" | grep -qiE 'already exists|duplicate'; then
+      echo "already present"
     else
-      echo "already present / skipped"
+      echo "FAILED"
+      echo "$err" | head -5 | sed 's/^/      /'
+      MIGRATE_FAILURES=$((MIGRATE_FAILURES + 1))
     fi
   done
+  if [ "$MIGRATE_FAILURES" -gt 0 ]; then
+    warn "$MIGRATE_FAILURES migration file(s) FAILED with real errors (not 'already exists') — schema may be incomplete, see errors above"
+  fi
 fi
 
 # ── 5. Health check ──────────────────────────────────────────────────────────
