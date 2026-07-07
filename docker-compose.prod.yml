@@ -23,16 +23,19 @@ services:
   redis:
     image: redis:7-alpine
     container_name: talentsecure-redis
+    # Enable auth only when REDIS_PASSWORD is set (double-quoted so it expands at
+    # runtime; the old single-quoted test always evaluated true and broke startup).
     command: >
-      sh -c "if [ -n '$$REDIS_PASSWORD' ];
-             then redis-server --requirepass $$REDIS_PASSWORD;
-             else redis-server; fi"
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ];
+             then exec redis-server --requirepass "$$REDIS_PASSWORD";
+             else exec redis-server; fi'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # Authenticate only when a password is configured, else plain ping.
+      test: ["CMD-SHELL", "if [ -n \"$$REDIS_PASSWORD\" ]; then redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping; else redis-cli ping; fi | grep -q PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
