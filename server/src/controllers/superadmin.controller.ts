@@ -245,7 +245,7 @@ export const getLiveDashboard = async (
           (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL
             AND started_at::date = CURRENT_DATE) AS exam_attempts,
           (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL
-            AND status = 'completed' AND updated_at::date = CURRENT_DATE) AS completed_exams,
+            AND status = 'completed' AND completed_at::date = CURRENT_DATE) AS completed_exams,
           (SELECT COUNT(DISTINCT actor_id) FROM rbac_audit_logs
             WHERE action = 'LOGIN_SUCCESS' AND created_at::date = CURRENT_DATE) AS logins`
       ),
@@ -258,7 +258,7 @@ export const getLiveDashboard = async (
           (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL
             AND started_at::date = CURRENT_DATE - 1) AS exam_attempts,
           (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL
-            AND status = 'completed' AND updated_at::date = CURRENT_DATE - 1) AS completed_exams,
+            AND status = 'completed' AND completed_at::date = CURRENT_DATE - 1) AS completed_exams,
           (SELECT COUNT(DISTINCT actor_id) FROM rbac_audit_logs
             WHERE action = 'LOGIN_SUCCESS' AND created_at::date = CURRENT_DATE - 1) AS logins`
       ),
@@ -353,7 +353,7 @@ export const getLiveDashboard = async (
         title: row.student_name || "Student payment",
         subtitle: `${row.college_name || "Unknown college"} · ₹${row.amount}`,
         createdAt: row.updated_at,
-        href: "/app/superadmin/analytics",
+        href: "/app/superadmin/billing",
       })),
     ].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -504,7 +504,7 @@ export const getDashboard = async (
           (SELECT COUNT(*) FROM users WHERE role = 'student' AND deleted_at IS NULL AND created_at::date = CURRENT_DATE) AS new_students,
           (SELECT COUNT(*) FROM colleges WHERE deleted_at IS NULL AND created_at::date = CURRENT_DATE) AS new_colleges,
           (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL AND started_at::date = CURRENT_DATE) AS exam_attempts,
-          (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL AND status = 'completed' AND updated_at::date = CURRENT_DATE) AS completed_exams,
+          (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL AND status = 'completed' AND completed_at::date = CURRENT_DATE) AS completed_exams,
           (SELECT COUNT(DISTINCT actor_id) FROM rbac_audit_logs WHERE action = 'LOGIN_SUCCESS' AND created_at::date = CURRENT_DATE) AS logins`
       ),
       pool.query(
@@ -512,7 +512,7 @@ export const getDashboard = async (
           (SELECT COUNT(*) FROM users WHERE role = 'student' AND deleted_at IS NULL AND created_at::date = CURRENT_DATE - 1) AS new_students,
           (SELECT COUNT(*) FROM colleges WHERE deleted_at IS NULL AND created_at::date = CURRENT_DATE - 1) AS new_colleges,
           (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL AND started_at::date = CURRENT_DATE - 1) AS exam_attempts,
-          (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL AND status = 'completed' AND updated_at::date = CURRENT_DATE - 1) AS completed_exams,
+          (SELECT COUNT(*) FROM exam_attempts WHERE deleted_at IS NULL AND status = 'completed' AND completed_at::date = CURRENT_DATE - 1) AS completed_exams,
           (SELECT COUNT(DISTINCT actor_id) FROM rbac_audit_logs WHERE action = 'LOGIN_SUCCESS' AND created_at::date = CURRENT_DATE - 1) AS logins`
       ),
       pool.query(
@@ -632,7 +632,7 @@ export const getDashboard = async (
         title: row.student_name || "Student payment",
         subtitle: `${row.college_name || "Unknown college"} · ₹${row.amount}`,
         createdAt: row.updated_at,
-        href: "/app/superadmin/analytics",
+        href: "/app/superadmin/billing",
       })),
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 

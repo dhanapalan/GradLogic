@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeft } from "lucide-react";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import studentsService, { StudentDetail } from "../../../services/studentsService";
 
@@ -22,7 +22,7 @@ export default function StudentDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
       </div>
     );
@@ -30,12 +30,12 @@ export default function StudentDetailPage() {
 
   if (notFound || !detail) {
     return (
-      <div className="p-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <Link to="/app/superadmin/students" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4">
-          <ArrowLeftIcon className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4" />
           Back to Students
         </Link>
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-600">
           Student not found
         </div>
       </div>
@@ -49,17 +49,17 @@ export default function StudentDetailPage() {
       : null;
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       <Link to="/app/superadmin/students" className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4">
-        <ArrowLeftIcon className="w-4 h-4" />
+        <ArrowLeft className="w-4 h-4" />
         Back to Students
       </Link>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">{profile.name}</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{profile.name}</h2>
+          <p className="text-gray-500 mt-1">
             {profile.email} {profile.college_name ? `· ${profile.college_name}` : ""}
           </p>
           <p className="text-sm text-gray-500 mt-1">
@@ -73,28 +73,28 @@ export default function StudentDetailPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-xs text-gray-500 uppercase">Avg Exam Score</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{avgScore !== null ? `${avgScore}%` : "N/A"}</p>
+          <p className="text-2xl font-display font-semibold text-gray-900 mt-1">{avgScore !== null ? `${avgScore}%` : "N/A"}</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-xs text-gray-500 uppercase">CGPA</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{profile.cgpa ?? "N/A"}</p>
+          <p className="text-2xl font-display font-semibold text-gray-900 mt-1">{profile.cgpa ?? "N/A"}</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-xs text-gray-500 uppercase">Certifications</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{certifications.length}</p>
+          <p className="text-2xl font-display font-semibold text-gray-900 mt-1">{certifications.length}</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-xs text-gray-500 uppercase">Last Active</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
+          <p className="text-2xl font-display font-semibold text-gray-900 mt-1">
             {profile.last_login ? new Date(profile.last_login).toLocaleDateString() : "Never"}
           </p>
         </div>
       </div>
 
       {/* Profile details */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
@@ -128,20 +128,20 @@ export default function StudentDetailPage() {
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Exam Results ({examResults.length})</h3>
         {examResults.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-600">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-8 text-center text-gray-600">
             No exam attempts recorded yet
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50/70 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Exam</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Score</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Exam</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Score</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {examResults.map((exam) => (
                   <tr key={exam.id}>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{exam.title}</td>
@@ -159,21 +159,21 @@ export default function StudentDetailPage() {
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Learning Progress ({moduleProgress.length})</h3>
         {moduleProgress.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-600">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-8 text-center text-gray-600">
             No learning modules started yet
           </div>
         ) : (
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50/70 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Module</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Score</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Completed</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Module</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Score</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Completed</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {moduleProgress.map((mp) => (
                   <tr key={mp.id}>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{mp.module_title}</td>
@@ -200,13 +200,13 @@ export default function StudentDetailPage() {
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Certifications ({certifications.length})</h3>
         {certifications.length === 0 ? (
-          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-600">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-8 text-center text-gray-600">
             No certifications earned yet
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {certifications.map((cert) => (
-              <div key={cert.id} className="bg-white rounded-lg border border-gray-200 p-4">
+              <div key={cert.id} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
                 <p className="font-medium text-gray-900">{cert.title}</p>
                 <p className="text-sm text-gray-500 mt-1">
                   Issued {new Date(cert.issued_at).toLocaleDateString()}

@@ -13,6 +13,22 @@
   body {
     @apply font-sans;
   }
+
+  /* "Navy Trust" admin design language — scoped to the superadmin portal so the
+     student/college/HR portals keep their existing typography. */
+  .admin-shell {
+    font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  .admin-shell h1,
+  .admin-shell h2,
+  .admin-shell h3,
+  .admin-shell h4,
+  .admin-shell h5 {
+    font-family: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: -0.015em;
+  }
 }
 
 @layer components {

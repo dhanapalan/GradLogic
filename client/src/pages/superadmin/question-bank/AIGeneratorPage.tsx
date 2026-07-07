@@ -201,13 +201,13 @@ export default function AIGeneratorPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">AI Question Generator</h2>
-          <p className="text-gray-600 mt-1">
-            Upload study material, generate grounded questions, review, and publish
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">AI Question Generator</h2>
+          <p className="text-gray-500 mt-1">
+            Upload study material, generate grounded questions, review, and publish.
           </p>
         </div>
         <div
@@ -235,9 +235,9 @@ export default function AIGeneratorPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Upload */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
           <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-            <DocumentArrowUpIcon className="h-5 w-5 text-blue-600" />
+            <DocumentArrowUpIcon className="h-5 w-5 text-admin-accent" />
             1. Upload Documents
           </h3>
           <p className="text-sm text-gray-500 mb-4">
@@ -257,7 +257,7 @@ export default function AIGeneratorPage() {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={!engineOnline || uploading}
-            className="w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 font-medium hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 font-medium hover:border-blue-400 hover:text-admin-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {uploading ? "Uploading & embedding..." : "Click to upload document(s)"}
           </button>
@@ -270,9 +270,9 @@ export default function AIGeneratorPage() {
         </div>
 
         {/* Generate */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
           <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
-            <SparklesIcon className="h-5 w-5 text-blue-600" />
+            <SparklesIcon className="h-5 w-5 text-admin-accent" />
             2. Generate Questions
           </h3>
           <p className="text-sm text-gray-500 mb-4">
@@ -283,7 +283,7 @@ export default function AIGeneratorPage() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Topic — e.g. Percentages, Time & Work, Binary Trees"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-admin-accent"
             />
             <div className="grid grid-cols-3 gap-3">
               <select
@@ -326,7 +326,7 @@ export default function AIGeneratorPage() {
             <button
               onClick={handleGenerate}
               disabled={!engineOnline || topic.trim().length < 3 || generating}
-              className="w-full px-4 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-navy-900 text-white font-medium rounded-lg hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? "Generating (may take up to a minute)..." : "Generate Questions"}
             </button>
@@ -337,7 +337,7 @@ export default function AIGeneratorPage() {
       {/* Review */}
       {generated.length > 0 && (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden mb-6">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden mb-6">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="font-semibold text-gray-900">
                 3. Review — {selectedCount} of {generated.length} approved
@@ -366,7 +366,7 @@ export default function AIGeneratorPage() {
                         title="Edit question"
                       >
                         <PencilIcon
-                          className={`h-5 w-5 ${q.editing ? "text-blue-600" : "text-gray-400 hover:text-blue-600"}`}
+                          className={`h-5 w-5 ${q.editing ? "text-admin-accent" : "text-gray-400 hover:text-admin-accent"}`}
                         />
                       </button>
                     </div>
@@ -378,7 +378,7 @@ export default function AIGeneratorPage() {
                             rows={2}
                             value={q.question}
                             onChange={(e) => updateQuestion(idx, { question: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium focus:ring-2 focus:ring-admin-accent"
                           />
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="flex items-center gap-2">
@@ -406,7 +406,7 @@ export default function AIGeneratorPage() {
                           />
                           <button
                             onClick={() => updateQuestion(idx, { editing: false })}
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                            className="px-3 py-1.5 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800"
                           >
                             Done Editing
                           </button>
@@ -431,7 +431,7 @@ export default function AIGeneratorPage() {
                             </ul>
                           )}
                           {q.explanation && (
-                            <p className="text-sm text-gray-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">
+                            <p className="text-sm text-gray-600 bg-navy-900/[0.03] rounded-lg px-3 py-2 mb-3">
                               <span className="font-medium">Explanation: </span>
                               {q.explanation}
                             </p>
@@ -463,7 +463,7 @@ export default function AIGeneratorPage() {
           </div>
 
           {/* Assign + import */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
             <h3 className="font-semibold text-gray-900 mb-1">4. Assign & Publish</h3>
             <p className="text-sm text-gray-500 mb-4">
               Optionally earmark these questions for specific colleges. Leave empty to publish globally.
@@ -475,7 +475,7 @@ export default function AIGeneratorPage() {
                     key={c.id}
                     className={`flex items-center gap-2 px-3 py-2 border rounded-lg cursor-pointer text-sm ${
                       assignedColleges.has(c.id)
-                        ? "border-blue-400 bg-blue-50 text-blue-800"
+                        ? "border-admin-accent bg-navy-900/[0.06] text-navy-900"
                         : "border-gray-200 text-gray-700 hover:bg-gray-50"
                     }`}
                   >

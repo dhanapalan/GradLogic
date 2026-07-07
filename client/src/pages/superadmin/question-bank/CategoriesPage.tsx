@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlusIcon, PencilIcon } from "@heroicons/react/24/outline";
+import { Plus, Pencil } from "lucide-react";
 import toast from "react-hot-toast";
 import questionBankService from "../../../services/questionBankService";
 
@@ -107,25 +107,25 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Categories & Topics</h2>
-          <p className="text-gray-600 mt-1">Manage question taxonomy and topics</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Categories & Topics</h2>
+          <p className="text-gray-500 mt-1">Manage question taxonomy and topics.</p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors"
         >
-          <PlusIcon className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Add Category
         </button>
       </div>
 
       {/* Add Category Form */}
       {showAddForm && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">New Category</h3>
           <div className="space-y-4">
             <div>
@@ -135,7 +135,7 @@ export default function CategoriesPage() {
                 value={newCategory.name}
                 onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
                 placeholder="e.g., Aptitude, Reasoning, Technical"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
               />
             </div>
             <div>
@@ -145,13 +145,13 @@ export default function CategoriesPage() {
                 onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                 placeholder="Brief description of this category"
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
               />
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleAddCategory}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                className="px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800"
               >
                 Add
               </button>
@@ -174,7 +174,7 @@ export default function CategoriesPage() {
       ) : (
         <div className="space-y-6">
           {categories.map((category) => (
-          <div key={category.id} className={`bg-white rounded-lg border p-6 ${category.is_active === false ? "border-gray-200 opacity-75" : "border-gray-200"}`}>
+          <div key={category.id} className={`bg-white rounded-xl shadow-admin-card border p-6 ${category.is_active === false ? "border-gray-200/70 opacity-75" : "border-gray-200/70"}`}>
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
                 {editingId === category.id ? (
@@ -191,7 +191,7 @@ export default function CategoriesPage() {
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                     />
                     <div className="flex gap-2">
-                      <button onClick={saveEdit} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm">Save</button>
+                      <button onClick={saveEdit} className="px-3 py-1.5 bg-navy-900 text-white rounded-lg text-sm">Save</button>
                       <button onClick={() => setEditingId(null)} className="px-3 py-1.5 border rounded-lg text-sm">Cancel</button>
                     </div>
                   </div>
@@ -214,7 +214,7 @@ export default function CategoriesPage() {
                     onClick={() => startEdit(category)}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                   >
-                    <PencilIcon className="w-5 h-5" />
+                    <Pencil className="w-4 h-4" />
                   </button>
                   {category.is_active === false ? (
                     <button

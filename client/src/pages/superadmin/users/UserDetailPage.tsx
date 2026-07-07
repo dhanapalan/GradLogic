@@ -76,8 +76,8 @@ export default function UserDetailPage() {
 
   if (!user) {
     return (
-      <div className="p-8">
-        <Link to="/app/superadmin/users" className="text-sm text-blue-600 hover:underline">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <Link to="/app/superadmin/users" className="text-sm text-admin-accent hover:underline">
           ← Back to users
         </Link>
         <p className="mt-4 text-gray-600">User not found.</p>
@@ -99,19 +99,19 @@ export default function UserDetailPage() {
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">{user.full_name}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{user.full_name}</h2>
           <p className="text-gray-600 mt-1 capitalize">{user.role.replace(/_/g, " ")}</p>
         </div>
         <StatusBadge status={user.status} label={user.status} />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Full name</label>
           <input
             value={form.full_name}
             onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           />
         </div>
         <div>
@@ -120,7 +120,7 @@ export default function UserDetailPage() {
             type="email"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           />
         </div>
         <div>
@@ -128,7 +128,7 @@ export default function UserDetailPage() {
           <input
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           />
         </div>
         {user.college_name && (
@@ -145,7 +145,7 @@ export default function UserDetailPage() {
           <button
             onClick={save}
             disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save changes"}
           </button>

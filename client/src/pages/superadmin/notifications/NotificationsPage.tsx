@@ -75,10 +75,10 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Notifications</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Notifications</h2>
         <p className="text-gray-600 mt-1">Manage system announcements and email templates</p>
       </div>
 
@@ -88,7 +88,7 @@ export default function NotificationsPage() {
           onClick={() => setTab("announcements")}
           className={`pb-3 px-4 font-medium transition-colors ${
             tab === "announcements"
-              ? "text-blue-600 border-b-2 border-blue-600"
+              ? "text-admin-accent border-b-2 border-admin-accent"
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
@@ -101,7 +101,7 @@ export default function NotificationsPage() {
           onClick={() => setTab("templates")}
           className={`pb-3 px-4 font-medium transition-colors ${
             tab === "templates"
-              ? "text-blue-600 border-b-2 border-blue-600"
+              ? "text-admin-accent border-b-2 border-admin-accent"
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
@@ -122,7 +122,7 @@ export default function NotificationsPage() {
           <div className="space-y-6">
           {/* Add Announcement Form */}
           {showAnnouncementForm && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Create Announcement</h3>
               <div className="space-y-4">
                 <div>
@@ -132,7 +132,7 @@ export default function NotificationsPage() {
                     value={newAnnouncement.title}
                     onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
                     placeholder="Announcement title"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   />
                 </div>
 
@@ -143,7 +143,7 @@ export default function NotificationsPage() {
                     onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
                     placeholder="Announcement message"
                     rows={4}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   />
                 </div>
 
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
                         type: e.target.value as any,
                       })
                     }
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   >
                     <option value="info">Info</option>
                     <option value="warning">Warning</option>
@@ -169,7 +169,7 @@ export default function NotificationsPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={handleAddAnnouncement}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                    className="px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800"
                   >
                     Create
                   </button>
@@ -188,7 +188,7 @@ export default function NotificationsPage() {
           {!showAnnouncementForm && (
             <button
               onClick={() => setShowAnnouncementForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors"
             >
               <PlusIcon className="w-5 h-5" />
               New Announcement
@@ -197,7 +197,7 @@ export default function NotificationsPage() {
 
           <div className="space-y-4">
             {announcements.map((ann) => (
-              <div key={ann.id} className="bg-white rounded-lg border border-gray-200 p-6">
+              <div key={ann.id} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
@@ -205,7 +205,7 @@ export default function NotificationsPage() {
                       <span
                         className={`text-xs px-3 py-1 rounded-full font-medium ${
                           ann.type === "info"
-                            ? "bg-blue-100 text-blue-800"
+                            ? "bg-navy-900/[0.06] text-navy-900"
                             : ann.type === "warning"
                               ? "bg-yellow-100 text-yellow-800"
                               : ann.type === "success"
@@ -251,13 +251,13 @@ export default function NotificationsPage() {
         ) : (
           <div className="space-y-4">
           {templates.map((template) => (
-            <div key={template.id} className="bg-white rounded-lg border border-gray-200 p-6">
+            <div key={template.id} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{template.name}</h3>
                   <p className="text-sm text-gray-600">Subject: {template.subject}</p>
                 </div>
-                <button className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                <button className="p-2 text-admin-accent hover:text-admin-accent hover:bg-navy-900/[0.04] rounded-lg transition-colors">
                   Edit
                 </button>
               </div>

@@ -1,28 +1,24 @@
 import { useEffect, useState } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { authActions, useAuthStore } from "../../stores/authStore";
-import Logo from "../../components/Logo";
-import NotificationBell from "../../components/NotificationBell";
 import {
-  HomeIcon,
-  UsersIcon,
-  UserGroupIcon,
-  ClipboardDocumentListIcon,
-  ArrowRightOnRectangleIcon,
-  AcademicCapIcon,
-  WrenchScrewdriverIcon,
-  ChartBarIcon,
-  BookOpenIcon,
-  CreditCardIcon,
-  Cog6ToothIcon,
-  EnvelopeIcon,
-  ChevronRightIcon,
-  CheckBadgeIcon,
-} from "@heroicons/react/24/outline";
-
-type IconType = React.ForwardRefExoticComponent<
-  React.SVGProps<SVGSVGElement> & { title?: string; titleId?: string }
->;
+  LayoutDashboard,
+  GraduationCap,
+  Users,
+  CheckCircle2,
+  UserCog,
+  BookOpen,
+  Workflow,
+  BarChart3,
+  Cpu,
+  Bell,
+  CreditCard,
+  Settings,
+  ChevronDown,
+  LogOut,
+  type LucideIcon,
+} from "lucide-react";
+import { authActions, useAuthStore } from "../../stores/authStore";
+import NotificationBell from "../../components/NotificationBell";
 
 interface NavLeaf {
   name: string;
@@ -31,89 +27,117 @@ interface NavLeaf {
 
 interface NavEntry {
   name: string;
-  icon: IconType;
+  icon: LucideIcon;
   href?: string; // flat item
   children?: NavLeaf[]; // collapsible group
 }
 
+interface NavSection {
+  label: string;
+  items: NavEntry[];
+}
+
 const BASE = "/app/superadmin";
 
-const navigation: NavEntry[] = [
-  { name: "Dashboard", icon: HomeIcon, href: `${BASE}/dashboard` },
+// Grouped into Overview / Manage / System (from the redesign) while keeping
+// every real route the portal already has.
+const SECTIONS: NavSection[] = [
   {
-    name: "Colleges",
-    icon: AcademicCapIcon,
-    children: [
-      { name: "All Colleges", href: `${BASE}/colleges` },
-      { name: "Add New College", href: `${BASE}/colleges/new` },
-      { name: "College Requests", href: `${BASE}/colleges/requests` },
-    ],
-  },
-  { name: "Students", icon: UserGroupIcon, href: `${BASE}/students` },
-  { name: "Approvals", icon: CheckBadgeIcon, href: `${BASE}/approvals` },
-  {
-    name: "Users",
-    icon: UsersIcon,
-    children: [
-      { name: "All Users", href: `${BASE}/users` },
-      { name: "Role Management", href: `${BASE}/roles` },
-    ],
+    label: "Overview",
+    items: [{ name: "Dashboard", icon: LayoutDashboard, href: `${BASE}/dashboard` }],
   },
   {
-    name: "Question Bank",
-    icon: ClipboardDocumentListIcon,
-    children: [
-      { name: "All Questions", href: `${BASE}/question-bank` },
-      { name: "AI Question Generator", href: `${BASE}/question-bank/ai-generator` },
-      { name: "Categories & Topics", href: `${BASE}/question-bank/categories` },
-      { name: "Review Queue", href: `${BASE}/question-bank/review-queue` },
-      { name: "Import from Books", href: `${BASE}/question-bank/import-books` },
+    label: "Manage",
+    items: [
+      {
+        name: "Colleges",
+        icon: GraduationCap,
+        children: [
+          { name: "All Colleges", href: `${BASE}/colleges` },
+          { name: "Add New College", href: `${BASE}/colleges/new` },
+          { name: "College Requests", href: `${BASE}/colleges/requests` },
+        ],
+      },
+      { name: "Students", icon: Users, href: `${BASE}/students` },
+      { name: "Approvals", icon: CheckCircle2, href: `${BASE}/approvals` },
     ],
   },
   {
-    name: "Workflows",
-    icon: BookOpenIcon,
-    children: [
-      { name: "Aptitude & Reasoning", href: `${BASE}/workflows?category=aptitude` },
-      { name: "Soft Skills", href: `${BASE}/workflows?category=soft-skills` },
-      { name: "Technical Skills", href: `${BASE}/workflows?category=technical` },
-    ],
-  },
-  {
-    name: "Analytics",
-    icon: ChartBarIcon,
-    children: [
-      { name: "Platform Overview", href: `${BASE}/analytics` },
-      { name: "College Performance", href: `${BASE}/analytics?view=colleges` },
-      { name: "Reports", href: `${BASE}/analytics?view=reports` },
-    ],
-  },
-  {
-    name: "AI Configuration",
-    icon: Cog6ToothIcon,
-    children: [
-      { name: "API Keys & Services", href: `${BASE}/ai-config?tab=services` },
-      { name: "Model Settings", href: `${BASE}/ai-config` },
-      { name: "Prompt Templates", href: `${BASE}/ai-config?tab=prompts` },
-      { name: "Usage Quotas", href: `${BASE}/ai-config?tab=quotas` },
-      { name: "Usage Monitoring", href: `${BASE}/ai-config?tab=usage` },
-    ],
-  },
-  { name: "Notifications", icon: EnvelopeIcon, href: `${BASE}/notifications` },
-  { name: "Billing", icon: CreditCardIcon, href: `${BASE}/billing` },
-  {
-    name: "Settings",
-    icon: WrenchScrewdriverIcon,
-    children: [
-      { name: "System Settings", href: `${BASE}/settings` },
-      { name: "Audit Logs", href: `${BASE}/audit-trail` },
-      { name: "Backup & Security", href: `${BASE}/settings?tab=backup` },
+    label: "System",
+    items: [
+      {
+        name: "Users",
+        icon: UserCog,
+        children: [
+          { name: "All Users", href: `${BASE}/users` },
+          { name: "Role Management", href: `${BASE}/roles` },
+        ],
+      },
+      {
+        name: "Question Bank",
+        icon: BookOpen,
+        children: [
+          { name: "All Questions", href: `${BASE}/question-bank` },
+          { name: "AI Question Generator", href: `${BASE}/question-bank/ai-generator` },
+          { name: "Categories & Topics", href: `${BASE}/question-bank/categories` },
+          { name: "Review Queue", href: `${BASE}/question-bank/review-queue` },
+          { name: "Import from Books", href: `${BASE}/question-bank/import-books` },
+        ],
+      },
+      {
+        name: "Workflows",
+        icon: Workflow,
+        children: [
+          { name: "Aptitude & Reasoning", href: `${BASE}/workflows?category=aptitude` },
+          { name: "Soft Skills", href: `${BASE}/workflows?category=soft-skills` },
+          { name: "Technical Skills", href: `${BASE}/workflows?category=technical` },
+        ],
+      },
+      {
+        name: "Analytics",
+        icon: BarChart3,
+        children: [
+          { name: "Platform Overview", href: `${BASE}/analytics` },
+          { name: "College Performance", href: `${BASE}/analytics?view=colleges` },
+          { name: "Reports", href: `${BASE}/analytics?view=reports` },
+        ],
+      },
+      {
+        name: "AI Configuration",
+        icon: Cpu,
+        children: [
+          { name: "API Keys & Services", href: `${BASE}/ai-config?tab=services` },
+          { name: "Model Settings", href: `${BASE}/ai-config` },
+          { name: "Prompt Templates", href: `${BASE}/ai-config?tab=prompts` },
+          { name: "Usage Quotas", href: `${BASE}/ai-config?tab=quotas` },
+          { name: "Usage Monitoring", href: `${BASE}/ai-config?tab=usage` },
+        ],
+      },
+      { name: "Notifications", icon: Bell, href: `${BASE}/notifications` },
+      { name: "Billing", icon: CreditCard, href: `${BASE}/billing` },
+      {
+        name: "Settings",
+        icon: Settings,
+        children: [
+          { name: "System Settings", href: `${BASE}/settings` },
+          { name: "Audit Logs", href: `${BASE}/audit-trail` },
+          { name: "Backup & Security", href: `${BASE}/settings?tab=backup` },
+        ],
+      },
     ],
   },
 ];
 
+const ALL_ENTRIES = SECTIONS.flatMap((s) => s.items);
+
 function basePath(href: string) {
   return href.split("?")[0];
+}
+
+function initials(name?: string) {
+  if (!name) return "AU";
+  const parts = name.trim().split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "AU";
 }
 
 export default function SuperAdminLayout() {
@@ -144,7 +168,7 @@ export default function SuperAdminLayout() {
   useEffect(() => {
     setOpen((prev) => {
       const next = { ...prev };
-      for (const entry of navigation) {
+      for (const entry of ALL_ENTRIES) {
         if (entry.children && groupOwnsRoute(entry)) next[entry.name] = true;
       }
       return next;
@@ -152,12 +176,10 @@ export default function SuperAdminLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.search]);
 
-  // Route is guarded by ProtectedRoute + RoleGuard; this is a belt-and-suspenders
-  // check plus a clean bounce if the session token disappears mid-session.
+  // Route is guarded by ProtectedRoute + RoleGuard; belt-and-suspenders bounce
+  // if the session token disappears mid-session.
   useEffect(() => {
-    if (!token) {
-      window.location.href = "/auth/login";
-    }
+    if (!token) window.location.href = "/auth/login";
   }, [token]);
 
   const handleLogout = () => {
@@ -165,127 +187,142 @@ export default function SuperAdminLayout() {
     window.location.href = "/auth/login";
   };
 
-  const leafClasses = (active: boolean) =>
-    `flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors duration-150 ${
+  const flatClasses = (active: boolean) =>
+    `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
       active
-        ? "bg-blue-50 font-medium text-blue-700"
-        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        ? "bg-white/10 text-white"
+        : "text-slate-300/80 hover:bg-white/5 hover:text-white"
+    }`;
+
+  const leafClasses = (active: boolean) =>
+    `flex items-center rounded-lg px-3 py-1.5 text-sm transition-colors duration-150 ${
+      active
+        ? "bg-white/10 font-medium text-white"
+        : "text-slate-400 hover:bg-white/5 hover:text-white"
     }`;
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="admin-shell flex h-screen bg-slate-50">
       {/* Sidebar */}
-      <aside className="flex w-64 flex-col border-r border-gray-200 bg-white">
-        {/* Logo */}
-        <div className="flex items-center gap-3 border-b border-gray-200 px-6 py-6">
-          <Logo />
-          <div>
-            <h1 className="text-sm font-bold text-gray-900">TalentSecure</h1>
-            <p className="text-xs text-gray-500">SuperAdmin Portal</p>
+      <aside className="flex w-64 flex-col bg-navy-900 text-slate-300">
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-admin-accent text-white shadow-admin-elegant">
+            <GraduationCap className="h-5 w-5" />
+          </div>
+          <div className="flex flex-col leading-tight">
+            <span className="font-display font-semibold text-white">GradLogic</span>
+            <span className="text-[11px] text-white/50">Admin Console</span>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navigation.map((entry) => {
-            const Icon = entry.icon;
+        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+          {SECTIONS.map((section) => (
+            <div key={section.label}>
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/35">
+                {section.label}
+              </p>
+              <div className="space-y-1">
+                {section.items.map((entry) => {
+                  const Icon = entry.icon;
 
-            // Flat item
-            if (!entry.children) {
-              const active = leafActive(entry.href!);
-              return (
-                <NavLink
-                  key={entry.name}
-                  to={entry.href!}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                    active
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1">{entry.name}</span>
-                </NavLink>
-              );
-            }
-
-            // Collapsible group
-            const isOpen = open[entry.name] ?? false;
-            const owns = groupOwnsRoute(entry);
-            return (
-              <div key={entry.name}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpen((p) => ({ ...p, [entry.name]: !isOpen }))
-                  }
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                    owns && !isOpen
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1 text-left">{entry.name}</span>
-                  <ChevronRightIcon
-                    className={`h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-150 ${
-                      isOpen ? "rotate-90" : ""
-                    }`}
-                  />
-                </button>
-
-                {isOpen && (
-                  <div className="mt-1 space-y-1 border-l border-gray-100 pl-4">
-                    {entry.children.map((child) => (
+                  // Flat item
+                  if (!entry.children) {
+                    return (
                       <NavLink
-                        key={child.href}
-                        to={child.href}
-                        className={leafClasses(leafActive(child.href))}
+                        key={entry.name}
+                        to={entry.href!}
+                        className={flatClasses(leafActive(entry.href!))}
                       >
-                        <span className="flex-1">{child.name}</span>
+                        <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                        <span className="flex-1">{entry.name}</span>
                       </NavLink>
-                    ))}
-                  </div>
-                )}
+                    );
+                  }
+
+                  // Collapsible group
+                  const isOpen = open[entry.name] ?? false;
+                  const owns = groupOwnsRoute(entry);
+                  return (
+                    <div key={entry.name}>
+                      <button
+                        type="button"
+                        onClick={() => setOpen((p) => ({ ...p, [entry.name]: !isOpen }))}
+                        className={flatClasses(owns && !isOpen)}
+                      >
+                        <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                        <span className="flex-1 text-left">{entry.name}</span>
+                        <ChevronDown
+                          className={`h-4 w-4 flex-shrink-0 text-white/40 transition-transform duration-150 ${
+                            isOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {isOpen && (
+                        <div className="ml-[1.15rem] mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                          {entry.children.map((child) => (
+                            <NavLink
+                              key={child.href}
+                              to={child.href}
+                              className={leafClasses(leafActive(child.href))}
+                            >
+                              <span className="flex-1">{child.name}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </nav>
 
-        {/* User Menu */}
-        <div className="space-y-2 border-t border-gray-200 px-4 py-4">
-          <div className="px-3 py-2 text-sm">
-            <p className="font-medium text-gray-900">{user?.name || "Admin"}</p>
-            <p className="text-xs text-gray-500">{user?.email}</p>
+        {/* User footer */}
+        <div className="border-t border-white/10 px-3 py-3">
+          <div className="flex items-center gap-2.5 px-1 py-1.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-accent text-xs font-semibold text-white">
+              {initials(user?.name)}
+            </div>
+            <div className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate text-sm font-medium text-white">
+                {user?.name || "Admin"}
+              </span>
+              <span className="truncate text-[11px] text-white/50">{user?.email}</span>
+            </div>
           </div>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300/80 transition-colors hover:bg-white/5 hover:text-white"
           >
-            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+            <LogOut className="h-[18px] w-[18px]" />
             Logout
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className="flex items-center justify-between border-b border-gray-200 bg-white px-8 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">SuperAdmin Portal</h1>
-          <div className="flex items-center gap-4">
+        {/* Top bar */}
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white/80 px-6 backdrop-blur">
+          <div className="text-sm text-gray-500">Admin Console</div>
+          <div className="flex items-center gap-3">
             <NotificationBell />
             <button
               onClick={handleLogout}
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              title="Log out"
             >
-              <ArrowRightOnRectangleIcon className="h-5 w-5" />
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto bg-gray-50">
+        <main className="flex-1 overflow-auto bg-slate-50">
           <Outlet />
         </main>
       </div>

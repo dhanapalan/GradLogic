@@ -26,22 +26,34 @@ export const getSummary = async (req: Request, res: Response<ApiResponse>, next:
             [collegeId]
         );
 
-        // 2. Placed students (from student_details)
-        const placement = await pool.query(
-            `SELECT 
-                COUNT(*) as placed_students,
-                (COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM student_details WHERE college_id = $1), 0)) as placement_conversion
-             FROM student_details
-             WHERE college_id = $1 AND placement_status IN ('Offered', 'Joined')`,
-            [collegeId]
-        );
+        // 2. Placed students — placement tracking columns are optional; degrade to 0 when absent.
+        let placedStudents = 0;
+        let placementConversion = 0;
+        try {
+            const placement = await pool.query(
+                `SELECT
+                    COUNT(*) as placed_students,
+                    (COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM student_details WHERE college_id = $1), 0)) as placement_conversion
+                 FROM student_details
+                 WHERE college_id = $1 AND placement_status IN ('Offered', 'Joined')`,
+                [collegeId]
+            );
+            placedStudents = parseInt(placement.rows[0]?.placed_students || 0);
+            placementConversion = parseFloat(placement.rows[0]?.placement_conversion || 0);
+        } catch { /* placement_status column not present in this deployment */ }
 
-        // 3. Avg CGPA-based integrity (from student_details since drive_students may be empty)
-        const avgIntegrity = await pool.query(
-            `SELECT COALESCE(AVG(avg_integrity_score), 85) as avg_integrity
-             FROM student_details WHERE college_id = $1`,
-            [collegeId]
-        );
+        // 3. Avg integrity from real drive results; 0 when no proctored drives exist yet.
+        let avgIntegrityScore = 0;
+        try {
+            const avgIntegrity = await pool.query(
+                `SELECT COALESCE(AVG(ds.integrity_score), 0) as avg_integrity
+                 FROM drive_students ds
+                 JOIN student_details sd ON ds.student_id = sd.user_id
+                 WHERE sd.college_id = $1`,
+                [collegeId]
+            );
+            avgIntegrityScore = parseFloat(avgIntegrity.rows[0]?.avg_integrity || 0);
+        } catch { /* drive_students may not exist yet */ }
 
         // 4. Active Drives (safe — may not exist)
         let activeDrivesCount = 0;
@@ -72,10 +84,10 @@ export const getSummary = async (req: Request, res: Response<ApiResponse>, next:
                 total_students: parseInt(studentCounts.rows[0]?.total_students || 0),
                 active_students: parseInt(studentCounts.rows[0]?.active_students || 0),
                 active_drives: activeDrivesCount,
-                avg_score: avgScore.toFixed(1),
-                avg_integrity: parseFloat(avgIntegrity.rows[0]?.avg_integrity || 85).toFixed(1),
-                placed_students: parseInt(placement.rows[0]?.placed_students || 0),
-                placement_conversion: parseFloat(placement.rows[0]?.placement_conversion || 0).toFixed(1)
+                avg_score: parseFloat(avgScore.toFixed(1)),
+                avg_integrity: parseFloat(avgIntegrityScore.toFixed(1)),
+                placed_students: placedStudents,
+                placement_conversion: parseFloat(placementConversion.toFixed(1))
             }
         });
     } catch (error) {
@@ -255,17 +267,20 @@ export const getIntegrity = async (req: Request, res: Response<ApiResponse>, nex
             totalViolations = parseInt(riskResult.rows[0]?.total_violations || 0);
         } catch { /* assessment_drives may not exist yet */ }
 
-        // Fallback: count from student_details.total_violations (set in seed)
+        // Optional fallback: some deployments carry per-student integrity columns on
+        // student_details. Only use them if present — never fail the request if absent.
         if (highRiskStudents === 0 && totalViolations === 0) {
-            const fallback = await pool.query(
-                `SELECT 
-                    COUNT(CASE WHEN avg_integrity_score < 70 THEN 1 END)::int as high_risk,
-                    COALESCE(SUM(total_violations), 0)::int as total_violations
-                 FROM student_details WHERE college_id = $1`,
-                [collegeId]
-            );
-            highRiskStudents = parseInt(fallback.rows[0]?.high_risk || 0);
-            totalViolations = parseInt(fallback.rows[0]?.total_violations || 0);
+            try {
+                const fallback = await pool.query(
+                    `SELECT
+                        COUNT(CASE WHEN avg_integrity_score < 70 THEN 1 END)::int as high_risk,
+                        COALESCE(SUM(total_violations), 0)::int as total_violations
+                     FROM student_details WHERE college_id = $1`,
+                    [collegeId]
+                );
+                highRiskStudents = parseInt(fallback.rows[0]?.high_risk || 0);
+                totalViolations = parseInt(fallback.rows[0]?.total_violations || 0);
+            } catch { /* integrity columns not present in this deployment */ }
         }
 
         res.json({
@@ -288,40 +303,57 @@ export const getPlacement = async (req: Request, res: Response<ApiResponse>, nex
     try {
         const collegeId = getCollegeId(req);
 
-        const funnel = await pool.query(
-            `SELECT 
-                COUNT(*) as total_students,
-                SUM(CASE WHEN placement_status IN ('Shortlisted', 'Offered', 'Accepted', 'Joined') THEN 1 ELSE 0 END) as shortlisted,
-                SUM(CASE WHEN placement_status IN ('Offered', 'Accepted', 'Joined') THEN 1 ELSE 0 END) as offered,
-                SUM(CASE WHEN placement_status = 'Joined' THEN 1 ELSE 0 END) as joined,
-                AVG(placement_package) as avg_package
-             FROM student_details
-             WHERE college_id = $1 AND eligible_for_hiring = true`,
-            [collegeId]
-        );
+        // Placement-outcome tracking is optional; degrade to zeros when the columns
+        // aren't present so the pipeline still reports real exam participation.
+        let total = 0;
+        let shortlisted = 0;
+        let offered = 0;
+        let joined = 0;
+        let avgPackage = 0;
+        try {
+            const funnel = await pool.query(
+                `SELECT
+                    COUNT(*) as total_students,
+                    SUM(CASE WHEN placement_status IN ('Shortlisted', 'Offered', 'Accepted', 'Joined') THEN 1 ELSE 0 END) as shortlisted,
+                    SUM(CASE WHEN placement_status IN ('Offered', 'Accepted', 'Joined') THEN 1 ELSE 0 END) as offered,
+                    SUM(CASE WHEN placement_status = 'Joined' THEN 1 ELSE 0 END) as joined,
+                    AVG(placement_package) as avg_package
+                 FROM student_details
+                 WHERE college_id = $1 AND eligible_for_hiring = true`,
+                [collegeId]
+            );
+            total = parseInt(funnel.rows[0]?.total_students || 0);
+            shortlisted = parseInt(funnel.rows[0]?.shortlisted || 0);
+            offered = parseInt(funnel.rows[0]?.offered || 0);
+            joined = parseInt(funnel.rows[0]?.joined || 0);
+            avgPackage = parseFloat(funnel.rows[0]?.avg_package || 0);
+        } catch { /* placement columns not present in this deployment */ }
 
-        const total = parseInt(funnel.rows[0]?.total_students || 0);
-        const offered = parseInt(funnel.rows[0]?.offered || 0);
-
-        // Mock 'Appeared' and 'Passed' from exam data
+        // 'Appeared' / 'Passed' come from real exam data (marks_scored).
         const stats = await pool.query(
-            `SELECT COUNT(DISTINCT student_id) as appeared FROM marks_scored ms JOIN student_details sd ON ms.student_id = sd.user_id WHERE sd.college_id = $1`,
+            `SELECT
+                COUNT(DISTINCT ms.student_id) as appeared,
+                COUNT(DISTINCT CASE WHEN ms.final_score >= 60 THEN ms.student_id END) as passed
+             FROM marks_scored ms
+             JOIN student_details sd ON ms.student_id = sd.user_id
+             WHERE sd.college_id = $1`,
             [collegeId]
         );
         const appeared = parseInt(stats.rows[0]?.appeared || 0);
+        const passed = parseInt(stats.rows[0]?.passed || 0);
 
         res.json({
             success: true,
             data: {
                 funnel: {
                     appeared: appeared,
-                    passed: Math.floor(appeared * 0.8), // Mock
-                    shortlisted: parseInt(funnel.rows[0]?.shortlisted || 0),
+                    passed: passed,
+                    shortlisted: shortlisted,
                     offered: offered,
-                    joined: parseInt(funnel.rows[0]?.joined || 0)
+                    joined: joined
                 },
                 conversion_percentage: total > 0 ? parseFloat(((offered / total) * 100).toFixed(1)) : 0,
-                avg_package: parseFloat(funnel.rows[0]?.avg_package || 0).toFixed(2)
+                avg_package: parseFloat((avgPackage || 0).toFixed(2))
             }
         });
 
@@ -354,9 +386,9 @@ export const getTopPerformers = async (req: Request, res: Response<ApiResponse>,
             rank: i + 1,
             student: r.student,
             id: r.id,
-            cgpa: parseFloat(r.cgpa || 0).toFixed(2),
-            avg_score: parseFloat(r.avg_score || 0).toFixed(1),
-            integrity: parseFloat(r.integrity || 100).toFixed(1)
+            cgpa: parseFloat(parseFloat(r.cgpa || 0).toFixed(2)),
+            avg_score: parseFloat(parseFloat(r.avg_score || 0).toFixed(1)),
+            integrity: parseFloat(parseFloat(r.integrity || 100).toFixed(1))
         }));
 
         res.json({

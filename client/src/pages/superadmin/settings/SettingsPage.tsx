@@ -48,9 +48,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
           {tab === "backup" ? "Backup & Security" : "System Settings"}
         </h2>
         <p className="text-gray-600 mt-1">
@@ -119,7 +119,7 @@ function Toggle({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          checked ? "bg-blue-600" : "bg-gray-300"
+          checked ? "bg-navy-900" : "bg-gray-300"
         }`}
       >
         <span
@@ -133,7 +133,7 @@ function Toggle({
 }
 
 const inputClass =
-  "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+  "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent";
 
 function SystemTab({ settings, set, save, saving }: TabProps) {
   const KEYS = [
@@ -147,7 +147,7 @@ function SystemTab({ settings, set, save, saving }: TabProps) {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
         <h3 className="font-semibold text-gray-900">Platform</h3>
         <Field label="Platform Name">
           <input
@@ -181,7 +181,7 @@ function SystemTab({ settings, set, save, saving }: TabProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
         <h3 className="font-semibold text-gray-900">Billing Defaults</h3>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Fee per Student (₹)" hint="Charged per student per academic year">
@@ -204,7 +204,7 @@ function SystemTab({ settings, set, save, saving }: TabProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-gray-900">System Logs</h3>
@@ -225,7 +225,7 @@ function SystemTab({ settings, set, save, saving }: TabProps) {
       <button
         onClick={() => save(KEYS)}
         disabled={saving}
-        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+        className="px-6 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
       >
         {saving ? "Saving..." : "Save Settings"}
       </button>
@@ -269,7 +269,7 @@ function BackupSecurityTab({ settings, set, save, saving }: TabProps) {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
         <h3 className="font-semibold text-gray-900">Security</h3>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Minimum Password Length">
@@ -300,7 +300,7 @@ function BackupSecurityTab({ settings, set, save, saving }: TabProps) {
         />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-semibold text-gray-900">Backups</h3>
@@ -311,7 +311,7 @@ function BackupSecurityTab({ settings, set, save, saving }: TabProps) {
           <button
             onClick={handleBackupNow}
             disabled={exporting}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
           >
             {exporting ? "Exporting..." : "Download Backup Now"}
           </button>
@@ -354,7 +354,7 @@ function BackupSecurityTab({ settings, set, save, saving }: TabProps) {
       <button
         onClick={() => save(KEYS)}
         disabled={saving}
-        className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+        className="px-6 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
       >
         {saving ? "Saving..." : "Save Settings"}
       </button>

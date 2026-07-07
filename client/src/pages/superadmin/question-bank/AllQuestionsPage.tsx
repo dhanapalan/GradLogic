@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { MagnifyingGlassIcon, SparklesIcon, ArrowDownTrayIcon, ArrowUpTrayIcon } from "@heroicons/react/24/outline";
+import { Search, Sparkles, Download, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import questionBankService, { Question } from "../../../services/questionBankService";
@@ -369,12 +369,12 @@ export default function AllQuestionsPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">All Questions</h2>
-          <p className="text-gray-600 mt-1">Manage the master question repository ({total} total)</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">All Questions</h2>
+          <p className="text-gray-500 mt-1">Manage the master question repository ({total} total).</p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -388,20 +388,20 @@ export default function AllQuestionsPage() {
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
           >
-            <ArrowUpTrayIcon className="w-5 h-5" />
+            <Upload className="w-4 h-4" />
             Import CSV
           </button>
           <button
             onClick={downloadTemplate}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-admin-accent hover:underline font-medium"
           >
             Download template
           </button>
           <Link
             to="/app/superadmin/question-bank/ai-generator"
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors"
           >
-            <SparklesIcon className="w-5 h-5" />
+            <Sparkles className="w-4 h-4" />
             Generate New Questions
           </Link>
         </div>
@@ -409,7 +409,7 @@ export default function AllQuestionsPage() {
 
       {/* Import review panel */}
       {pendingImport && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Review Import</h3>
           <p className="text-sm text-gray-600 mb-3">
             <span className="font-medium text-green-700">{pendingImport.valid.length} valid</span>
@@ -438,7 +438,7 @@ export default function AllQuestionsPage() {
             <button
               onClick={confirmImport}
               disabled={importing || pendingImport.valid.length === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
             >
               Import {pendingImport.valid.length} Question{pendingImport.valid.length === 1 ? "" : "s"}
             </button>
@@ -453,15 +453,15 @@ export default function AllQuestionsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 mb-4">
         <div className="relative mb-4">
-          <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
           <input
             type="text"
             placeholder="Search question text..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
           />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -470,7 +470,7 @@ export default function AllQuestionsPage() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
             >
               <option value="">All Subjects</option>
               {CATEGORIES.map((c) => (
@@ -485,7 +485,7 @@ export default function AllQuestionsPage() {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
             >
               <option value="">All Types</option>
               <option value="multiple_choice">Multiple Choice</option>
@@ -497,7 +497,7 @@ export default function AllQuestionsPage() {
             <select
               value={difficulty}
               onChange={(e) => setDifficulty(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
             >
               <option value="">All Levels</option>
               <option value="easy">Easy</option>
@@ -510,7 +510,7 @@ export default function AllQuestionsPage() {
             <select
               value={bloomLevel}
               onChange={(e) => setBloomLevel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
             >
               <option value="">All Levels</option>
               {BLOOM_LEVELS.map((b) => (
@@ -525,7 +525,7 @@ export default function AllQuestionsPage() {
             <select
               value={source}
               onChange={(e) => setSource(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
             >
               <option value="">All Sources</option>
               <option value="ai-generated">AI Generated</option>
@@ -537,8 +537,8 @@ export default function AllQuestionsPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
-          <span className="text-sm font-medium text-blue-900">{selected.size} selected</span>
+        <div className="bg-navy-900/[0.04] border border-navy-900/10 rounded-xl p-3 mb-4 flex items-center justify-between">
+          <span className="text-sm font-medium text-navy-900">{selected.size} selected</span>
           <div className="flex gap-2">
             <button
               onClick={() => handleBulk("publish")}
@@ -556,9 +556,9 @@ export default function AllQuestionsPage() {
             </button>
             <button
               onClick={handleExport}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100"
+              className="flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
             >
-              <ArrowDownTrayIcon className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               Export
             </button>
           </div>
@@ -566,7 +566,7 @@ export default function AllQuestionsPage() {
       )}
 
       {/* Questions Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
             <p className="text-gray-600">Loading questions...</p>
@@ -574,7 +574,7 @@ export default function AllQuestionsPage() {
         ) : (
           <>
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50/70 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-3">
                     <input
@@ -583,17 +583,17 @@ export default function AllQuestionsPage() {
                       onChange={toggleAll}
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Question</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Subject</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Type</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Difficulty</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Bloom's</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Source</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Question</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Difficulty</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Bloom's</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Source</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {questions.map((question) => (
                   <tr key={question.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-4">

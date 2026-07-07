@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Check, X } from "lucide-react";
 import collegeService, { CollegeRequest } from "../../../services/collegeService";
 import questionBankService, { AIQuestion } from "../../../services/questionBankService";
 
@@ -117,10 +117,10 @@ export default function ApprovalsPage() {
   const pendingQuestionCount = questions.length;
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Approvals</h2>
-        <p className="text-gray-600 mt-1">Review and act on pending requests across the platform</p>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Approvals</h2>
+        <p className="text-gray-500 mt-1">Review and act on pending requests across the platform.</p>
       </div>
 
       {/* Tabs */}
@@ -135,7 +135,7 @@ export default function ApprovalsPage() {
                 onClick={() => setTab(t.key)}
                 className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2 ${
                   tab === t.key
-                    ? "border-blue-600 text-blue-600"
+                    ? "border-admin-accent text-admin-accent"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
@@ -155,11 +155,11 @@ export default function ApprovalsPage() {
       {tab === "colleges" && (
         <div>
           {loadingColleges ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-500">
               Loading...
             </div>
           ) : collegeRequests.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-500">
               No pending college registrations
             </div>
           ) : (
@@ -167,7 +167,7 @@ export default function ApprovalsPage() {
               {collegeRequests.map((request) => {
                 const key = `colleges:${request.id}`;
                 return (
-                  <div key={request.id} className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div key={request.id} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <h4 className="text-lg font-semibold text-gray-900">{request.name}</h4>
@@ -198,7 +198,7 @@ export default function ApprovalsPage() {
                               ? "Optional comment..."
                               : "Reason for rejection (required)..."
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent mb-2"
                         />
                         <div className="flex gap-2">
                           <button
@@ -224,14 +224,14 @@ export default function ApprovalsPage() {
                           onClick={() => openComment(key, "approve")}
                           className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100 transition-colors"
                         >
-                          <CheckIcon className="w-4 h-4" />
+                          <Check className="w-4 h-4" />
                           Approve
                         </button>
                         <button
                           onClick={() => openComment(key, "reject")}
                           className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100 transition-colors"
                         >
-                          <XMarkIcon className="w-4 h-4" />
+                          <X className="w-4 h-4" />
                           Reject
                         </button>
                       </div>
@@ -248,11 +248,11 @@ export default function ApprovalsPage() {
       {tab === "questions" && (
         <div>
           {loadingQuestions ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-500">
               Loading...
             </div>
           ) : questions.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-500">
               No pending AI-generated questions
             </div>
           ) : (
@@ -260,10 +260,10 @@ export default function ApprovalsPage() {
               {questions.map((q) => {
                 const key = `questions:${q.id}`;
                 return (
-                  <div key={q.id} className="bg-white rounded-lg border border-gray-200 p-6">
+                  <div key={q.id} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
                     <div className="flex items-start justify-between mb-3">
                       <p className="text-sm font-medium text-gray-900 flex-1">{q.text}</p>
-                      <span className="ml-3 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded whitespace-nowrap">
+                      <span className="ml-3 px-2 py-1 text-xs font-medium bg-navy-900/[0.06] text-navy-900 rounded whitespace-nowrap">
                         {q.category} · {q.difficulty}
                       </span>
                     </div>
@@ -291,7 +291,7 @@ export default function ApprovalsPage() {
                               ? "Optional comment..."
                               : "Reason for rejection (required)..."
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent mb-2"
                         />
                         <div className="flex gap-2">
                           <button
@@ -317,14 +317,14 @@ export default function ApprovalsPage() {
                           onClick={() => openComment(key, "approve")}
                           className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg font-medium hover:bg-green-100 transition-colors"
                         >
-                          <CheckIcon className="w-4 h-4" />
+                          <Check className="w-4 h-4" />
                           Approve
                         </button>
                         <button
                           onClick={() => openComment(key, "reject")}
                           className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100 transition-colors"
                         >
-                          <XMarkIcon className="w-4 h-4" />
+                          <X className="w-4 h-4" />
                           Reject
                         </button>
                       </div>
@@ -339,7 +339,7 @@ export default function ApprovalsPage() {
 
       {/* Other Requests */}
       {tab === "other" && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-500">
           No other pending request types yet. This tab is reserved for future approval workflows
           (e.g. content flags, role change requests).
         </div>

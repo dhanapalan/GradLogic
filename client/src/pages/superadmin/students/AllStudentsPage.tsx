@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { MagnifyingGlassIcon, BellIcon, KeyIcon } from "@heroicons/react/24/outline";
+import { Search, Bell, Key } from "lucide-react";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import studentsService, { StudentListItem } from "../../../services/studentsService";
 import collegeService, { College } from "../../../services/collegeService";
@@ -132,31 +132,31 @@ export default function AllStudentsPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Students</h2>
-        <p className="text-gray-600 mt-1">
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Students</h2>
+        <p className="text-gray-500 mt-1">
           {total > 0 ? `${total} students across all colleges` : "All students across all colleges"}
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="relative md:col-span-2">
-            <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search name, email, or ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
             />
           </div>
           <select
             value={collegeId}
             onChange={(e) => setCollegeId(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-admin-accent"
           >
             <option value="">All Colleges</option>
             {colleges.map((c) => (
@@ -170,12 +170,12 @@ export default function AllStudentsPage() {
             placeholder="Batch (year)"
             value={batch}
             onChange={(e) => setBatch(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-admin-accent"
           />
           <select
             value={performance}
             onChange={(e) => setPerformance(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-admin-accent"
           >
             <option value="">All Performance</option>
             <option value="high">High (≥70%)</option>
@@ -189,7 +189,7 @@ export default function AllStudentsPage() {
               key={s || "all"}
               onClick={() => setStatus(s)}
               className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
-                status === s ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                status === s ? "bg-navy-900/[0.06] text-navy-900" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
               {s ? s.charAt(0).toUpperCase() + s.slice(1) : "All Statuses"}
@@ -200,23 +200,23 @@ export default function AllStudentsPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
-          <span className="text-sm font-medium text-blue-900">{selected.size} selected</span>
+        <div className="bg-navy-900/[0.04] border border-navy-900/10 rounded-xl p-3 mb-4 flex items-center justify-between">
+          <span className="text-sm font-medium text-navy-900">{selected.size} selected</span>
           <div className="flex gap-2">
             <button
               onClick={() => setNotifyOpen(true)}
               disabled={acting}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
             >
-              <BellIcon className="w-4 h-4" />
+              <Bell className="w-4 h-4" />
               Send Notification
             </button>
             <button
               onClick={handleResetPasswords}
               disabled={acting}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
             >
-              <KeyIcon className="w-4 h-4" />
+              <Key className="w-4 h-4" />
               Reset Password
             </button>
             <button
@@ -238,7 +238,7 @@ export default function AllStudentsPage() {
       )}
 
       {notifyOpen && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+        <div className="bg-white border border-gray-200/70 rounded-xl shadow-admin-card p-4 mb-4">
           <p className="text-sm font-medium text-gray-900 mb-2">
             Send notification to {selected.size} student(s)
           </p>
@@ -247,13 +247,13 @@ export default function AllStudentsPage() {
             value={notifyMessage}
             onChange={(e) => setNotifyMessage(e.target.value)}
             placeholder="Message..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
           />
           <div className="flex gap-2 mt-2">
             <button
               onClick={handleSendNotification}
               disabled={acting || !notifyMessage.trim()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
             >
               Send
             </button>
@@ -268,9 +268,9 @@ export default function AllStudentsPage() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50/70 border-b border-gray-200">
             <tr>
               <th className="px-4 py-3">
                 <input
@@ -279,16 +279,14 @@ export default function AllStudentsPage() {
                   onChange={toggleAll}
                 />
               </th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Student Name</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Batch/Department</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Registered</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Readiness</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Last Active</th>
+              {["Student Name", "College", "Batch/Department", "Email", "Registered", "Readiness", "Last Active"].map((h) => (
+                <th key={h} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {loading ? (
               [1, 2, 3].map((i) => (
                 <tr key={i} className="animate-pulse">
@@ -310,23 +308,23 @@ export default function AllStudentsPage() {
                       />
                     </td>
                     <td
-                      className="px-6 py-4 text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer"
+                      className="px-6 py-4 text-sm font-medium text-admin-accent hover:underline cursor-pointer"
                       onClick={() => navigate(`/app/superadmin/students/${student.id}`)}
                     >
                       {student.name}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{student.college_name || "—"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-500">{student.college_name || "—"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {[student.department, student.batch].filter(Boolean).join(" · ") || "—"}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-500">{student.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(student.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       <StatusBadge status={readiness.status} label={readiness.label} size="sm" />
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {student.last_login ? new Date(student.last_login).toLocaleString() : "Never"}
                     </td>
                   </tr>
@@ -338,8 +336,8 @@ export default function AllStudentsPage() {
       </div>
 
       {!loading && students.length === 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <p className="text-gray-600">No students match your filters</p>
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center">
+          <p className="text-gray-500">No students match your filters</p>
         </div>
       )}
     </div>

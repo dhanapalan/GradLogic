@@ -180,22 +180,22 @@ export default function RoleManagementPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Role Management</h2>
-          <p className="text-gray-600 mt-1">Manage roles and permissions ({roles.length} total)</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Role Management</h2>
+          <p className="text-gray-500 mt-1">Manage roles and permissions ({roles.length} total).</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800"
         >
           <PlusIcon className="w-5 h-5" />
           Create Role
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-600">Loading roles...</div>
         ) : roles.length === 0 ? (
@@ -204,22 +204,22 @@ export default function RoleManagementPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Role Name
                 </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Users
                 </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Permissions
                 </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Actions
                 </th>
               </tr>
@@ -249,7 +249,7 @@ export default function RoleManagementPage() {
                   <td className="px-6 py-4 text-sm flex gap-2">
                     <button
                       onClick={() => handleOpenPermissionsModal(role)}
-                      className="px-3 py-1 text-blue-600 text-sm border border-blue-200 rounded hover:bg-blue-50"
+                      className="px-3 py-1 text-admin-accent text-sm border border-admin-accent/30 rounded hover:bg-navy-900/[0.04]"
                     >
                       Permissions
                     </button>
@@ -262,7 +262,7 @@ export default function RoleManagementPage() {
                             setEditRoleDescription(role.description || "");
                             setShowEditModal(true);
                           }}
-                          className="px-2 py-1 text-gray-600 hover:text-blue-600"
+                          className="px-2 py-1 text-gray-500 hover:text-admin-accent"
                         >
                           <PencilIcon className="w-4 h-4" />
                         </button>
@@ -306,7 +306,7 @@ export default function RoleManagementPage() {
                   value={newRoleName}
                   onChange={(e) => setNewRoleName(e.target.value)}
                   placeholder="e.g., Content Manager"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 />
               </div>
 
@@ -319,7 +319,7 @@ export default function RoleManagementPage() {
                   onChange={(e) => setNewRoleDescription(e.target.value)}
                   placeholder="Role description..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 />
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function RoleManagementPage() {
               <button
                 onClick={handleCreateRole}
                 disabled={submitLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
               >
                 {submitLoading ? "Creating..." : "Create"}
               </button>
@@ -369,7 +369,7 @@ export default function RoleManagementPage() {
                   type="text"
                   value={editRoleName}
                   onChange={(e) => setEditRoleName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 />
               </div>
 
@@ -381,7 +381,7 @@ export default function RoleManagementPage() {
                   value={editRoleDescription}
                   onChange={(e) => setEditRoleDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 />
               </div>
             </div>
@@ -399,7 +399,7 @@ export default function RoleManagementPage() {
               <button
                 onClick={handleEditRole}
                 disabled={submitLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
               >
                 {submitLoading ? "Saving..." : "Save"}
               </button>
@@ -430,7 +430,7 @@ export default function RoleManagementPage() {
             <div className="space-y-6">
               {permissionGroups.map((group) => (
                 <div key={group.category}>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">
                     {group.category}
                   </h4>
                   <div className="space-y-2 pl-4">
@@ -475,7 +475,7 @@ export default function RoleManagementPage() {
               <button
                 onClick={handleSavePermissions}
                 disabled={submitLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
               >
                 {submitLoading ? "Saving..." : "Save Permissions"}
               </button>

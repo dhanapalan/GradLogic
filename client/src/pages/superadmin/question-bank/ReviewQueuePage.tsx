@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircleIcon, XCircleIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { CheckCircle2, XCircle, Check } from "lucide-react";
 import toast from "react-hot-toast";
 import questionBankService from "../../../services/questionBankService";
 
@@ -81,26 +81,26 @@ export default function ReviewQueuePage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Review Queue</h2>
-        <p className="text-gray-600 mt-1">Review and approve AI-generated questions before publishing</p>
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Review Queue</h2>
+        <p className="text-gray-500 mt-1">Review and approve AI-generated questions before publishing.</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-sm text-gray-600 mb-1">Pending Review</p>
-          <p className="text-3xl font-bold text-yellow-600">{pendingQuestions.length}</p>
+          <p className="text-3xl font-display font-semibold text-yellow-600">{pendingQuestions.length}</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-sm text-gray-600 mb-1">Approved</p>
-          <p className="text-3xl font-bold text-green-600">{approvedCount}</p>
+          <p className="text-3xl font-display font-semibold text-green-600">{approvedCount}</p>
         </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
           <p className="text-sm text-gray-600 mb-1">Rejected</p>
-          <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
+          <p className="text-3xl font-display font-semibold text-red-600">{rejectedCount}</p>
         </div>
       </div>
 
@@ -113,7 +113,7 @@ export default function ReviewQueuePage() {
         <div className="grid grid-cols-3 gap-6">
         {/* Questions List */}
         <div className="col-span-1">
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
             <div className="bg-gray-50 border-b border-gray-200 p-4">
               <h3 className="font-semibold text-gray-900">Pending Questions</h3>
             </div>
@@ -127,7 +127,7 @@ export default function ReviewQueuePage() {
                       key={q.id}
                       onClick={() => setSelectedQuestion(q)}
                       className={`w-full text-left p-4 hover:bg-gray-50 transition-colors ${
-                        selectedQuestion?.id === q.id ? "bg-blue-50" : ""
+                        selectedQuestion?.id === q.id ? "bg-navy-900/[0.06]" : ""
                       }`}
                     >
                       <p className="text-sm font-medium text-gray-900 line-clamp-2">{q.text}</p>
@@ -147,7 +147,7 @@ export default function ReviewQueuePage() {
         {/* Question Detail Review */}
         <div className="col-span-2">
           {selectedQuestion ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
               {/* Question Text */}
               <div className="mb-6">
                 <div className="flex items-start justify-between mb-3">
@@ -160,7 +160,7 @@ export default function ReviewQueuePage() {
 
                 {/* Metadata */}
                 <div className="flex gap-2 flex-wrap">
-                  <span className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium capitalize">
+                  <span className="text-xs px-3 py-1 bg-navy-900/[0.06] text-navy-900 rounded-full font-medium capitalize">
                     {selectedQuestion.difficulty}
                   </span>
                   <span className="text-xs px-2 py-1 bg-gray-100 rounded">{selectedQuestion.category}</span>
@@ -188,7 +188,7 @@ export default function ReviewQueuePage() {
                           </span>
                           <span className="text-sm text-gray-900">{option}</span>
                           {option === selectedQuestion.correctAnswer && (
-                            <CheckIcon className="w-4 h-4 text-green-600 ml-auto" />
+                            <Check className="w-4 h-4 text-green-600 ml-auto" />
                           )}
                         </div>
                       </div>
@@ -216,7 +216,7 @@ export default function ReviewQueuePage() {
                     onChange={(e) => setRejectionReason(e.target.value)}
                     placeholder="Why are you rejecting this question?"
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   />
                 </div>
 
@@ -225,21 +225,21 @@ export default function ReviewQueuePage() {
                     onClick={() => handleApprove(selectedQuestion.id)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
                   >
-                    <CheckCircleIcon className="w-4 h-4" />
+                    <CheckCircle2 className="w-4 h-4" />
                     Approve
                   </button>
                   <button
                     onClick={() => handleReject(selectedQuestion.id)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
                   >
-                    <XCircleIcon className="w-4 h-4" />
+                    <XCircle className="w-4 h-4" />
                     Reject
                   </button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center">
               <p className="text-gray-600">Select a question from the list to review</p>
             </div>
           )}

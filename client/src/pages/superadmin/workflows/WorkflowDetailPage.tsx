@@ -227,7 +227,7 @@ export default function WorkflowDetailPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
       </div>
     );
@@ -235,7 +235,7 @@ export default function WorkflowDetailPage() {
 
   if (notFound || !workflow) {
     return (
-      <div className="p-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
         <Link
           to="/app/superadmin/workflows"
           className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
@@ -243,7 +243,7 @@ export default function WorkflowDetailPage() {
           <ArrowLeftIcon className="w-4 h-4" />
           Back to Workflows
         </Link>
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-600">
           Workflow not found
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function WorkflowDetailPage() {
   }
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       <Link
         to={`/app/superadmin/workflows${workflow.category ? `?category=${workflow.category}` : ""}`}
         className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
@@ -263,8 +263,8 @@ export default function WorkflowDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">{workflow.name}</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{workflow.name}</h2>
+          <p className="text-gray-500 mt-1">
             {CATEGORY_LABELS[workflow.category || ""] || "Uncategorized"} ·{" "}
             {workflow.trigger_event.replace(/_/g, " ")}
           </p>
@@ -279,7 +279,7 @@ export default function WorkflowDetailPage() {
 
       {/* Pipeline overview */}
       {steps.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6 overflow-x-auto">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 mb-6 overflow-x-auto">
           <div className="flex items-center gap-2 min-w-max">
             {steps.map((step, i) => {
               const meta = stageMeta(step.type);
@@ -306,7 +306,7 @@ export default function WorkflowDetailPage() {
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu((v) => !v)}
-                className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                className="flex items-center gap-2 px-3 py-2 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800"
               >
                 <PlusIcon className="w-4 h-4" />
                 Add Stage
@@ -350,7 +350,7 @@ export default function WorkflowDetailPage() {
           </div>
 
           {steps.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-600">
               No stages yet. Add stages to build the learning pipeline
               (e.g. Learn → Practice → Exam → Certify).
             </div>
@@ -360,7 +360,7 @@ export default function WorkflowDetailPage() {
                 const meta = stageMeta(step.type);
                 const Icon = meta.icon;
                 return (
-                  <div key={i} className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div key={i} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
                     <div className="flex items-start gap-3">
                       <span
                         className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium whitespace-nowrap mt-1 ${meta.badge}`}
@@ -374,7 +374,7 @@ export default function WorkflowDetailPage() {
                           value={step.name}
                           onChange={(e) => updateStage(i, { name: e.target.value })}
                           placeholder="Stage name"
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-admin-accent"
                         />
                         <textarea
                           rows={2}
@@ -383,7 +383,7 @@ export default function WorkflowDetailPage() {
                             updateStage(i, { config: { ...step.config, description: e.target.value } })
                           }
                           placeholder="What happens in this stage..."
-                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-admin-accent"
                         />
                       </div>
                       <div className="flex flex-col gap-1">
@@ -430,14 +430,14 @@ export default function WorkflowDetailPage() {
         {/* Workflow details editor */}
         <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Details</h3>
-          <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
               />
             </div>
             <div>
@@ -446,7 +446,7 @@ export default function WorkflowDetailPage() {
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
               />
             </div>
             <div>
@@ -454,7 +454,7 @@ export default function WorkflowDetailPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
               >
                 {Object.entries(CATEGORY_LABELS).map(([value, lbl]) => (
                   <option key={value} value={value}>
@@ -468,7 +468,7 @@ export default function WorkflowDetailPage() {
               <select
                 value={triggerEvent}
                 onChange={(e) => setTriggerEvent(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
               >
                 {TRIGGER_OPTIONS.map((t) => (
                   <option key={t} value={t}>
@@ -480,7 +480,7 @@ export default function WorkflowDetailPage() {
             <button
               onClick={saveMeta}
               disabled={savingMeta}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
             >
               {savingMeta ? "Saving..." : "Save Details"}
             </button>

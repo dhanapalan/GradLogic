@@ -5,7 +5,7 @@ import * as collegeDashboardController from "../controllers/college.dashboard.co
 const router = Router();
 
 // Apply auth to all dashboard routes
-router.use(authenticate, authorize("college_admin", "college"));
+router.use(authenticate, authorize("college_admin", "college", "college_staff"));
 
 router.get("/summary", collegeDashboardController.getSummary);
 router.get("/drives", collegeDashboardController.getDrives);

@@ -36,11 +36,11 @@ interface ChartCardProps {
 }
 
 const CHART_HEADER: Record<ChartColor, string> = {
-  blue: "from-blue-500/10 to-white border-blue-100",
-  violet: "from-violet-500/10 to-white border-violet-100",
-  emerald: "from-emerald-500/10 to-white border-emerald-100",
-  cyan: "from-cyan-500/10 to-white border-cyan-100",
-  indigo: "from-indigo-500/10 to-white border-indigo-100",
+  blue: "border-blue-200",
+  violet: "border-violet-200",
+  emerald: "border-emerald-200",
+  cyan: "border-cyan-200",
+  indigo: "border-indigo-200",
 };
 
 function EmptyChart({ title, subtitle, compact }: { title: string; subtitle?: string; compact?: boolean }) {
@@ -84,7 +84,7 @@ export default function ChartCard({
   }
 
   return (
-    <div className={`bg-gradient-to-b ${CHART_HEADER[color]} rounded-xl border ${pad} shadow-sm h-full flex flex-col`}>
+    <div className={`bg-white rounded-lg border ${CHART_HEADER[color]} ${pad} shadow-sm h-full flex flex-col`}>
       <div className={`flex items-start justify-between ${compact ? "mb-2" : "mb-4"}`}>
         <div className="min-w-0">
           <p className={`font-semibold text-gray-900 truncate ${compact ? "text-xs" : "text-sm"}`}>{title}</p>

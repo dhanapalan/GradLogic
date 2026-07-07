@@ -113,9 +113,9 @@ export default function AuditTrailPage() {
   const pages = Math.ceil(total / limit);
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Audit Trail</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Audit Trail</h2>
         <p className="text-gray-600 mt-1">
           Platform activity log ({total} total events)
         </p>
@@ -124,25 +124,25 @@ export default function AuditTrailPage() {
       {/* Statistics */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
             <p className="text-sm text-gray-600">Total Actions (30d)</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {stats.total_actions}
             </p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
             <p className="text-sm text-gray-600">Unique Users</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {stats.by_user?.length || 0}
             </p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
             <p className="text-sm text-gray-600">Resource Types</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {stats.by_resource_type?.length || 0}
             </p>
           </div>
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
             <p className="text-sm text-gray-600">Action Types</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
               {stats.by_action?.length || 0}
@@ -152,7 +152,7 @@ export default function AuditTrailPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 mb-6">
         <div className="grid grid-cols-5 gap-4 mb-4">
           <select
             value={actionFilter}
@@ -160,7 +160,7 @@ export default function AuditTrailPage() {
               setActionFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           >
             {ACTION_OPTIONS.map((action) => (
               <option key={action} value={action}>
@@ -175,7 +175,7 @@ export default function AuditTrailPage() {
               setResourceFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           >
             {RESOURCE_TYPE_OPTIONS.map((type) => (
               <option key={type} value={type}>
@@ -190,7 +190,7 @@ export default function AuditTrailPage() {
               setSeverityFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           >
             {SEVERITY_OPTIONS.map((sev) => (
               <option key={sev} value={sev}>
@@ -206,7 +206,7 @@ export default function AuditTrailPage() {
               setFromDate(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           />
 
           <input
@@ -216,7 +216,7 @@ export default function AuditTrailPage() {
               setToDate(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           />
         </div>
 
@@ -241,13 +241,13 @@ export default function AuditTrailPage() {
       </div>
 
       {/* Timeline View */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-600">Loading audit logs...</div>
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-gray-600">No audit logs found</div>
         ) : (
-          <div className="space-y-1 divide-y divide-gray-200">
+          <div className="space-y-1 divide-y divide-gray-100">
             {logs.map((log) => (
               <div key={log.id} className="p-4 hover:bg-gray-50 cursor-pointer transition">
                 <button
@@ -323,7 +323,7 @@ export default function AuditTrailPage() {
                   onClick={() => setPage(p)}
                   className={`px-3 py-2 rounded-lg text-sm ${
                     p === page
-                      ? "bg-blue-600 text-white"
+                      ? "bg-navy-900 text-white"
                       : "border border-gray-300"
                   }`}
                 >

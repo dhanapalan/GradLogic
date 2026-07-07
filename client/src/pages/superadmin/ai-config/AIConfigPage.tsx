@@ -42,7 +42,7 @@ const TAB_META: Record<Tab, { title: string; subtitle: string }> = {
 };
 
 const inputClass =
-  "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+  "w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent";
 
 interface EngineStatus {
   online: boolean;
@@ -147,9 +147,9 @@ export default function AIConfigPage() {
   const meta = TAB_META[tab];
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">{meta.title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{meta.title}</h2>
         <p className="text-gray-600 mt-1">{meta.subtitle}</p>
       </div>
 
@@ -188,7 +188,7 @@ export default function AIConfigPage() {
           )}
 
           {tab === "model" && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
@@ -250,7 +250,7 @@ export default function AIConfigPage() {
           )}
 
           {tab === "prompts" && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   MCQ Generation Prompt
@@ -285,7 +285,7 @@ export default function AIConfigPage() {
           )}
 
           {tab === "quotas" && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+            <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -344,25 +344,25 @@ export default function AIConfigPage() {
           {tab === "usage" && (
             <>
               {usage === null ? (
-                <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+                <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-600">
                   Loading usage data...
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
                       <p className="text-xs text-gray-500 uppercase">AI Questions (total)</p>
                       <p className="text-2xl font-bold text-gray-900 mt-1">
                         {usage.totals.ai_questions_total}
                       </p>
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
                       <p className="text-xs text-gray-500 uppercase">Generated (last 30 days)</p>
                       <p className="text-2xl font-bold text-gray-900 mt-1">
                         {usage.totals.ai_questions_30d}
                       </p>
                     </div>
-                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                    <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
                       <p className="text-xs text-gray-500 uppercase">Import Batches (30 days)</p>
                       <p className="text-2xl font-bold text-gray-900 mt-1">
                         {usage.totals.import_batches_30d}
@@ -370,7 +370,7 @@ export default function AIConfigPage() {
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200">
                       <h3 className="font-semibold text-gray-900">Per-College Usage</h3>
                       <p className="text-sm text-gray-500">
@@ -378,15 +378,15 @@ export default function AIConfigPage() {
                       </p>
                     </div>
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b border-gray-200">
+                      <thead className="bg-gray-50/70 border-b border-gray-200">
                         <tr>
-                          <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
+                          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
                           <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Students</th>
                           <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">AI Questions Assigned</th>
                           <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Total Questions Assigned</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
+                      <tbody className="divide-y divide-gray-100">
                         {usage.per_college.map((c) => (
                           <tr key={c.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 text-sm font-medium text-gray-900">{c.name}</td>
@@ -399,14 +399,14 @@ export default function AIConfigPage() {
                     </table>
                   </div>
 
-                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
                     <div className="px-6 py-4 border-b border-gray-200">
                       <h3 className="font-semibold text-gray-900">Recent Import Batches</h3>
                     </div>
                     {usage.recent_imports.length === 0 ? (
                       <div className="p-8 text-center text-gray-600 text-sm">No AI imports yet</div>
                     ) : (
-                      <div className="divide-y divide-gray-200">
+                      <div className="divide-y divide-gray-100">
                         {usage.recent_imports.map((imp, i) => (
                           <div key={i} className="px-6 py-3 flex items-center justify-between text-sm">
                             <span className="text-gray-900">
@@ -439,7 +439,7 @@ function SaveButton({ saving, onClick }: { saving: boolean; onClick: () => void 
     <button
       onClick={onClick}
       disabled={saving}
-      className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+      className="px-6 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
     >
       {saving ? "Saving..." : "Save Configuration"}
     </button>
@@ -459,7 +459,7 @@ function ServicesTab({ services }: { services: AIServiceStatus[] | null }) {
 
   if (services === null) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-12 text-center text-gray-600">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center text-gray-600">
         Loading services...
       </div>
     );
@@ -486,7 +486,7 @@ function ServicesTab({ services }: { services: AIServiceStatus[] | null }) {
   return (
     <>
       {/* Summary strip */}
-      <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-5 py-4">
+      <div className="flex items-center justify-between bg-white rounded-xl border border-gray-200/70 shadow-admin-card px-5 py-4">
         <div>
           <p className="text-sm font-medium text-gray-900">
             {configuredCount} of {services.length} services configured
@@ -509,7 +509,7 @@ function ServicesTab({ services }: { services: AIServiceStatus[] | null }) {
       {/* Master-detail */}
       <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
         {/* Left rail */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden self-start">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden self-start">
           {services.map((svc) => {
             const Icon = SERVICE_ICONS[svc.key] || CpuChipIcon;
             const active = svc.key === selected.key;
@@ -518,12 +518,12 @@ function ServicesTab({ services }: { services: AIServiceStatus[] | null }) {
                 key={svc.key}
                 onClick={() => setSelectedKey(svc.key)}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left border-b border-gray-100 last:border-b-0 transition-colors ${
-                  active ? "bg-blue-50" : "hover:bg-gray-50"
+                  active ? "bg-navy-900/[0.04]" : "hover:bg-gray-50"
                 }`}
               >
-                <Icon className={`w-5 h-5 flex-shrink-0 ${active ? "text-blue-600" : "text-gray-400"}`} />
+                <Icon className={`w-5 h-5 flex-shrink-0 ${active ? "text-admin-accent" : "text-gray-400"}`} />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate ${active ? "text-blue-700" : "text-gray-900"}`}>
+                  <p className={`text-sm font-medium truncate ${active ? "text-admin-accent" : "text-gray-900"}`}>
                     {svc.name}
                   </p>
                   <p className="text-xs text-gray-500 capitalize">{svc.provider}</p>
@@ -535,11 +535,11 @@ function ServicesTab({ services }: { services: AIServiceStatus[] | null }) {
         </div>
 
         {/* Detail panel */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-blue-50 p-2">
-                <SelIcon className="w-6 h-6 text-blue-600" />
+              <div className="rounded-lg bg-navy-900/[0.04] p-2">
+                <SelIcon className="w-6 h-6 text-admin-accent" />
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">{selected.name}</h3>
@@ -561,7 +561,7 @@ function ServicesTab({ services }: { services: AIServiceStatus[] | null }) {
             <button
               onClick={() => runTest(selected.key)}
               disabled={!selected.testable || testing === selected.key}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
             >
               <BoltIcon className="w-4 h-4" />
               {testing === selected.key ? "Testing..." : "Test connection"}

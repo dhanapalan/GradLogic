@@ -49,7 +49,7 @@ const navigation: NavSection[] = [
     items: [
       { name: "HR Dashboard", href: "/app/hr-dashboard", icon: HomeIcon, roles: ["super_admin", "hr", "cxo"] },
       { name: "CXO Analytics", href: "/app/cxo-analytics", icon: ChartBarIcon, roles: ["cxo", "super_admin"] },
-      { name: "Dashboard", href: "/app/college-dashboard", icon: HomeIcon, roles: ["college_admin", "college", "college_staff"] },
+      { name: "Dashboard", href: "/app/college-portal/dashboard", icon: HomeIcon, roles: ["college_admin", "college", "college_staff"] },
       { name: "Student Portal", href: "/app/student-portal", icon: HomeIcon, roles: ["student"] },
       { name: "Dashboard", href: "/app/company", icon: BuildingOffice2Icon, roles: ["company"] },
       { name: "My Students", href: "/app/mentor", icon: UserGroupIcon, roles: ["mentor"] },

@@ -330,23 +330,7 @@ class SuperAdminMetricsService {
       return data;
     } catch (error) {
       console.error("Failed to fetch live dashboard:", error);
-      return {
-        updatedAt: new Date().toISOString(),
-        today: { newStudents: 0, newColleges: 0, examAttempts: 0, completedExams: 0, logins: 0 },
-        yesterday: { newStudents: 0, newColleges: 0, examAttempts: 0, completedExams: 0, logins: 0 },
-        activeNow: 0,
-        examsInProgress: 0,
-        examTrend: [],
-        actionItems: [],
-        counts: {
-          pendingColleges: 0,
-          pendingQuestions: 0,
-          pendingPayments: 0,
-          failedLoginsLastHour: 0,
-          suspendedColleges: 0,
-          aiGenerated30d: 0,
-        },
-      };
+      throw error;
     }
   }
 

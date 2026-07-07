@@ -32,8 +32,8 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Billing</h2>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Billing</h2>
         <div className="p-12 text-center text-gray-600">Loading billing summary...</div>
       </div>
     );
@@ -41,8 +41,8 @@ export default function BillingPage() {
 
   if (!summary) {
     return (
-      <div className="p-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Billing</h2>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Billing</h2>
         <p className="text-gray-600">Billing data is unavailable.</p>
       </div>
     );
@@ -57,7 +57,7 @@ export default function BillingPage() {
       value: inr(summary.expected),
       note: `${summary.total_students} students × ${inr(summary.fee_per_student)}`,
       icon: UserGroupIcon,
-      color: "text-blue-600 bg-blue-50",
+      color: "text-admin-accent bg-navy-900/[0.06]",
     },
     {
       title: "Collected",
@@ -83,9 +83,9 @@ export default function BillingPage() {
   ];
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
       <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Billing</h2>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Billing</h2>
         <p className="text-gray-600 mt-1">
           Per-student fees — {inr(summary.fee_per_student)} per student for academic year{" "}
           {summary.academic_year}
@@ -96,7 +96,7 @@ export default function BillingPage() {
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.title} className="bg-white rounded-lg border border-gray-200 p-5">
+            <div key={card.title} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-5">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-gray-600">{card.title}</p>
@@ -114,8 +114,8 @@ export default function BillingPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Per-college collection */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
+          <div className="bg-gray-50/70 border-b border-gray-200 px-6 py-3">
             <h3 className="font-semibold text-gray-900">Collection by College</h3>
           </div>
           {summary.by_college.length === 0 ? (
@@ -124,13 +124,13 @@ export default function BillingPage() {
             <table className="w-full">
               <thead className="border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Students</th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Paid</th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Collected</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Students</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Paid</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Collected</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {summary.by_college.map((c) => (
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{c.name}</td>
@@ -147,8 +147,8 @@ export default function BillingPage() {
         </div>
 
         {/* Recent payments */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
+          <div className="bg-gray-50/70 border-b border-gray-200 px-6 py-3">
             <h3 className="font-semibold text-gray-900">Recent Payments</h3>
           </div>
           {summary.recent_payments.length === 0 ? (
@@ -157,13 +157,13 @@ export default function BillingPage() {
             <table className="w-full">
               <thead className="border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Student</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
-                  <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Amount</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Student</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {summary.recent_payments.map((p) => (
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">

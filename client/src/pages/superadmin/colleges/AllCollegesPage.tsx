@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { PlusIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import { Plus, Search } from "lucide-react";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import collegeService, { College } from "../../../services/collegeService";
+
+const STATUS_FILTERS = ["all", "active", "pending", "suspended"] as const;
 
 export default function AllCollegesPage() {
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "suspended">("all");
+  const [statusFilter, setStatusFilter] =
+    useState<(typeof STATUS_FILTERS)[number]>("all");
 
   useEffect(() => {
     const load = async () => {
@@ -30,50 +33,45 @@ export default function AllCollegesPage() {
   }, [search, statusFilter]);
 
   return (
-    <div className="p-8">
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">All Colleges</h2>
-          <p className="text-gray-600 mt-1">Manage all registered colleges and their settings</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">All Colleges</h2>
+          <p className="text-gray-500 mt-1">Manage all registered colleges and their settings.</p>
         </div>
-        <a
-          href="/app/superadmin/colleges/new"
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        <Link
+          to="/app/superadmin/colleges/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2 text-sm font-medium text-white hover:bg-navy-800 transition-colors"
         >
-          <PlusIcon className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Add College
-        </a>
+        </Link>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-        <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[220px] relative">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search colleges..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-admin-accent"
             />
           </div>
-
-          {/* Status Filter */}
-          <div className="flex gap-2">
-            {["all", "active", "pending", "suspended"].map((status) => (
+          <div className="flex gap-1.5">
+            {STATUS_FILTERS.map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status as any)}
-                className={`
-                  px-3 py-2 rounded-lg font-medium text-sm transition-colors
-                  ${statusFilter === status
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }
-                `}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors ${
+                  statusFilter === status
+                    ? "bg-navy-900/[0.06] text-navy-900"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
               >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
               </button>
@@ -82,25 +80,25 @@ export default function AllCollegesPage() {
         </div>
       </div>
 
-      {/* Colleges Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Colleges table */}
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50/70 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">City</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Students</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">City</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Students</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {loading ? (
               [1, 2, 3].map((i) => (
                 <tr key={i} className="animate-pulse">
                   <td className="px-6 py-4" colSpan={6}>
-                    <div className="h-4 bg-gray-200 rounded w-1/3" />
+                    <div className="h-4 bg-gray-100 rounded w-1/3" />
                   </td>
                 </tr>
               ))
@@ -108,16 +106,16 @@ export default function AllCollegesPage() {
               colleges.map((college) => (
                 <tr key={college.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{college.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{college.email || "—"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{college.city || "—"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900 font-medium">{college.student_count}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{college.email || "—"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500">{college.city || "—"}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 tabular-nums">{college.student_count}</td>
                   <td className="px-6 py-4">
                     <StatusBadge status={college.status} size="sm" />
                   </td>
                   <td className="px-6 py-4 text-sm">
                     <Link
                       to={`/app/superadmin/colleges/${college.id}`}
-                      className="text-blue-600 hover:text-blue-700 font-medium"
+                      className="font-medium text-admin-accent hover:underline"
                     >
                       View
                     </Link>
@@ -130,8 +128,8 @@ export default function AllCollegesPage() {
       </div>
 
       {!loading && colleges.length === 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-          <p className="text-gray-600">No colleges found</p>
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-12 text-center">
+          <p className="text-gray-500">No colleges found</p>
         </div>
       )}
     </div>

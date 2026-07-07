@@ -83,14 +83,14 @@ export default function AddCollegePage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">Add New College</h2>
-        <p className="text-gray-600 mt-1">Register a new college on the platform</p>
+    <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+      <div>
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Add New College</h2>
+        <p className="text-gray-500 mt-1">Register a new college on the platform.</p>
       </div>
 
-      <div className="max-w-2xl">
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg border border-gray-200 p-8 space-y-6">
+      <div>
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-8 space-y-6">
           {/* College Information */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">College Information</h3>
@@ -103,7 +103,7 @@ export default function AddCollegePage() {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g., MIT College of Engineering"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   required
                 />
               </div>
@@ -117,7 +117,7 @@ export default function AddCollegePage() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="admin@college.edu"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                     required
                   />
                 </div>
@@ -129,7 +129,7 @@ export default function AddCollegePage() {
                     value={formData.phone}
                     onChange={handleChange}
                     placeholder="+91 98765 43210"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   />
                 </div>
               </div>
@@ -142,7 +142,7 @@ export default function AddCollegePage() {
                   onChange={handleChange}
                   placeholder="Street address"
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   required
                 />
               </div>
@@ -156,7 +156,7 @@ export default function AddCollegePage() {
                     value={formData.city}
                     onChange={handleChange}
                     placeholder="Bangalore"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                     required
                   />
                 </div>
@@ -168,7 +168,7 @@ export default function AddCollegePage() {
                     value={formData.state}
                     onChange={handleChange}
                     placeholder="Karnataka"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                     required
                   />
                 </div>
@@ -188,7 +188,7 @@ export default function AddCollegePage() {
                   value={formData.tpoName}
                   onChange={handleChange}
                   placeholder="Dr. Rajesh Kumar"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   required
                 />
               </div>
@@ -200,7 +200,7 @@ export default function AddCollegePage() {
                   value={formData.tpoEmail}
                   onChange={handleChange}
                   placeholder="tpo@college.edu"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
                   required
                 />
               </div>
@@ -219,7 +219,7 @@ export default function AddCollegePage() {
                 onChange={handleChange}
                 min="10"
                 max="10000"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">Maximum students that can be registered from this college</p>
             </div>
@@ -237,7 +237,7 @@ export default function AddCollegePage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Creating..." : "Create College"}
             </button>

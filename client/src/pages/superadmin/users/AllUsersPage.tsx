@@ -208,15 +208,15 @@ export default function AllUsersPage() {
   const pages = Math.ceil(total / limit);
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">All Users</h2>
-          <p className="text-gray-600 mt-1">Manage platform users ({total} total)</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">All Users</h2>
+          <p className="text-gray-500 mt-1">Manage platform users ({total} total).</p>
         </div>
         <button
           onClick={() => setShowInvite(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800"
         >
           <PlusIcon className="w-5 h-5" />
           Invite User
@@ -224,7 +224,7 @@ export default function AllUsersPage() {
       </div>
 
       {showInvite && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Invite User</h3>
           <div className="grid grid-cols-2 gap-4">
             <input
@@ -262,7 +262,7 @@ export default function AllUsersPage() {
             <button
               onClick={handleInviteUser}
               disabled={inviteLoading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
+              className="px-4 py-2 bg-navy-900 text-white rounded-lg disabled:opacity-50"
             >
               {inviteLoading ? "Creating..." : "Create User"}
             </button>
@@ -273,7 +273,7 @@ export default function AllUsersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 mb-6">
         <div className="grid grid-cols-3 gap-4">
           <div className="relative col-span-2">
             <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -285,7 +285,7 @@ export default function AllUsersPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
             />
           </div>
 
@@ -295,7 +295,7 @@ export default function AllUsersPage() {
               setRoleFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           >
             <option value="all">All Roles</option>
             <option value="super_admin">Super Admin</option>
@@ -311,7 +311,7 @@ export default function AllUsersPage() {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -322,12 +322,12 @@ export default function AllUsersPage() {
       </div>
 
       {selectedUsers.size > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-center gap-4">
-          <p className="font-semibold text-blue-900">{selectedUsers.size} selected</p>
+        <div className="bg-navy-900/[0.04] border border-navy-900/10 rounded-xl p-4 mb-6 flex items-center gap-4">
+          <p className="font-semibold text-navy-900">{selectedUsers.size} selected</p>
           <select
             value={bulkAction}
             onChange={(e) => setBulkAction(e.target.value)}
-            className="px-3 py-2 border border-blue-300 rounded-lg text-sm"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
             <option value="">-- Action --</option>
             <option value="suspend">Suspend</option>
@@ -337,7 +337,7 @@ export default function AllUsersPage() {
           <button
             onClick={handleBulkAction}
             disabled={bulkLoading || !bulkAction}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm disabled:opacity-50"
+            className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm disabled:opacity-50"
           >
             {bulkLoading ? "Processing..." : "Apply"}
           </button>
@@ -346,20 +346,20 @@ export default function AllUsersPage() {
               setSelectedUsers(new Set());
               setBulkAction("");
             }}
-            className="px-4 py-2 text-blue-600 text-sm"
+            className="px-4 py-2 text-admin-accent text-sm"
           >
             Cancel
           </button>
         </div>
       )}
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-600">Loading users...</div>
         ) : (
           <>
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50/70 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left">
                     <input
@@ -368,16 +368,16 @@ export default function AllUsersPage() {
                       onChange={(e) => handleSelectAll(e.target.checked)}
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Email</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Role</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Joined</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-100">
                 {users.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -399,7 +399,7 @@ export default function AllUsersPage() {
                     </td>
                     <td className="px-6 py-4 text-sm flex gap-2">
                       <button onClick={() => navigate(`/app/superadmin/users/${user.id}`)}>
-                        <EyeIcon className="w-4 h-4 text-blue-600" />
+                        <EyeIcon className="w-4 h-4 text-admin-accent" />
                       </button>
                       {user.status === "suspended" ? (
                         <button onClick={() => handleUnsuspendUser(user.id)}>
@@ -449,7 +449,7 @@ export default function AllUsersPage() {
                   onClick={() => setPage(p)}
                   className={`px-3 py-2 rounded-lg text-sm ${
                     p === page
-                      ? "bg-blue-600 text-white"
+                      ? "bg-navy-900 text-white"
                       : "border border-gray-300"
                   }`}
                 >

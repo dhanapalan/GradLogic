@@ -75,10 +75,10 @@ export default function AnalyticsPage() {
   const meta = VIEW_TITLES[view] || VIEW_TITLES.platform;
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-3xl font-bold text-gray-900">{meta.title}</h2>
-        <p className="text-gray-600 mt-1">{meta.subtitle}</p>
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{meta.title}</h2>
+        <p className="text-gray-500 mt-1">{meta.subtitle}</p>
       </div>
 
       {loading ? (
@@ -135,7 +135,7 @@ function PlatformView({
             onClick={() => setDays(d)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               days === d
-                ? "bg-blue-600 text-white"
+                ? "bg-navy-900 text-white"
                 : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
             }`}
           >
@@ -145,7 +145,7 @@ function PlatformView({
         <select
           value={collegeId}
           onChange={(e) => setCollegeId(e.target.value)}
-          className="ml-auto px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500"
+          className="ml-auto px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-admin-accent"
         >
           <option value="">All Colleges</option>
           {colleges.map((c) => (
@@ -160,11 +160,11 @@ function PlatformView({
         {cards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.title} className="bg-white rounded-lg border border-gray-200 p-5">
+            <div key={card.title} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600">{card.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{card.value ?? 0}</p>
+                  <p className="text-2xl font-display font-semibold text-gray-900 mt-1">{card.value ?? 0}</p>
                 </div>
                 <div className={`rounded-lg p-2 ${card.color}`}>
                   <Icon className="w-6 h-6" />
@@ -204,23 +204,23 @@ function PlatformView({
 
 function CollegesView({ colleges }: { colleges: CollegeAnalytics[] }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
       {colleges.length === 0 ? (
         <div className="p-12 text-center text-gray-600">No colleges found</div>
       ) : (
         <table className="w-full">
-          <thead className="bg-gray-50 border-b border-gray-200">
+          <thead className="bg-gray-50/70 border-b border-gray-200">
             <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">College</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Students</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Attempts</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Avg Score</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Paid Students</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-900">Fees Collected</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Students</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Attempts</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Avg Score</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Paid Students</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Fees Collected</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-100">
             {colleges.map((c) => (
               <tr key={c.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 text-sm font-medium text-gray-900">{c.name}</td>
@@ -313,13 +313,13 @@ function ReportsView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {reports.map((r) => (
-        <div key={r.name} className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col">
+        <div key={r.name} className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 flex flex-col">
           <h3 className="font-semibold text-gray-900">{r.name}</h3>
           <p className="text-sm text-gray-600 mt-1 flex-1">{r.description}</p>
           <button
             onClick={r.onDownload}
             disabled={r.disabled}
-            className="mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="mt-4 flex items-center justify-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
           >
             <ArrowDownTrayIcon className="w-4 h-4" />
             Download CSV

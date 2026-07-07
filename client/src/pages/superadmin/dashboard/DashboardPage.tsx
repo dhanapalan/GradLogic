@@ -1,20 +1,25 @@
-import { useCallback, useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode, Children } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
-  ArrowPathIcon,
-  ArrowRightIcon,
-  BuildingOffice2Icon,
-  ChartBarIcon,
-  ClipboardDocumentListIcon,
-  ClockIcon,
-  Cog6ToothIcon,
-  CurrencyRupeeIcon,
-  PlusIcon,
-  ShieldCheckIcon,
-  SparklesIcon,
-  UsersIcon,
-} from "@heroicons/react/24/outline";
-import StatsCard from "../../../components/superadmin/StatsCard";
+  RefreshCw,
+  ArrowUpRight,
+  ArrowRight,
+  GraduationCap,
+  Users,
+  ShieldCheck,
+  Activity,
+  ClipboardList,
+  Sparkles,
+  BarChart3,
+  TrendingUp,
+  IndianRupee,
+  Clock,
+  Building2,
+  Plus,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 import AlertCard from "../../../components/superadmin/AlertCard";
 import ChartCard from "../../../components/superadmin/ChartCard";
 import LiveMetricStrip from "../../../components/superadmin/LiveMetricStrip";
@@ -30,13 +35,13 @@ import superadminMetrics, {
   DashboardBilling,
 } from "../../../services/superadminMetrics";
 
-const QUICK_ACTIONS = [
-  { label: "College", href: "/app/superadmin/colleges/new", icon: PlusIcon, grad: "from-blue-500 to-indigo-600" },
-  { label: "Approvals", href: "/app/superadmin/approvals", icon: ShieldCheckIcon, grad: "from-amber-400 to-orange-500" },
-  { label: "Questions", href: "/app/superadmin/question-bank", icon: ClipboardDocumentListIcon, grad: "from-violet-500 to-purple-600" },
-  { label: "Students", href: "/app/superadmin/students", icon: UsersIcon, grad: "from-emerald-500 to-teal-600" },
-  { label: "Analytics", href: "/app/superadmin/analytics", icon: ChartBarIcon, grad: "from-cyan-500 to-sky-600" },
-  { label: "Settings", href: "/app/superadmin/settings", icon: Cog6ToothIcon, grad: "from-slate-500 to-gray-600" },
+const QUICK_ACTIONS: { label: string; href: string; icon: LucideIcon }[] = [
+  { label: "Add college", href: "/app/superadmin/colleges/new", icon: Plus },
+  { label: "Approvals", href: "/app/superadmin/approvals", icon: ShieldCheck },
+  { label: "Question bank", href: "/app/superadmin/question-bank", icon: ClipboardList },
+  { label: "Students", href: "/app/superadmin/students", icon: Users },
+  { label: "Billing", href: "/app/superadmin/billing", icon: IndianRupee },
+  { label: "Settings", href: "/app/superadmin/settings", icon: Settings },
 ];
 
 const ALERT_LINKS: Record<string, string> = {
@@ -44,8 +49,6 @@ const ALERT_LINKS: Record<string, string> = {
   "review-queue": "/app/superadmin/approvals",
   "failed-logins": "/app/superadmin/audit-trail",
 };
-
-const RANK_BG = ["bg-amber-400", "bg-slate-300", "bg-orange-400", "bg-gray-300", "bg-gray-200"];
 
 function formatReadiness(value?: number) {
   if (value == null || Number.isNaN(value)) return "N/A";
@@ -73,8 +76,11 @@ export default function SuperAdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const lastLiveErrorToast = useRef(0);
+  const hasLoadedRef = useRef(false);
 
   const applyBundle = useCallback((bundle: Awaited<ReturnType<typeof superadminMetrics.getDashboard>>) => {
+    hasLoadedRef.current = true;
     setMetrics(bundle.metrics);
     setLive(bundle.live);
     setGrowth(bundle.growth);
@@ -91,7 +97,11 @@ export default function SuperAdminDashboard() {
     try {
       applyBundle(await superadminMetrics.getDashboard(force));
     } catch {
-      /* keep prior data */
+      toast.error(
+        hasLoadedRef.current
+          ? "Could not refresh dashboard — showing last loaded data"
+          : "Failed to load dashboard. Check your connection and try again."
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -103,7 +113,11 @@ export default function SuperAdminDashboard() {
       setLive(await superadminMetrics.getLiveDashboard(true));
       setLastUpdated(new Date());
     } catch {
-      /* silent */
+      const now = Date.now();
+      if (now - lastLiveErrorToast.current > 60000) {
+        lastLiveErrorToast.current = now;
+        toast.error("Live metrics update failed — will retry shortly");
+      }
     }
   }, []);
 
@@ -140,52 +154,43 @@ export default function SuperAdminDashboard() {
   const billingPct = expected > 0 ? Math.round((collected / expected) * 100) : 0;
 
   return (
-    <div className="p-3 sm:p-4 lg:p-5 space-y-3 max-w-[1800px] mx-auto">
-      {/* Hero — compact */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 p-3 sm:p-4 text-white shadow-lg">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-60" />
-        <div className="relative space-y-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">Live</span>
-              </div>
-              <h2 className="text-lg sm:text-xl font-bold truncate">Hi, {firstName}</h2>
-            </div>
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-white/20 hover:bg-white/30 px-2.5 py-1.5 text-xs font-medium disabled:opacity-60"
-            >
-              <ArrowPathIcon className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">{lastUpdated ? lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Refresh"}</span>
-            </button>
-          </div>
-          <LiveMetricStrip
-            today={live?.today ?? { newStudents: 0, newColleges: 0, examAttempts: 0, completedExams: 0, logins: 0 }}
-            yesterday={live?.yesterday ?? { newStudents: 0, newColleges: 0, examAttempts: 0, completedExams: 0, logins: 0 }}
-            activeNow={live?.activeNow ?? 0}
-            examsInProgress={live?.examsInProgress ?? 0}
-            loading={loading && !live}
-          />
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      {/* Header */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm text-gray-500 font-medium">Welcome back, {firstName}</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 mt-1">Admin Dashboard</h1>
+          <p className="text-gray-500 mt-1">A snapshot of your colleges and students today.</p>
         </div>
-      </div>
-
-      {/* Quick actions — horizontal scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-0.5 snap-x snap-mandatory -mx-0.5 px-0.5">
-        {QUICK_ACTIONS.map(({ label, href, icon: Icon, grad }) => (
-          <Link
-            key={href}
-            to={href}
-            className={`snap-start shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r ${grad} px-3 py-2 text-xs font-semibold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all`}
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-xs text-gray-400 tabular-nums mr-1">
+              Updated {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+          <Link
+            to="/app/superadmin/colleges"
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Manage Colleges
           </Link>
-        ))}
-      </div>
+          <Link
+            to="/app/superadmin/students"
+            className="rounded-lg bg-navy-900 px-3 py-2 text-sm font-medium text-white hover:bg-navy-800"
+          >
+            View Students
+          </Link>
+        </div>
+      </header>
 
       {visibleAlerts.length > 0 && (
         <div className="space-y-2">
@@ -195,151 +200,225 @@ export default function SuperAdminDashboard() {
               type={alert.type}
               title={alert.title}
               message={alert.message}
-              action={ALERT_LINKS[alert.id] ? { label: "Act →", onClick: () => navigate(ALERT_LINKS[alert.id]) } : undefined}
+              action={ALERT_LINKS[alert.id] ? { label: "View", onClick: () => navigate(ALERT_LINKS[alert.id]) } : undefined}
               onClose={() => setDismissedAlerts((prev) => new Set(prev).add(alert.id))}
             />
           ))}
         </div>
       )}
 
-      {/* Colorful KPI grid — 2 cols mobile, 4 tablet, 8 desktop */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2">
-        <StatsCard compact title="Colleges" value={metrics?.totalColleges ?? 0} subtitle={`+${live?.today.newColleges ?? 0} today`} color="blue" icon={<BuildingOffice2Icon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/colleges")} />
-        <StatsCard compact title="Students" value={metrics?.totalStudents ?? 0} subtitle={`+${live?.today.newStudents ?? 0} today`} color="emerald" icon={<UsersIcon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/students")} />
-        <StatsCard compact title="Active 24h" value={metrics?.activeUsers ?? 0} subtitle={`${live?.activeNow ?? 0} now`} color="cyan" icon={<UsersIcon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/users")} />
-        <StatsCard compact title="Pending" value={totalInbox} subtitle={totalInbox ? "Action needed" : "Clear"} color="amber" icon={<ShieldCheckIcon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/approvals")} />
-        <StatsCard compact title="Questions" value={metrics?.totalQuestions ?? 0} subtitle={`${liveCounts?.pendingQuestions ?? 0} review`} color="indigo" icon={<ClipboardDocumentListIcon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/question-bank")} />
-        <StatsCard compact title="AI Gen" value={metrics?.aiGeneratedQuestions ?? 0} subtitle="total" color="violet" icon={<SparklesIcon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/question-bank/ai-generator")} />
-        <StatsCard compact title="Tests" value={metrics?.totalTests ?? 0} subtitle="completed" color="rose" icon={<ChartBarIcon className="w-4 h-4" />} loading={loading} />
-        <StatsCard compact title="Readiness" value={formatReadiness(metrics?.avgPlacementReadiness)} subtitle="avg score" color="orange" icon={<ChartBarIcon className="w-4 h-4" />} loading={loading} onClick={() => navigate("/app/superadmin/analytics")} />
+      {/* Primary KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard title="Total Colleges" value={metrics?.totalColleges ?? 0} delta={`+${live?.today.newColleges ?? 0} today`} icon={GraduationCap} onClick={() => navigate("/app/superadmin/colleges")} />
+        <KpiCard title="Active Students" value={metrics?.totalStudents ?? 0} delta={`+${live?.today.newStudents ?? 0} today`} icon={Users} onClick={() => navigate("/app/superadmin/students")} />
+        <KpiCard title="Pending Actions" value={totalInbox} delta={totalInbox ? "Needs review" : "All clear"} icon={ShieldCheck} onClick={() => navigate("/app/superadmin/approvals")} />
+        <KpiCard title="Active Users" value={metrics?.activeUsers ?? 0} delta={`${live?.activeNow ?? 0} online now`} icon={Activity} onClick={() => navigate("/app/superadmin/users")} />
       </div>
 
-      {/* Main grid — fits one viewport on lg+ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-2 sm:gap-3 auto-rows-fr">
-        {/* Inbox */}
-        <div className="md:col-span-2 xl:col-span-4 min-h-[220px] max-h-[280px] xl:max-h-[300px]">
+      {/* Secondary KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard title="Questions in Bank" value={metrics?.totalQuestions ?? 0} delta={`${liveCounts?.pendingQuestions ?? 0} to review`} icon={ClipboardList} onClick={() => navigate("/app/superadmin/question-bank")} />
+        <KpiCard title="AI Generated" value={metrics?.aiGeneratedQuestions ?? 0} delta="in question bank" icon={Sparkles} onClick={() => navigate("/app/superadmin/question-bank/ai-generator")} />
+        <KpiCard title="Tests Completed" value={metrics?.totalTests ?? 0} delta="all time" icon={BarChart3} />
+        <KpiCard title="Avg Readiness" value={formatReadiness(metrics?.avgPlacementReadiness)} delta="exam scores" icon={TrendingUp} onClick={() => navigate("/app/superadmin/analytics")} />
+      </div>
+
+      {/* Today live strip */}
+      <Panel title="Today">
+        <LiveMetricStrip
+          today={live?.today ?? { newStudents: 0, newColleges: 0, examAttempts: 0, completedExams: 0, logins: 0 }}
+          yesterday={live?.yesterday ?? { newStudents: 0, newColleges: 0, examAttempts: 0, completedExams: 0, logins: 0 }}
+          activeNow={live?.activeNow ?? 0}
+          examsInProgress={live?.examsInProgress ?? 0}
+          loading={loading && !live}
+        />
+      </Panel>
+
+      {/* Quick actions */}
+      <div className="flex flex-wrap gap-2">
+        {QUICK_ACTIONS.map(({ label, href, icon: Icon }) => (
+          <Link
+            key={href}
+            to={href}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-admin-card hover:border-gray-300 hover:bg-gray-50"
+          >
+            <Icon className="w-4 h-4 text-admin-accent" />
+            {label}
+          </Link>
+        ))}
+      </div>
+
+      {/* Action inbox + charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 min-h-[260px] lg:max-h-[340px]">
           <ActionInbox items={live?.actionItems ?? []} totalPending={totalInbox} loading={loading && !live} onActionComplete={handleInboxAction} />
         </div>
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <ChartCard compact title="Exams (7d)" data={live?.examTrend ?? []} color="violet" variant="bar" loading={loading && !live} />
+          <ChartCard compact title="Colleges (30d)" data={growth.collegeGrowth} color="blue" variant="area" loading={loading} />
+          <ChartCard compact title="Students (30d)" data={growth.studentGrowth} color="emerald" variant="bar" loading={loading} />
+        </div>
+      </div>
 
-        {/* Charts row */}
-        <div className="xl:col-span-2 min-h-[180px]">
-          <ChartCard compact title="Exams 7d" data={live?.examTrend ?? []} color="violet" variant="bar" loading={loading && !live} />
-        </div>
-        <div className="xl:col-span-3 min-h-[180px]">
-          <ChartCard compact title="Colleges 30d" data={growth.collegeGrowth} color="blue" variant="area" loading={loading} />
-        </div>
-        <div className="xl:col-span-3 min-h-[180px]">
-          <ChartCard compact title="Students 30d" data={growth.studentGrowth} color="emerald" variant="bar" loading={loading} />
-        </div>
-
-        {/* Billing + health */}
-        <div className="md:col-span-1 xl:col-span-4 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 p-3 text-white shadow-lg min-h-[120px]">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <CurrencyRupeeIcon className="w-4 h-4 shrink-0" />
-              <span className="text-xs font-semibold truncate">Billing {billing?.academic_year ?? ""}</span>
+      {/* Billing + system tiles */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="sm:col-span-2 bg-white rounded-xl border border-gray-200/70 p-5 shadow-admin-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <IndianRupee className="w-4 h-4 text-admin-accent" />
+              <span className="text-sm font-semibold text-gray-900">Billing · {billing?.academic_year ?? "—"}</span>
             </div>
-            <Link to="/app/superadmin/analytics" className="text-[10px] font-medium text-white/80 hover:text-white shrink-0">Details →</Link>
+            <Link to="/app/superadmin/billing" className="text-xs font-medium text-admin-accent hover:underline">View all →</Link>
           </div>
           {loading && !billing ? (
-            <div className="h-10 bg-white/20 rounded animate-pulse" />
+            <div className="h-12 bg-gray-50 rounded animate-pulse" />
           ) : (
             <>
-              <p className="text-xl sm:text-2xl font-bold tabular-nums">{formatCurrency(collected)}</p>
-              <div className="mt-2 h-1.5 rounded-full bg-white/25 overflow-hidden">
-                <div className="h-full rounded-full bg-white transition-all" style={{ width: `${Math.min(billingPct, 100)}%` }} />
+              <p className="text-2xl font-display font-semibold text-gray-900 tabular-nums">{formatCurrency(collected)}</p>
+              <p className="text-xs text-gray-500 mt-1">of {formatCurrency(expected)} expected</p>
+              <div className="mt-3 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-full rounded-full bg-admin-accent transition-all" style={{ width: `${Math.min(billingPct, 100)}%` }} />
               </div>
-              <p className="text-[10px] text-white/80 mt-1">{billingPct}% · {billing?.pending ?? 0} pending</p>
+              <p className="text-xs text-gray-500 mt-2">
+                {billingPct}% collected
+                {(billing?.pending ?? 0) > 0 && (
+                  <> · <Link to="/app/superadmin/billing" className="text-gray-900 font-medium hover:underline">{billing?.pending} pending</Link></>
+                )}
+              </p>
             </>
           )}
         </div>
 
-        <div className="md:col-span-1 xl:col-span-4 grid grid-cols-2 gap-2">
-          <HealthChip label="Exams live" value={live?.examsInProgress ?? 0} grad="from-fuchsia-500 to-violet-600" href="/app/superadmin/analytics" pulse={(live?.examsInProgress ?? 0) > 0} />
-          <HealthChip label="Failed logins" value={liveCounts?.failedLoginsLastHour ?? 0} grad="from-rose-500 to-red-600" href="/app/superadmin/audit-trail" warn={(liveCounts?.failedLoginsLastHour ?? 0) >= 5} />
-          <HealthChip label="Suspended" value={liveCounts?.suspendedColleges ?? 0} grad="from-slate-500 to-gray-600" href="/app/superadmin/colleges" warn={(liveCounts?.suspendedColleges ?? 0) > 0} />
-          <HealthChip label="AI review" value={liveCounts?.pendingQuestions ?? 0} grad="from-amber-400 to-orange-500" href="/app/superadmin/approvals" warn={(liveCounts?.pendingQuestions ?? 0) > 0} />
-        </div>
+        <StatTile label="Exams in progress" value={live?.examsInProgress ?? 0} href="/app/superadmin/analytics" highlight={(live?.examsInProgress ?? 0) > 0} />
+        <StatTile label="Failed logins (1h)" value={liveCounts?.failedLoginsLastHour ?? 0} href="/app/superadmin/audit-trail" warn={(liveCounts?.failedLoginsLastHour ?? 0) >= 5} />
+        <StatTile label="Suspended colleges" value={liveCounts?.suspendedColleges ?? 0} href="/app/superadmin/colleges" />
+        <StatTile label="AI pending review" value={liveCounts?.pendingQuestions ?? 0} href="/app/superadmin/approvals" warn={(liveCounts?.pendingQuestions ?? 0) > 0} />
+      </div>
 
-        {/* Bottom panels */}
-        <div className="md:col-span-1 xl:col-span-5 rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white shadow-sm overflow-hidden max-h-[200px] flex flex-col">
-          <PanelHeader icon={BuildingOffice2Icon} title="Top Colleges" href="/app/superadmin/colleges" color="text-blue-600" />
-          <div className="flex-1 overflow-y-auto">
-            {loading ? <PanelSkeleton /> : mostActiveColleges.length === 0 ? (
-              <p className="p-4 text-xs text-gray-400 text-center">No data</p>
-            ) : (
-              <ul className="divide-y divide-blue-50">
-                {mostActiveColleges.slice(0, 4).map((c, i) => (
-                  <li key={c.id}>
-                    <Link to={`/app/superadmin/colleges/${c.id}`} className="flex items-center gap-2 px-3 py-2 hover:bg-blue-50/80 text-sm">
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white ${RANK_BG[i]}`}>{i + 1}</span>
-                      <span className="flex-1 truncate font-medium text-gray-800">{c.name}</span>
-                      <span className="text-[10px] text-gray-500 tabular-nums">{c.studentCount}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+      {/* Lists */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ListPanel icon={Building2} title="Top colleges" href="/app/superadmin/colleges" loading={loading} empty="No colleges yet">
+          {mostActiveColleges.slice(0, 5).map((c, i) => (
+            <Link key={c.id} to={`/app/superadmin/colleges/${c.id}`} className="flex items-center justify-between px-5 py-2.5 hover:bg-gray-50 text-sm border-t border-gray-100 first:border-t-0">
+              <span className="text-gray-400 text-xs w-4">{i + 1}</span>
+              <span className="flex-1 truncate font-medium text-gray-900 mx-2">{c.name}</span>
+              <span className="text-xs text-gray-500 tabular-nums">{c.studentCount}</span>
+            </Link>
+          ))}
+        </ListPanel>
 
-        <div className="md:col-span-1 xl:col-span-7 rounded-xl border border-indigo-100 bg-gradient-to-b from-indigo-50 to-white shadow-sm overflow-hidden max-h-[200px] flex flex-col">
-          <PanelHeader icon={ClockIcon} title="Recent Activity" href="/app/superadmin/audit-trail" color="text-indigo-600" />
-          <div className="flex-1 overflow-y-auto">
-            {loading ? <PanelSkeleton /> : recentActivities.length === 0 ? (
-              <p className="p-4 text-xs text-gray-400 text-center">No events</p>
-            ) : (
-              <ul className="divide-y divide-indigo-50">
-                {recentActivities.slice(0, 5).map((a) => (
-                  <li key={a.id} className="px-3 py-2 hover:bg-indigo-50/50">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="font-medium text-gray-800 truncate max-w-[30%]">{a.user}</span>
-                      <span className="text-indigo-600 font-medium truncate flex-1">{a.action}</span>
-                      <time className="text-[9px] text-gray-400 shrink-0 tabular-nums">
-                        {new Date(a.timestamp).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                      </time>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        <ListPanel icon={Clock} title="Recent activity" href="/app/superadmin/audit-trail" loading={loading} empty="No recent events">
+          {recentActivities.slice(0, 6).map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-2 px-5 py-2.5 border-t border-gray-100 first:border-t-0 text-sm">
+              <div className="min-w-0 flex-1">
+                <span className="font-medium text-gray-900">{a.user}</span>
+                <span className="text-gray-400 mx-1">·</span>
+                <span className="text-gray-600">{a.action}</span>
+              </div>
+              <time className="text-[10px] text-gray-400 shrink-0 tabular-nums">
+                {new Date(a.timestamp).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </time>
+            </div>
+          ))}
+        </ListPanel>
       </div>
     </div>
   );
 }
 
-function PanelHeader({ icon: Icon, title, href, color }: { icon: ComponentType<{ className?: string }>; title: string; href: string; color: string }) {
+function KpiCard({
+  title,
+  value,
+  delta,
+  icon: Icon,
+  onClick,
+}: {
+  title: string;
+  value: number | string;
+  delta?: string;
+  icon: LucideIcon;
+  onClick?: () => void;
+}) {
+  const Wrapper: any = onClick ? "button" : "div";
   return (
-    <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100/80 shrink-0">
-      <div className="flex items-center gap-1.5">
-        <Icon className={`w-4 h-4 ${color}`} />
-        <h3 className="text-xs font-semibold text-gray-900">{title}</h3>
+    <Wrapper
+      onClick={onClick}
+      className={`text-left w-full bg-white rounded-xl border border-gray-200/70 p-5 shadow-admin-card transition-shadow ${
+        onClick ? "hover:shadow-admin-elegant cursor-pointer" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-navy-900/[0.06] text-navy-900">
+          <Icon className="h-5 w-5" />
+        </div>
+        <ArrowUpRight className="h-4 w-4 text-gray-300" />
       </div>
-      <Link to={href} className="text-[10px] font-medium text-gray-500 hover:text-gray-700 flex items-center gap-0.5">
-        All <ArrowRightIcon className="w-3 h-3" />
-      </Link>
-    </div>
+      <div className="mt-4">
+        <div className="text-2xl font-display font-semibold tracking-tight text-gray-900 tabular-nums">{value}</div>
+        <div className="text-sm text-gray-500 mt-0.5">{title}</div>
+        {delta && <div className="text-xs text-admin-accent mt-2 font-medium">{delta}</div>}
+      </div>
+    </Wrapper>
   );
 }
 
-function PanelSkeleton() {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="p-3 space-y-2">
-      {[1, 2, 3].map((i) => <div key={i} className="h-6 bg-gray-100 rounded animate-pulse" />)}
-    </div>
+    <section className="bg-white rounded-xl border border-gray-200/70 p-5 shadow-admin-card">
+      <p className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-3">{title}</p>
+      {children}
+    </section>
   );
 }
 
-function HealthChip({ label, value, grad, href, warn, pulse }: { label: string; value: number; grad: string; href: string; warn?: boolean; pulse?: boolean }) {
+function StatTile({ label, value, href, warn, highlight }: { label: string; value: number; href: string; warn?: boolean; highlight?: boolean }) {
   return (
     <Link
       to={href}
-      className={`rounded-lg bg-gradient-to-br ${grad} p-2.5 text-white shadow-md hover:shadow-lg transition-shadow ${pulse ? "ring-2 ring-white/50 animate-pulse" : ""} ${warn ? "ring-2 ring-rose-200" : ""}`}
+      className={`bg-white rounded-xl border p-5 shadow-admin-card hover:border-gray-300 transition-colors ${warn ? "border-rose-200" : "border-gray-200/70"}`}
     >
-      <p className="text-[9px] font-medium text-white/85 uppercase tracking-wide truncate">{label}</p>
-      <p className="text-lg font-bold tabular-nums">{value}</p>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`mt-1 text-xl font-display font-semibold tabular-nums ${warn ? "text-rose-600" : highlight ? "text-admin-accent" : "text-gray-900"}`}>
+        {value}
+      </p>
     </Link>
+  );
+}
+
+function ListPanel({
+  icon: Icon,
+  title,
+  href,
+  loading,
+  empty,
+  children,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  title: string;
+  href: string;
+  loading?: boolean;
+  empty: string;
+  children: ReactNode;
+}) {
+  const hasChildren = Children.count(children) > 0;
+  return (
+    <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4 text-admin-accent" />
+          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        </div>
+        <Link to={href} className="text-xs font-medium text-gray-500 hover:text-gray-900 flex items-center gap-0.5">
+          All <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+      {loading ? (
+        <div className="p-4 space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-8 bg-gray-50 rounded animate-pulse" />)}</div>
+      ) : !hasChildren ? (
+        <p className="p-6 text-sm text-gray-400 text-center">{empty}</p>
+      ) : (
+        <div className="max-h-[240px] overflow-y-auto">{children}</div>
+      )}
+    </div>
   );
 }

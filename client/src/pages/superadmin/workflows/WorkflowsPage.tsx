@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import {
-  MagnifyingGlassIcon,
-  PlusIcon,
-  PencilIcon,
-  CheckIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import { Search, Plus, Pencil, Check, X } from "lucide-react";
 import toast from "react-hot-toast";
 import workflowService, { Workflow, WorkflowFilters, WorkflowStep } from "../../../services/workflowService";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
@@ -136,27 +130,27 @@ export default function WorkflowsPage() {
   const pages = Math.ceil(total / limit);
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
             {category ? `${CATEGORY_LABELS[category] || category} Workflows` : "Workflows"}
           </h2>
-          <p className="text-gray-600 mt-1">Manage automation workflows ({total} total)</p>
+          <p className="text-gray-500 mt-1">Manage automation workflows ({total} total).</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800"
         >
-          <PlusIcon className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Create Workflow
         </button>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-4 mb-6">
         <div className="grid grid-cols-3 gap-4">
           <div className="relative col-span-2">
-            <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search workflows..."
@@ -165,7 +159,7 @@ export default function WorkflowsPage() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
             />
           </div>
 
@@ -175,7 +169,7 @@ export default function WorkflowsPage() {
               setStatusFilter(e.target.value as any);
               setPage(1);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-admin-accent"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -184,30 +178,30 @@ export default function WorkflowsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
         {loading ? (
           <div className="p-12 text-center text-gray-600">Loading workflows...</div>
         ) : workflows.length === 0 ? (
           <div className="p-12 text-center text-gray-600">No workflows found</div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-gray-50/70 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Name</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Trigger</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Steps</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Created</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Trigger</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Steps</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {workflows.map((workflow) => (
                 <tr key={workflow.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium">
                     <Link
                       to={`/app/superadmin/workflows/${workflow.id}`}
-                      className="text-blue-600 hover:text-blue-700"
+                      className="text-admin-accent hover:underline"
                     >
                       {workflow.name}
                     </Link>
@@ -229,16 +223,16 @@ export default function WorkflowsPage() {
                   <td className="px-6 py-4 text-sm flex gap-2">
                     <button
                       onClick={() => navigate(`/app/superadmin/workflows/${workflow.id}`)}
-                      className="text-blue-600 hover:text-blue-700"
+                      className="text-admin-accent hover:underline"
                       title="Edit stages"
                     >
-                      <PencilIcon className="w-4 h-4" />
+                      <Pencil className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleToggleActive(workflow)} title={workflow.is_active ? "Deactivate" : "Activate"}>
                       {workflow.is_active ? (
-                        <XMarkIcon className="w-4 h-4 text-yellow-600" />
+                        <X className="w-4 h-4 text-yellow-600" />
                       ) : (
-                        <CheckIcon className="w-4 h-4 text-green-600" />
+                        <Check className="w-4 h-4 text-green-600" />
                       )}
                     </button>
                   </td>
@@ -267,7 +261,7 @@ export default function WorkflowsPage() {
                   key={p}
                   onClick={() => setPage(p)}
                   className={`px-3 py-2 rounded-lg text-sm ${
-                    p === page ? "bg-blue-600 text-white" : "border border-gray-300"
+                    p === page ? "bg-navy-900 text-white" : "border border-gray-300"
                   }`}
                 >
                   {p}
@@ -286,14 +280,14 @@ export default function WorkflowsPage() {
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-admin-elegant">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Create Workflow</h3>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="text-gray-400 hover:text-gray-600"
               >
-                <XMarkIcon className="w-5 h-5" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
@@ -307,7 +301,7 @@ export default function WorkflowsPage() {
                   value={newWorkflow.name}
                   onChange={(e) => setNewWorkflow({ ...newWorkflow, name: e.target.value })}
                   placeholder="e.g., Assessment Follow-up"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 />
               </div>
 
@@ -320,7 +314,7 @@ export default function WorkflowsPage() {
                   onChange={(e) => setNewWorkflow({ ...newWorkflow, description: e.target.value })}
                   placeholder="Describe what this workflow does..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 />
               </div>
 
@@ -331,7 +325,7 @@ export default function WorkflowsPage() {
                 <select
                   value={newWorkflow.category}
                   onChange={(e) => setNewWorkflow({ ...newWorkflow, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 >
                   {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -348,7 +342,7 @@ export default function WorkflowsPage() {
                 <select
                   value={newWorkflow.trigger_event}
                   onChange={(e) => setNewWorkflow({ ...newWorkflow, trigger_event: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-admin-accent"
                 >
                   {TRIGGER_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -384,7 +378,7 @@ export default function WorkflowsPage() {
               <button
                 onClick={handleCreateWorkflow}
                 disabled={submitLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 disabled:opacity-50"
               >
                 {submitLoading ? "Creating..." : "Create"}
               </button>

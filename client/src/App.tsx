@@ -17,6 +17,7 @@ import {
 // ── Layouts ──────────────────────────────────────────────────────────────────
 import PublicLayout from "./layouts/PublicLayout";
 const SuperAdminLayout = lazy(() => import("./pages/superadmin/SuperAdminLayout"));
+const CollegeLayout = lazy(() => import("./layouts/CollegeLayout"));
 
 // ── Public pages (eagerly loaded for fast initial paint) ─────────────────────
 import LandingPage from "./pages/public/LandingPage";
@@ -41,7 +42,6 @@ const MicrosoftCallback = lazy(() => import("./pages/auth/MicrosoftCallback"));
 const HRDashboardPage = lazy(() => import("./pages/hr/HRDashboardPage"));
 const EngineerPanelPage = lazy(() => import("./pages/engineer/EngineerPanelPage"));
 const CXOAnalyticsPage = lazy(() => import("./pages/cxo/CXOAnalyticsPage"));
-const CollegeDashboardPage = lazy(() => import("./pages/college/CollegeDashboardPage"));
 const CampusDrivesListPage = lazy(() => import("./pages/college/DrivesListPage"));
 const CampusDriveDetailPage = lazy(() => import("./pages/college/DriveDetailPage"));
 const CampusResultsPage = lazy(() => import("./pages/college/ResultsPage"));
@@ -51,6 +51,10 @@ const CampusCommunicationsPage = lazy(() => import("./pages/college/Communicatio
 const CampusAdminsPage = lazy(() => import("./pages/college/CampusAdminsPage"));
 const CampusSettingsPage = lazy(() => import("./pages/college/SettingsPage"));
 const BillingPage = lazy(() => import("./pages/college/BillingPage"));
+const CollegePortalDashboard = lazy(() => import("./pages/college-portal/DashboardPage"));
+const CollegePortalStudents = lazy(() => import("./pages/college-portal/StudentsPage"));
+const CollegePortalAnalytics = lazy(() => import("./pages/college-portal/AnalyticsPage"));
+const CollegePortalComingSoon = lazy(() => import("./pages/college-portal/ComingSoonPage"));
 const StudentPortalPage = lazy(() => import("./pages/student/StudentPortalPage"));
 const CampusListPage = lazy(() => import("./pages/hr/CampusListPage"));
 const CampusDetailPage = lazy(() => import("./pages/hr/CampusDetailPage"));
@@ -337,6 +341,61 @@ export default function App() {
               <Route path="settings" element={<SuperAdminSettings />} />
             </Route>
 
+            {/* ── College / Campus Portal (redesigned) ───────────────────── */}
+            <Route
+              path="/app/college-portal"
+              element={
+                <ProtectedRoute>
+                  <RoleGuard allowed={["college_admin", "college", "college_staff"]}>
+                    <CollegeLayout />
+                  </RoleGuard>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/app/college-portal/dashboard" replace />} />
+              <Route path="dashboard" element={<CollegePortalDashboard />} />
+              <Route path="students" element={<CollegePortalStudents />} />
+              <Route
+                path="question-bank"
+                element={
+                  <CollegePortalComingSoon
+                    title="Question Bank"
+                    description="Browse and assign questions scoped to your campus."
+                  />
+                }
+              />
+              <Route
+                path="workflows"
+                element={
+                  <CollegePortalComingSoon
+                    title="Workflows"
+                    description="Aptitude, soft skills, and technical skill pathways for your students."
+                  />
+                }
+              />
+              <Route path="assessments" element={<CampusDrivesListPage />} />
+              <Route path="analytics" element={<CollegePortalAnalytics />} />
+              <Route
+                path="soft-skills"
+                element={
+                  <CollegePortalComingSoon
+                    title="Soft Skills"
+                    description="Communication, teamwork, and interview readiness programs."
+                  />
+                }
+              />
+              <Route
+                path="technical-skills"
+                element={
+                  <CollegePortalComingSoon
+                    title="Technical Skills"
+                    description="Coding, aptitude, and domain-specific skill tracks."
+                  />
+                }
+              />
+              <Route path="settings" element={<CampusSettingsPage />} />
+            </Route>
+
             {/* ── Student onboarding (protected) ──────────────────────── */}
             <Route
               path="/student-onboarding"
@@ -411,14 +470,10 @@ export default function App() {
                 }
               />
 
-              {/* College Dashboard */}
+              {/* College Dashboard — redirect to redesigned portal */}
               <Route
                 path="college-dashboard"
-                element={
-                  <RoleGuard allowed={["college_admin", "college", "college_staff"]}>
-                    <CollegeDashboardPage />
-                  </RoleGuard>
-                }
+                element={<Navigate to="/app/college-portal/dashboard" replace />}
               />
               {/* College Drives */}
               <Route

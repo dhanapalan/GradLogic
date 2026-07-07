@@ -29,9 +29,29 @@ export default {
           800: "#166534",
           900: "#14532d",
         },
+        // "Navy Trust" admin palette (ported from the redesign)
+        navy: {
+          950: "#0a1230",
+          900: "#0f1b3d",
+          800: "#16234a",
+          700: "#1e2d54",
+          600: "#28345e",
+          500: "#3a4770",
+        },
+        "admin-accent": {
+          DEFAULT: "#3b6fa0",
+          light: "#5a8bc0",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
+        manrope: ["Manrope", "Inter", "system-ui", "sans-serif"],
+        display: ["Sora", "Inter", "system-ui", "sans-serif"],
+      },
+      boxShadow: {
+        "admin-card": "0 1px 3px 0 rgb(15 27 61 / 0.05)",
+        "admin-elegant":
+          "0 1px 2px 0 rgb(15 27 61 / 0.04), 0 8px 24px -8px rgb(15 27 61 / 0.10)",
       },
     },
   },
