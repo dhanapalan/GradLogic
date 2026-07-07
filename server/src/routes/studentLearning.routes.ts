@@ -33,7 +33,7 @@ router.get("/my-enrollments", async (req, res) => {
       FROM student_program_enrollments spe
       JOIN skill_programs sp ON sp.id = spe.program_id
       LEFT JOIN program_modules pm ON pm.program_id = sp.id
-      LEFT JOIN student_module_progress smp ON smp.program_id = sp.id AND smp.student_id = spe.student_id
+      LEFT JOIN student_module_progress smp ON smp.enrollment_id = spe.id AND smp.module_id = pm.module_id
       WHERE spe.student_id = $1
       GROUP BY spe.id, sp.id
       ORDER BY spe.enrolled_at DESC

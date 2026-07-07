@@ -4,6 +4,7 @@
 // =============================================================================
 
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "../../lib/api";
 import {
@@ -241,9 +242,11 @@ function StatsPanel() {
 // ─── QuizMode ─────────────────────────────────────────────────────────────────
 
 function QuizMode() {
+  // Question Bank can deep-link here: ?topic=Aptitude&difficulty=easy
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState<"setup" | "playing" | "done">("setup");
-  const [selectedTopic, setSelectedTopic] = useState<string>("");
-  const [difficulty, setDifficulty] = useState<string>("mixed");
+  const [selectedTopic, setSelectedTopic] = useState<string>(searchParams.get("topic") ?? "");
+  const [difficulty, setDifficulty] = useState<string>(searchParams.get("difficulty") ?? "mixed");
   const [questionCount, setQuestionCount] = useState<number>(10);
 
   const [session, setSession] = useState<any>(null);

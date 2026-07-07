@@ -39,6 +39,52 @@ router.get("/topics", async (_req, res, next) => {
 });
 
 /**
+ * GET /api/practice/daily-target
+ * The student's daily practice goal (set by their college), how many practice
+ * sessions they've completed today, and their current streak.
+ */
+router.get("/daily-target", async (req, res, next) => {
+  try {
+    const studentId = req.user!.userId;
+
+    const [targetRow, todayRow, streakRow] = await Promise.all([
+      queryOne<{ daily_practice_target: number }>(`
+        SELECT COALESCE(c.daily_practice_target, 1)::int AS daily_practice_target
+        FROM users u
+        LEFT JOIN colleges c ON c.id = u.college_id
+        WHERE u.id = $1
+      `, [studentId]),
+      queryOne<{ completed_today: number }>(`
+        SELECT COUNT(*)::int AS completed_today
+        FROM practice_sessions
+        WHERE student_id = $1 AND status = 'completed'
+          AND completed_at >= date_trunc('day', now())
+      `, [studentId]),
+      queryOne<{ current_streak: number; longest_streak: number; last_practice_date: string | null }>(`
+        SELECT current_streak, longest_streak, last_practice_date
+        FROM practice_streaks WHERE student_id = $1
+      `, [studentId]),
+    ]);
+
+    const target = targetRow?.daily_practice_target ?? 1;
+    const completedToday = todayRow?.completed_today ?? 0;
+
+    res.json({
+      success: true,
+      data: {
+        target,
+        completed_today: completedToday,
+        remaining: Math.max(0, target - completedToday),
+        met: target > 0 && completedToday >= target,
+        current_streak: streakRow?.current_streak ?? 0,
+        longest_streak: streakRow?.longest_streak ?? 0,
+        last_practice_date: streakRow?.last_practice_date ?? null,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+/**
  * POST /api/practice/sessions
  * Start a new practice session and get questions
  */
@@ -54,11 +100,15 @@ router.post("/sessions", async (req, res, next) => {
     const studentId = req.user!.userId;
 
     // Fetch random questions
+    // category / difficulty_level are enums — compare as text so literals from the
+    // client don't get cast into the enum type (which throws on any non-label value).
     let difficultyFilter = "";
-    if (difficulty !== "mixed") difficultyFilter = `AND difficulty_level = '${difficulty}'`;
+    if (difficulty !== "mixed") difficultyFilter = `AND difficulty_level::text = '${difficulty}'`;
 
-    const topicFilter = topic ? `AND category = '${topic}'` : "";
-    const typeFilter  = session_type === "coding" ? "AND type IN ('coding','CODING')" : "AND type NOT IN ('coding','CODING')";
+    const topicFilter = topic ? `AND category::text = '${topic}'` : "";
+    // `type` is an enum — cast to text so a non-enum literal like 'coding' doesn't
+    // trigger "invalid input value for enum question_type".
+    const typeFilter  = session_type === "coding" ? "AND type::text IN ('coding','CODING')" : "AND type::text NOT IN ('coding','CODING')";
 
     const questions = await query(`
       SELECT id, category, type, difficulty_level, question_text, options, marks

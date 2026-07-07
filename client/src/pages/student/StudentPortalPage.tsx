@@ -25,9 +25,11 @@ import {
   Target,
   Mic,
   ChevronRight,
+  Wallet,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef } from "react";
+import DailyTargetCard from "./DailyTargetCard";
 
 type PortalTab = "dashboard" | "exams" | "learning";
 
@@ -177,14 +179,23 @@ export default function StudentPortalPage() {
             </p>
           </div>
         </div>
-        <Link
-          to="/app/student-portal/profile"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 hover:bg-indigo-50 text-sm font-bold text-slate-600 hover:text-indigo-600 border border-slate-100 hover:border-indigo-100 transition-all group"
-        >
-          <User className="h-4 w-4" />
-          Profile
-          <ArrowRight className="h-3 w-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/app/student-portal/payments"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 hover:bg-indigo-50 text-sm font-bold text-slate-600 hover:text-indigo-600 border border-slate-100 hover:border-indigo-100 transition-all"
+          >
+            <Wallet className="h-4 w-4" />
+            <span className="hidden sm:inline">Payments</span>
+          </Link>
+          <Link
+            to="/app/student-portal/profile"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-50 hover:bg-indigo-50 text-sm font-bold text-slate-600 hover:text-indigo-600 border border-slate-100 hover:border-indigo-100 transition-all group"
+          >
+            <User className="h-4 w-4" />
+            Profile
+            <ArrowRight className="h-3 w-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+          </Link>
+        </div>
       </div>
 
       {/* ── Tab Switcher ── */}
@@ -224,6 +235,9 @@ export default function StudentPortalPage() {
               </div>
             ))}
           </div>
+
+          {/* Daily target (set by your college) */}
+          <DailyTargetCard />
 
           {/* Two-zone entry: Career Prep + Learning Portal */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -13,5 +13,7 @@ router.get("/performance", collegeDashboardController.getPerformance);
 router.get("/integrity", collegeDashboardController.getIntegrity);
 router.get("/placement", collegeDashboardController.getPlacement);
 router.get("/top-performers", collegeDashboardController.getTopPerformers);
+router.get("/daily-target", collegeDashboardController.getDailyTarget);
+router.put("/daily-target", collegeDashboardController.updateDailyTarget);
 
 export default router;

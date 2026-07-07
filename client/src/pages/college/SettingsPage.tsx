@@ -7,6 +7,7 @@ import {
     Award,
     Save,
     CheckCircle2,
+    Target,
 } from "lucide-react";
 import api from "../../lib/api";
 import { useAuthStore } from "../../stores/authStore";
@@ -91,6 +92,24 @@ export default function SettingsPage() {
         onError: (err: any) => {
             toast.error(err?.response?.data?.error ?? "Failed to save settings.");
         },
+    });
+
+    // ── Daily practice target (scoped college endpoint) ──────────────────────
+    const { data: dailyTarget } = useQuery<{ daily_practice_target: number }>({
+        queryKey: ["college-daily-target"],
+        queryFn: async () => (await api.get("/college/dashboard/daily-target")).data.data,
+    });
+    const [target, setTarget] = useState<string>("");
+    useEffect(() => {
+        if (dailyTarget) setTarget(String(dailyTarget.daily_practice_target));
+    }, [dailyTarget]);
+
+    const targetMutation = useMutation({
+        mutationFn: (value: number) =>
+            api.put("/college/dashboard/daily-target", { daily_practice_target: value }),
+        onSuccess: () => toast.success("Daily practice target updated."),
+        onError: (err: any) =>
+            toast.error(err?.response?.data?.error ?? "Failed to update daily target."),
     });
 
     if (isLoading) {
@@ -235,6 +254,53 @@ export default function SettingsPage() {
                         )}
                         {mutation.isPending ? "Saving..." : "Save Changes"}
                     </button>
+                </div>
+            </div>
+
+            {/* Student Engagement */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+                    <Target className="h-5 w-5 text-indigo-500" />
+                    <h2 className="text-base font-black text-slate-900">Student Engagement</h2>
+                </div>
+                <div className="p-6">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                        Daily Practice Target
+                    </label>
+                    <p className="text-sm text-slate-500 mb-3">
+                        How many practice sets each student should complete per day. Shown on their
+                        dashboard with a streak. Set to <span className="font-bold">0</span> to hide the target.
+                    </p>
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="number"
+                            min={0}
+                            max={20}
+                            value={target}
+                            onChange={(e) => setTarget(e.target.value)}
+                            className="w-28 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        />
+                        <span className="text-sm font-medium text-slate-400">sets / student / day</span>
+                        <button
+                            onClick={() => {
+                                const v = parseInt(target, 10);
+                                if (Number.isNaN(v) || v < 0 || v > 20) {
+                                    toast.error("Enter a whole number between 0 and 20.");
+                                    return;
+                                }
+                                targetMutation.mutate(v);
+                            }}
+                            disabled={targetMutation.isPending}
+                            className="ml-auto flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-bold text-sm rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all active:scale-95 shadow-sm"
+                        >
+                            {targetMutation.isPending ? (
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            ) : (
+                                <Save className="h-4 w-4" />
+                            )}
+                            Save Target
+                        </button>
+                    </div>
                 </div>
             </div>
 

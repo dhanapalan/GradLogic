@@ -673,4 +673,51 @@ router.post(
   }
 );
 
+/**
+ * GET /api/billing/my-fees
+ * Self-service: the logged-in student's own fee records across all academic
+ * years, plus a small summary. Read-only — fees are collected offline and
+ * recorded by the college placement office.
+ */
+router.get(
+  "/my-fees",
+  authenticate,
+  authorize("student"),
+  async (req, res, next) => {
+    try {
+      const studentId = (req as any).user?.userId;
+      if (!studentId) return res.status(403).json({ success: false, error: "No student context" });
+
+      const rows = await query(
+        `SELECT sp.id, sp.academic_year, sp.department, sp.amount, sp.status,
+                sp.paid_at, sp.payment_method, sp.payment_ref,
+                c.name AS college_name
+         FROM student_payments sp
+         LEFT JOIN colleges c ON c.id = sp.college_id
+         WHERE sp.student_id = $1
+         ORDER BY sp.academic_year DESC`,
+        [studentId]
+      );
+
+      const current = rows.find((r: any) => r.academic_year === currentAcademicYear()) || null;
+      const totalPaid = rows
+        .filter((r: any) => r.status === "paid")
+        .reduce((sum: number, r: any) => sum + Number(r.amount), 0);
+
+      res.json({
+        success: true,
+        data: {
+          fee_per_student: PER_STUDENT_ANNUAL_FEE,
+          current_academic_year: currentAcademicYear(),
+          current,
+          total_paid: totalPaid,
+          history: rows,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;

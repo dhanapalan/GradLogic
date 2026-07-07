@@ -56,6 +56,14 @@ const CollegePortalStudents = lazy(() => import("./pages/college-portal/Students
 const CollegePortalAnalytics = lazy(() => import("./pages/college-portal/AnalyticsPage"));
 const CollegePortalComingSoon = lazy(() => import("./pages/college-portal/ComingSoonPage"));
 const StudentPortalPage = lazy(() => import("./pages/student/StudentPortalPage"));
+const StudentPaymentsPage = lazy(() => import("./pages/student/PaymentsPage"));
+const StudentQuestionBankPage = lazy(() => import("./pages/student/QuestionBankPage"));
+const StudentWorkflowPage = lazy(() => import("./pages/student/WorkflowPage"));
+const StudentPortalLayout = lazy(() => import("./layouts/StudentPortalLayout"));
+const StudentDashboardPage = lazy(() => import("./pages/student/portal/DashboardPage"));
+const StudentTestsPage = lazy(() => import("./pages/student/portal/TestsPage"));
+const StudentNotificationsPage = lazy(() => import("./pages/student/portal/NotificationsPage"));
+const StudentLearnPage = lazy(() => import("./pages/student/portal/LearnPage"));
 const CampusListPage = lazy(() => import("./pages/hr/CampusListPage"));
 const CampusDetailPage = lazy(() => import("./pages/hr/CampusDetailPage"));
 const PendingApprovalsPage = lazy(() => import("./pages/hr/PendingApprovalsPage"));
@@ -396,6 +404,37 @@ export default function App() {
               <Route path="settings" element={<CampusSettingsPage />} />
             </Route>
 
+            {/* ── Student Portal (dedicated layout) ───────────────────── */}
+            <Route
+              path="/app/student-portal"
+              element={
+                <ProtectedRoute>
+                  <RoleGuard allowed={["student"]}>
+                    <StudentPortalLayout />
+                  </RoleGuard>
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<StudentDashboardPage />} />
+              <Route path="workflow" element={<StudentWorkflowPage />} />
+              <Route path="learn" element={<StudentLearnPage />} />
+              <Route path="practice" element={<PracticePage />} />
+              <Route path="tests" element={<StudentTestsPage />} />
+              <Route path="question-bank" element={<StudentQuestionBankPage />} />
+              <Route path="achievements" element={<GamificationPage />} />
+              <Route path="payments" element={<StudentPaymentsPage />} />
+              <Route path="notifications" element={<StudentNotificationsPage />} />
+              <Route path="profile" element={<StudentProfile />} />
+              <Route path="soft-skills" element={<SoftSkillsHubPage />} />
+              <Route path="development" element={<DevelopmentPage />} />
+              <Route path="mock-interview" element={<MockInterviewPage />} />
+              <Route path="mock-interview/room" element={<MockInterviewRoom />} />
+              <Route path="mock-interview/:sessionId/feedback" element={<MockInterviewFeedbackPage />} />
+              <Route path="exam/:driveId/instructions" element={<ExamInstructionsPage />} />
+              <Route path="programs/:programId" element={<StudentProgramPage />} />
+              <Route path="programs/:programId/modules/:moduleId" element={<ModulePlayerPage />} />
+            </Route>
+
             {/* ── Student onboarding (protected) ──────────────────────── */}
             <Route
               path="/student-onboarding"
@@ -550,95 +589,8 @@ export default function App() {
                 }
               />
 
-              {/* Student Portal */}
-              <Route
-                path="student-portal"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <StudentPortalPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/exam/:driveId/instructions"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <ExamInstructionsPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <StudentPortalPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/profile"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <StudentProfile />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/practice"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <PracticePage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/soft-skills"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <SoftSkillsHubPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/mock-interview"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <MockInterviewPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/mock-interview/room"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <MockInterviewRoom />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/mock-interview/:sessionId/feedback"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <MockInterviewFeedbackPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/development"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <DevelopmentPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/gamification"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <GamificationPage />
-                  </RoleGuard>
-                }
-              />
+              {/* Student Portal routes moved to the dedicated StudentPortalLayout
+                  group below (/app/student-portal/*). */}
               <Route
                 path="mentor"
                 element={
@@ -723,23 +675,6 @@ export default function App() {
                   </RoleGuard>
                 }
               />
-              <Route
-                path="student-portal/programs/:programId"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <StudentProgramPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="student-portal/programs/:programId/modules/:moduleId"
-                element={
-                  <RoleGuard allowed={["student"]}>
-                    <ModulePlayerPage />
-                  </RoleGuard>
-                }
-              />
-
               {/* LMS — Student */}
               <Route
                 path="lms/catalog"

@@ -399,3 +399,52 @@ export const getTopPerformers = async (req: Request, res: Response<ApiResponse>,
         next(error);
     }
 };
+
+/**
+ * GET /api/college/dashboard/daily-target
+ * The college's configured daily practice target for its students.
+ */
+export const getDailyTarget = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const collegeId = getCollegeId(req);
+        const result = await pool.query(
+            `SELECT COALESCE(daily_practice_target, 1) AS daily_practice_target
+             FROM colleges WHERE id = $1`,
+            [collegeId]
+        );
+        res.json({
+            success: true,
+            data: { daily_practice_target: parseInt(result.rows[0]?.daily_practice_target ?? 1, 10) },
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * PUT /api/college/dashboard/daily-target
+ * Scoped setter — a college admin sets ONLY the daily practice target for
+ * their own college. { daily_practice_target: 0..20 }.
+ */
+export const updateDailyTarget = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const collegeId = getCollegeId(req);
+        const raw = Number((req.body ?? {}).daily_practice_target);
+        if (!Number.isInteger(raw) || raw < 0 || raw > 20) {
+            throw new AppError("daily_practice_target must be an integer between 0 and 20.", 400);
+        }
+        const result = await pool.query(
+            `UPDATE colleges SET daily_practice_target = $1, updated_at = NOW()
+             WHERE id = $2
+             RETURNING COALESCE(daily_practice_target, 1) AS daily_practice_target`,
+            [raw, collegeId]
+        );
+        res.json({
+            success: true,
+            data: { daily_practice_target: parseInt(result.rows[0]?.daily_practice_target ?? raw, 10) },
+            message: "Daily target updated",
+        });
+    } catch (error) {
+        next(error);
+    }
+};
