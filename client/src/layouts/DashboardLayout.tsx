@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { authActions, useAuthStore } from "../stores/authStore";
+import { logout } from "../lib/logout";
 import { resolveRole, type AppRole } from "../components/ProtectedRoute";
 import Logo from "../components/Logo";
 import NotificationBell from "../components/NotificationBell";
@@ -27,6 +28,7 @@ import {
   UserCircleIcon,
   CreditCardIcon,
   MapIcon,
+  Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 
 // ── Sidebar navigation: grouped sections with role access control ────────────
@@ -63,6 +65,7 @@ const navigation: NavSection[] = [
     title: "Colleges",
     items: [
       { name: "Campuses", href: "/app/campuses", icon: AcademicCapIcon, roles: ["super_admin", "hr"] },
+      { name: "Modules", href: "/app/superadmin/modules", icon: Squares2X2Icon, roles: ["super_admin"] },
       { name: "Pending Approvals", href: "/app/approvals/pending", icon: ShieldCheckIcon, roles: ["super_admin", "admin", "hr"] },
       { name: "Placements", href: "/app/placements", icon: TrophyIcon, roles: ["super_admin", "hr"] },
     ],
@@ -302,7 +305,7 @@ export default function DashboardLayout() {
               )}
               
               <button
-                onClick={() => authActions.logout()}
+                onClick={() => { void logout().finally(() => { window.location.href = "/auth/login"; }); }}
                 className="flex items-center justify-center p-2 rounded-xl text-slate-500 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-100 hover:text-red-600 transition-colors"
                 title="Sign out"
               >

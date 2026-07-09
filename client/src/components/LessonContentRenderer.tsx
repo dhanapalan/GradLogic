@@ -23,6 +23,151 @@ interface Props {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Minimal markdown → HTML for text lessons (headings, tables, lists, code,
+// blockquotes, bold/italic/links). Input is HTML-escaped first, so the output
+// contains only tags generated here — safe for dangerouslySetInnerHTML.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function inlineMd(s: string): string {
+  return s
+    .replace(/`([^`]+)`/g, '<code class="rounded bg-slate-100 px-1 py-0.5 text-[13px] text-slate-800">$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(
+      /\[([^\]]+)\]\((https?:[^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">$1</a>'
+    );
+}
+
+function markdownToHtml(md: string): string {
+  const lines = escapeHtml(md).split(/\r?\n/);
+  const out: string[] = [];
+  let i = 0;
+  let inCode = false;
+  let listType: "ul" | "ol" | null = null;
+  const closeList = () => {
+    if (listType) {
+      out.push(`</${listType}>`);
+      listType = null;
+    }
+  };
+
+  const H_CLS: Record<number, string> = {
+    1: "text-xl font-bold text-slate-900 mt-2 mb-3",
+    2: "text-lg font-semibold text-slate-900 mt-5 mb-2",
+    3: "text-base font-semibold text-slate-800 mt-4 mb-2",
+    4: "text-sm font-semibold text-slate-800 mt-3 mb-1",
+  };
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    if (line.trim().startsWith("```")) {
+      closeList();
+      if (!inCode) {
+        out.push('<pre class="my-3 overflow-x-auto rounded-lg bg-slate-900 p-4 text-[13px] leading-relaxed text-slate-100"><code>');
+        inCode = true;
+      } else {
+        out.push("</code></pre>");
+        inCode = false;
+      }
+      i++;
+      continue;
+    }
+    if (inCode) {
+      out.push(line);
+      i++;
+      continue;
+    }
+
+    // Table: header row followed by a |---|---| separator line
+    if (line.includes("|") && /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(lines[i + 1] ?? "")) {
+      closeList();
+      const parseRow = (l: string) =>
+        l.trim().replace(/^\||\|$/g, "").split("|").map((c) => inlineMd(c.trim()));
+      out.push('<table class="my-3 w-full border-collapse text-sm"><thead><tr>');
+      out.push(
+        parseRow(line)
+          .map((h) => `<th class="border border-slate-200 bg-slate-50 px-3 py-1.5 text-left font-semibold text-slate-700">${h}</th>`)
+          .join("")
+      );
+      out.push("</tr></thead><tbody>");
+      i += 2;
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+        out.push(
+          "<tr>" +
+            parseRow(lines[i])
+              .map((c) => `<td class="border border-slate-200 px-3 py-1.5 text-slate-700">${c}</td>`)
+              .join("") +
+            "</tr>"
+        );
+        i++;
+      }
+      out.push("</tbody></table>");
+      continue;
+    }
+
+    const h = line.match(/^(#{1,4})\s+(.*)/);
+    if (h) {
+      closeList();
+      const lvl = h[1].length;
+      out.push(`<h${lvl} class="${H_CLS[lvl]}">${inlineMd(h[2])}</h${lvl}>`);
+      i++;
+      continue;
+    }
+
+    if (/^\s*(---+|\*\*\*+)\s*$/.test(line)) {
+      closeList();
+      out.push('<hr class="my-4 border-slate-200"/>');
+      i++;
+      continue;
+    }
+
+    // Blockquote (">" was escaped to "&gt;" above)
+    if (/^\s*&gt;\s?/.test(line)) {
+      closeList();
+      out.push(
+        `<blockquote class="my-3 border-l-4 border-blue-200 bg-blue-50/60 px-4 py-2 text-slate-700">${inlineMd(line.replace(/^\s*&gt;\s?/, ""))}</blockquote>`
+      );
+      i++;
+      continue;
+    }
+
+    const ul = line.match(/^\s*[-*]\s+(.*)/);
+    const ol = line.match(/^\s*\d+\.\s+(.*)/);
+    if (ul || ol) {
+      const t = ul ? "ul" : "ol";
+      if (listType !== t) {
+        closeList();
+        out.push(t === "ul" ? '<ul class="my-2 list-disc space-y-1 pl-6">' : '<ol class="my-2 list-decimal space-y-1 pl-6">');
+        listType = t;
+      }
+      out.push(`<li>${inlineMd((ul ?? ol)![1])}</li>`);
+      i++;
+      continue;
+    }
+
+    if (line.trim() === "") {
+      closeList();
+      i++;
+      continue;
+    }
+
+    closeList();
+    out.push(`<p class="my-2">${inlineMd(line)}</p>`);
+    i++;
+  }
+  closeList();
+  if (inCode) out.push("</code></pre>");
+  return out.join("\n");
+}
+
 function isYouTube(url: string) {
   return url.includes("youtube.com") || url.includes("youtu.be");
 }
@@ -156,10 +301,11 @@ function TextContent({ text, contentUrl }: { text?: string | null; contentUrl?: 
               dangerouslySetInnerHTML={{ __html: text }}
             />
           ) : (
-            /* Plain text — preserve whitespace and line breaks */
-            <pre className="whitespace-pre-wrap font-sans text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-xl p-5 border border-slate-100">
-              {text}
-            </pre>
+            /* Markdown / plain text — converted with the escaped-input renderer above */
+            <div
+              className="text-sm text-slate-700 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: markdownToHtml(text!) }}
+            />
           )}
         </div>
       ) : contentUrl ? (

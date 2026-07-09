@@ -113,12 +113,20 @@ export default function AllCollegesPage() {
                     <StatusBadge status={college.status} size="sm" />
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <Link
-                      to={`/app/superadmin/colleges/${college.id}`}
-                      className="font-medium text-admin-accent hover:underline"
-                    >
-                      View
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        to={`/app/superadmin/colleges/${college.id}`}
+                        className="font-medium text-admin-accent hover:underline"
+                      >
+                        View
+                      </Link>
+                      <Link
+                        to={`/app/superadmin/colleges/${college.id}?tab=modules`}
+                        className="font-medium text-gray-600 hover:text-admin-accent hover:underline"
+                      >
+                        Modules
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))

@@ -45,6 +45,12 @@ export const env = {
   // JWT
   JWT_SECRET: process.env.JWT_SECRET || "dev-jwt-secret-talentsecure-2026",
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
+  // Short-lived access token; refresh tokens keep sessions alive with rotation.
+  JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || "1h",
+  // Refresh token lifetime (opaque token stored hashed in DB).
+  REFRESH_TOKEN_EXPIRES_DAYS: parseInt(process.env.REFRESH_TOKEN_EXPIRES_DAYS || "30", 10),
+  // Password reset link lifetime (minutes).
+  PASSWORD_RESET_EXPIRES_MIN: parseInt(process.env.PASSWORD_RESET_EXPIRES_MIN || "30", 10),
 
   // API Controls
   DISABLE_RATE_LIMIT: process.env.DISABLE_RATE_LIMIT === "true",

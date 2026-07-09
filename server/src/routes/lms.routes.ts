@@ -6,6 +6,7 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
 import { query, queryOne } from "../config/database.js";
+import * as platformModulesController from "../controllers/platformModules.controller.js";
 
 const router = Router();
 
@@ -16,6 +17,20 @@ router.use(authenticate);
 
 const CONTENT_ROLES = ["super_admin", "hr", "instructor"] as const;
 const READ_ROLES    = ["super_admin", "hr", "instructor", "mentor", "college_admin", "college", "college_staff", "student", "cxo"] as const;
+
+// =============================================================================
+// LMS MODULE GROUPS (multi-tenant feature modules)
+// =============================================================================
+
+/**
+ * GET /api/lms/module-groups/:moduleKey/content
+ * Courses, practice topics, and (for students) progress for an enabled module.
+ */
+router.get(
+  "/module-groups/:moduleKey/content",
+  authorize(...READ_ROLES),
+  platformModulesController.getLmsModuleContent
+);
 
 // =============================================================================
 // COURSES

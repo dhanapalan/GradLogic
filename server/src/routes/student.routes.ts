@@ -4,6 +4,7 @@ import { z } from "zod";
 import { validate } from "../middleware/validate.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import * as studentController from "../controllers/student.controller.js";
+import * as modulesController from "../controllers/platformModules.controller.js";
 import { passwordSchema } from "../validators/password.js";
 
 const router = Router();
@@ -152,6 +153,14 @@ router.get(
   authenticate,
   authorize("super_admin", "admin", "hr", "cxo"),
   studentController.getAnalytics
+);
+
+/** Enabled portal features for the student's college (multi-tenant modules). */
+router.get(
+  "/portal-features",
+  authenticate,
+  authorize("student"),
+  modulesController.getStudentPortalFeatures
 );
 
 /**

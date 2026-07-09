@@ -3,6 +3,7 @@ import { pool, query, queryOne } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
 import { env } from "../config/env.js";
+import { assignDefaultModulesToCollege } from "../services/platformModules.service.js";
 
 // ────────────────────────────────────────────────────────────────────
 // METRICS ENDPOINTS
@@ -1039,6 +1040,14 @@ export const approveCollege = async (
         JSON.stringify({ note: note || null }),
       ]
     );
+
+    const hasAssignments = await queryOne(
+      `SELECT id FROM college_module_assignments WHERE college_id = $1 LIMIT 1`,
+      [id]
+    );
+    if (!hasAssignments) {
+      await assignDefaultModulesToCollege(id as string, req.user?.userId);
+    }
 
     res.json({
       success: true,

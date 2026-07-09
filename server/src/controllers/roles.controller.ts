@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { query } from "../config/database.js";
+import { invalidateRbacCache } from "../services/rbac.service.js";
 
 // System roles that cannot be deleted
 const SYSTEM_ROLES = ["super_admin", "college_admin", "tpo", "mentor", "student"];
@@ -319,9 +320,9 @@ export const updateRolePermissions = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { permission_ids = [] } = req.body;
 
-    // Check if role exists and is not system role
+    // Check if role exists
     const roleCheck = await query(
-      "SELECT id, is_system FROM roles WHERE id = $1 AND deleted_at IS NULL",
+      "SELECT id, name, is_system FROM roles WHERE id = $1 AND deleted_at IS NULL",
       [id]
     );
 
@@ -332,10 +333,11 @@ export const updateRolePermissions = async (req: Request, res: Response) => {
       });
     }
 
-    if (roleCheck[0].is_system) {
+    // super_admin must always retain full access; its permissions are not editable.
+    if (roleCheck[0].name === "super_admin") {
       return res.status(403).json({
         success: false,
-        message: "Cannot modify permissions of system roles",
+        message: "The super_admin role always has full access and cannot be modified",
       });
     }
 
@@ -367,6 +369,9 @@ export const updateRolePermissions = async (req: Request, res: Response) => {
         req.ip,
       ]
     );
+
+    // Permissions changed → drop the RBAC cache so enforcement updates immediately.
+    invalidateRbacCache();
 
     res.json({
       success: true,

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Search, Pencil } from "lucide-react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Search, Pencil, Package } from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
+import CollegeModulesPanel from "../../../components/superadmin/CollegeModulesPanel";
 import collegeService, { College, CollegeStudent } from "../../../services/collegeService";
 
 const inputCls =
@@ -10,6 +11,7 @@ const inputCls =
 
 export default function CollegeDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const [college, setCollege] = useState<College | null>(null);
   const [students, setStudents] = useState<CollegeStudent[]>([]);
   const [total, setTotal] = useState(0);
@@ -18,6 +20,9 @@ export default function CollegeDetailPage() {
   const [loadingStudents, setLoadingStudents] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"students" | "modules">(
+    searchParams.get("tab") === "modules" ? "modules" : "students"
+  );
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -196,6 +201,39 @@ export default function CollegeDetailPage() {
         </div>
       )}
 
+      {college && (
+        <div className="flex gap-1 border-b border-gray-200">
+          <button
+            type="button"
+            onClick={() => setActiveTab("students")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === "students"
+                ? "border-admin-accent text-admin-accent"
+                : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            Students
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("modules")}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === "modules"
+                ? "border-admin-accent text-admin-accent"
+                : "border-transparent text-gray-500 hover:text-gray-800"
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            Assign Modules
+          </button>
+        </div>
+      )}
+
+      {college && activeTab === "modules" && (
+        <CollegeModulesPanel collegeId={college.id} collegeName={college.name} />
+      )}
+
+      {college && activeTab === "students" && (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900">
           Students {total > 0 && <span className="text-gray-400 font-normal">({total})</span>}
@@ -252,6 +290,7 @@ export default function CollegeDetailPage() {
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }

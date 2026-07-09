@@ -36,8 +36,8 @@ export default function MicrosoftCallback() {
             try {
                 const { data } = await api.post("/auth/microsoft", { code, state: stateFromUrl });
                 if (data.success && data.data) {
-                    const { accessToken, user } = data.data;
-                    authActions.login(accessToken, user);
+                    const { accessToken, refreshToken, permissions, user } = data.data;
+                    authActions.login(accessToken, user, refreshToken, permissions ?? []);
                     toast.success("Login successful");
 
                     setTimeout(() => {

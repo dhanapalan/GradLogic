@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/rbac.js";
 import * as auditController from "../controllers/auditTrail.controller.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ router.get(
   "/",
   authenticate,
   authorize("super_admin"),
+  requirePermission("audit_view"),
   auditController.listAuditTrail
 );
 
@@ -23,6 +25,7 @@ router.get(
   "/stats",
   authenticate,
   authorize("super_admin"),
+  requirePermission("audit_view"),
   auditController.getAuditStats
 );
 
@@ -34,6 +37,7 @@ router.get(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("audit_view"),
   auditController.getAuditEntry
 );
 
@@ -46,6 +50,7 @@ router.post(
   "/export",
   authenticate,
   authorize("super_admin"),
+  requirePermission("audit_export"),
   auditController.exportAuditLogs
 );
 

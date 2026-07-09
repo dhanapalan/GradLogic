@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { Outlet, NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
+import { PortalFeatureOutlet } from "../components/PortalFeatureOutlet";
 import {
   LayoutDashboard,
   Users,
@@ -16,24 +17,34 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { authActions, useAuthStore } from "../stores/authStore";
+import { useAuthStore } from "../stores/authStore";
+import { logout } from "../lib/logout";
 import NotificationBell from "../components/NotificationBell";
 import { cn } from "../lib/utils";
+import { usePortalFeatures } from "../hooks/usePortalFeatures";
+import { moduleIcon } from "../constants/lmsModules";
+import type { PlatformFeatureKey } from "../constants/platformFeatures";
 
 const BASE = "/app/college-portal";
 
 /** Primary navigation for the Campus / College Portal (TPO role). */
-const NAV_ITEMS = [
-  { name: "Dashboard", href: `${BASE}/dashboard`, icon: LayoutDashboard },
-  { name: "Students", href: `${BASE}/students`, icon: Users },
-  { name: "Question Bank", href: `${BASE}/question-bank`, icon: BookOpen },
-  { name: "Workflows", href: `${BASE}/workflows`, icon: Workflow },
-  { name: "Tests & Assessments", href: `${BASE}/assessments`, icon: ClipboardList },
-  { name: "Analytics & Reports", href: `${BASE}/analytics`, icon: BarChart3 },
-  { name: "Soft Skills", href: `${BASE}/soft-skills`, icon: MessageSquare },
-  { name: "Technical Skills", href: `${BASE}/technical-skills`, icon: Code2 },
-  { name: "Settings", href: `${BASE}/settings`, icon: Settings },
-] as const;
+const NAV_ITEMS: {
+  name: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  segment: string;
+  featureKey: PlatformFeatureKey | null;
+}[] = [
+  { name: "Dashboard", href: `${BASE}/dashboard`, icon: LayoutDashboard, segment: "dashboard", featureKey: null },
+  { name: "Students", href: `${BASE}/students`, icon: Users, segment: "students", featureKey: "students" },
+  { name: "Question Bank", href: `${BASE}/question-bank`, icon: BookOpen, segment: "question-bank", featureKey: "question_bank" },
+  { name: "Workflows", href: `${BASE}/workflows`, icon: Workflow, segment: "workflows", featureKey: "workflows" },
+  { name: "Tests & Assessments", href: `${BASE}/assessments`, icon: ClipboardList, segment: "assessments", featureKey: "assessments" },
+  { name: "Analytics & Reports", href: `${BASE}/analytics`, icon: BarChart3, segment: "analytics", featureKey: "analytics" },
+  { name: "Soft Skills", href: `${BASE}/soft-skills`, icon: MessageSquare, segment: "soft-skills", featureKey: "soft_skills" },
+  { name: "Technical Skills", href: `${BASE}/technical-skills`, icon: Code2, segment: "technical-skills", featureKey: "technical_skills" },
+  { name: "Settings", href: `${BASE}/settings`, icon: Settings, segment: "settings", featureKey: "settings" },
+];
 
 function initials(name?: string) {
   if (!name) return "TP";
@@ -45,14 +56,18 @@ export default function CollegeLayout() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { hasFeature, modules: lmsModules } = usePortalFeatures("college");
+
+  const visibleNav = NAV_ITEMS.filter((item) => hasFeature(item.featureKey));
 
   useEffect(() => {
     if (!token) window.location.href = "/auth/login";
   }, [token]);
 
   const handleLogout = () => {
-    authActions.logout();
-    window.location.href = "/auth/login";
+    void logout().finally(() => {
+      window.location.href = "/auth/login";
+    });
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -79,7 +94,7 @@ export default function CollegeLayout() {
         <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
           Placement Office
         </p>
-        {NAV_ITEMS.map((item) => {
+        {visibleNav.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
@@ -93,6 +108,28 @@ export default function CollegeLayout() {
             </NavLink>
           );
         })}
+
+        {lmsModules.length > 0 && (
+          <>
+            <p className="mt-4 px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
+              Learning Modules
+            </p>
+            {lmsModules.map((mod) => {
+              const ModIcon = moduleIcon(mod.icon);
+              return (
+                <NavLink
+                  key={mod.key}
+                  to={`${BASE}/lms/${mod.key}`}
+                  className={navLinkClass}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  <ModIcon className="h-[18px] w-[18px] shrink-0" />
+                  <span className="truncate">{mod.name}</span>
+                </NavLink>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       <div className="border-t border-white/10 px-3 py-3">
@@ -171,7 +208,7 @@ export default function CollegeLayout() {
         </header>
 
         <main className="flex-1 overflow-auto bg-slate-50">
-          <Outlet />
+          <PortalFeatureOutlet portal="college" />
         </main>
       </div>
     </div>

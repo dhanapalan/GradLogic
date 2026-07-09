@@ -123,6 +123,26 @@ function emailHtml(title: string, body: string, ctaUrl?: string, ctaLabel?: stri
 }
 
 // =============================================================================
+// PASSWORD RESET
+// =============================================================================
+
+export async function sendPasswordResetEmail({
+  name, email, resetUrl,
+}: { name: string; email: string; resetUrl: string }) {
+  const subject = "Reset your GradLogic password";
+  const text = `Hi ${name}, we received a request to reset your password. Use this link (valid for a limited time): ${resetUrl}. If you didn't request this, you can ignore this email.`;
+  const html = emailHtml(
+    "Reset your password",
+    `<p>Hi <strong>${esc(name)}</strong>,</p>
+     <p>We received a request to reset the password for your GradLogic account.</p>
+     <p>Click the button below to choose a new password. This link expires shortly for your security.</p>
+     <p style="font-size:13px;color:#64748b;">If you didn't request a password reset, you can safely ignore this email — your password won't change.</p>`,
+    resetUrl, "Reset Password"
+  );
+  return sendEmail({ to: email, subject, text, html, template: "password_reset" });
+}
+
+// =============================================================================
 // CAMPUS ADMIN INVITATION (existing)
 // =============================================================================
 

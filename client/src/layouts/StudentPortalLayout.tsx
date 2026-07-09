@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Outlet, NavLink, Link } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
+import { PortalFeatureOutlet } from "../components/PortalFeatureOutlet";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -18,15 +19,27 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { authActions, useAuthStore } from "../stores/authStore";
+import { useAuthStore } from "../stores/authStore";
+import { logout } from "../lib/logout";
 import studentPracticeService from "../services/studentPracticeService";
 import studentPaymentsService from "../services/studentPaymentsService";
 import { cn } from "../lib/utils";
+import { usePortalFeatures } from "../hooks/usePortalFeatures";
+import { moduleIcon } from "../constants/lmsModules";
+import { STUDENT_NAV_FEATURE_MAP, type PlatformFeatureKey } from "../constants/platformFeatures";
 
 const BASE = "/app/student-portal";
 
+function hrefFeatureKey(href: string): PlatformFeatureKey | null {
+  const suffix = href === BASE ? "" : href.replace(`${BASE}/`, "");
+  return STUDENT_NAV_FEATURE_MAP[suffix] ?? null;
+}
+
 /** Grouped navigation mirroring the Student Portal export. */
-const NAV_GROUPS: { label: string; items: { name: string; href: string; icon: typeof LayoutDashboard; end?: boolean }[] }[] = [
+const NAV_GROUPS: {
+  label: string;
+  items: { name: string; href: string; icon: typeof LayoutDashboard; end?: boolean }[];
+}[] = [
   {
     label: "Overview",
     items: [
@@ -71,6 +84,31 @@ export default function StudentPortalLayout() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { hasFeature, modules: lmsModules } = usePortalFeatures("student");
+
+  const filteredGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => hasFeature(hrefFeatureKey(item.href))),
+  })).filter((group) => group.items.length > 0);
+
+  const lmsNavItems =
+    lmsModules.length > 0
+      ? [
+          {
+            label: "Learning Modules",
+            items: lmsModules.map((mod) => {
+              const ModIcon = moduleIcon(mod.icon);
+              return {
+                name: mod.name,
+                href: `${BASE}/lms/${mod.key}`,
+                icon: ModIcon,
+              };
+            }),
+          },
+        ]
+      : [];
+
+  const allNavGroups = [...filteredGroups, ...lmsNavItems];
 
   useEffect(() => {
     if (!token) window.location.href = "/auth/login";
@@ -98,8 +136,9 @@ export default function StudentPortalLayout() {
         : { text: `${formatINR(due.amount)} due`, cls: "bg-amber-50 text-amber-700 border-amber-100" };
 
   const handleLogout = () => {
-    authActions.logout();
-    window.location.href = "/auth/login";
+    void logout().finally(() => {
+      window.location.href = "/auth/login";
+    });
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -129,7 +168,7 @@ export default function StudentPortalLayout() {
       </div>
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
-        {NAV_GROUPS.map((group) => (
+        {allNavGroups.map((group) => (
           <div key={group.label}>
             <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
               {group.label}
@@ -141,7 +180,7 @@ export default function StudentPortalLayout() {
                   <NavLink
                     key={item.href}
                     to={item.href}
-                    end={item.end}
+                    end={(item as { end?: boolean }).end === true ? true : undefined}
                     className={navLinkClass}
                     onClick={() => setMobileOpen(false)}
                   >
@@ -232,7 +271,7 @@ export default function StudentPortalLayout() {
         </header>
 
         <main className="flex-1 overflow-auto bg-slate-50 p-4 sm:p-6">
-          <Outlet />
+          <PortalFeatureOutlet portal="student" />
         </main>
       </div>
     </div>

@@ -26,8 +26,15 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/login", form);
-      const { accessToken, user } = data.data;
-      authActions.login(accessToken, user);
+
+      // 2FA gate: password OK but a TOTP code is required to finish signing in.
+      if (data.data?.requires2FA) {
+        navigate("/auth/2fa", { state: { challengeToken: data.data.challengeToken } });
+        return;
+      }
+
+      const { accessToken, refreshToken, permissions, user } = data.data;
+      authActions.login(accessToken, user, refreshToken, permissions ?? []);
 
       setTimeout(() => {
         const landingPath = getLandingPath(user);
@@ -95,9 +102,9 @@ export default function LoginPage() {
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
               Password
             </label>
-            <span className="text-xs text-slate-400 cursor-default">Forgot?{" "}
-              <span className="text-indigo-500">Contact admin</span>
-            </span>
+            <Link to="/auth/forgot-password" className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 hover:underline">
+              Forgot password?
+            </Link>
           </div>
           <div className="relative">
             <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />

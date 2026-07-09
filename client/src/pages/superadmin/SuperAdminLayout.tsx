@@ -15,9 +15,11 @@ import {
   Settings,
   ChevronDown,
   LogOut,
+  Package,
   type LucideIcon,
 } from "lucide-react";
-import { authActions, useAuthStore } from "../../stores/authStore";
+import { useAuthStore } from "../../stores/authStore";
+import { logout } from "../../lib/logout";
 import NotificationBell from "../../components/NotificationBell";
 
 interface NavLeaf {
@@ -60,6 +62,7 @@ const SECTIONS: NavSection[] = [
       },
       { name: "Students", icon: Users, href: `${BASE}/students` },
       { name: "Approvals", icon: CheckCircle2, href: `${BASE}/approvals` },
+      { name: "Modules", icon: Package, href: `${BASE}/modules` },
     ],
   },
   {
@@ -71,6 +74,7 @@ const SECTIONS: NavSection[] = [
         children: [
           { name: "All Users", href: `${BASE}/users` },
           { name: "Role Management", href: `${BASE}/roles` },
+          { name: "Permission Matrix", href: `${BASE}/roles/matrix` },
         ],
       },
       {
@@ -121,6 +125,7 @@ const SECTIONS: NavSection[] = [
         children: [
           { name: "System Settings", href: `${BASE}/settings` },
           { name: "Audit Logs", href: `${BASE}/audit-trail` },
+          { name: "My Security (2FA)", href: `/app/security` },
           { name: "Backup & Security", href: `${BASE}/settings?tab=backup` },
         ],
       },
@@ -183,8 +188,9 @@ export default function SuperAdminLayout() {
   }, [token]);
 
   const handleLogout = () => {
-    authActions.logout();
-    window.location.href = "/auth/login";
+    void logout().finally(() => {
+      window.location.href = "/auth/login";
+    });
   };
 
   const flatClasses = (active: boolean) =>

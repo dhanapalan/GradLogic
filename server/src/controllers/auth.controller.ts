@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import * as authService from "../services/auth.service.js";
+import * as twoFactorService from "../services/twoFactor.service.js";
 import { ApiResponse } from "../types/index.js";
 import { env } from "../config/env.js";
 
@@ -44,8 +45,123 @@ export const login = async (
 ) => {
   try {
     const { email, password } = req.body;
-    const result = await authService.loginUser(email, password, req.ip);
+    const result = await authService.loginUser(email, password, req.ip, {
+      userAgent: req.headers["user-agent"],
+    });
     res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/refresh
+ * Body: { refreshToken }  → rotates tokens and returns a new pair + permissions.
+ */
+export const refresh = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { refreshToken } = req.body;
+    const result = await authService.refreshSession(refreshToken, {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ * Body: { refreshToken }  → revokes the presented refresh token.
+ */
+export const logout = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { refreshToken } = req.body ?? {};
+    await authService.logout(refreshToken, req.user?.userId, req.ip);
+    res.json({ success: true, message: "Logged out" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/change-password  (authenticated)
+ * Body: { currentPassword, newPassword }
+ */
+export const changePassword = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    await authService.changePassword(req.user!.userId, currentPassword, newPassword);
+    res.json({ success: true, message: "Password changed successfully. Please log in again." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/forgot-password
+ * Body: { email }  → always returns success (no account enumeration).
+ */
+export const forgotPassword = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+    await authService.requestPasswordReset(email, req.ip);
+    res.json({
+      success: true,
+      message: "If an account exists for that email, a reset link has been sent.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Body: { token, password }
+ */
+export const resetPassword = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { token, password } = req.body;
+    await authService.resetPassword(token, password, req.ip);
+    res.json({ success: true, message: "Password reset successfully. You can now log in." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/auth/permissions  (authenticated)
+ * Returns the caller's effective permission set for the client RBAC layer.
+ */
+export const permissions = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const perms = await authService.getUserPermissions(req.user!.role);
+    res.json({ success: true, data: { permissions: perms } });
   } catch (err) {
     next(err);
   }
@@ -100,6 +216,97 @@ export const setupPassword = async (
     await authService.updatePassword(userId, password);
 
     res.json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// =============================================================================
+// TWO-FACTOR AUTHENTICATION (TOTP)
+// =============================================================================
+
+/**
+ * POST /api/auth/2fa/verify  (public — completes a 2FA login)
+ * Body: { challengeToken, code }
+ */
+export const verifyTwoFactor = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { challengeToken, code } = req.body;
+    const result = await authService.verifyTwoFactorLogin(challengeToken, code, req.ip, {
+      userAgent: req.headers["user-agent"],
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/auth/2fa/status  (authenticated)
+ */
+export const twoFactorStatus = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const status = await twoFactorService.getStatus(req.user!.userId);
+    res.json({ success: true, data: status });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/2fa/setup  (authenticated)
+ * Begins enrollment; returns the secret + otpauth URI for the authenticator app.
+ */
+export const twoFactorSetup = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const result = await twoFactorService.beginSetup(req.user!.userId, req.user!.email);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/2fa/enable  (authenticated)
+ * Body: { code }  → confirms enrollment.
+ */
+export const twoFactorEnable = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    await twoFactorService.enable(req.user!.userId, req.body.code, req.ip);
+    res.json({ success: true, message: "Two-factor authentication enabled" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/2fa/disable  (authenticated)
+ * Body: { code }
+ */
+export const twoFactorDisable = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    await twoFactorService.disable(req.user!.userId, req.body.code, req.ip);
+    res.json({ success: true, message: "Two-factor authentication disabled" });
   } catch (err) {
     next(err);
   }

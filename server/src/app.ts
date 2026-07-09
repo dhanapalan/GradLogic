@@ -47,6 +47,7 @@ import companyRoutes from "./routes/company.routes.js";
 import billingRoutes from "./routes/billing.routes.js";
 import questionBankAIRoutes from "./routes/questionBankAI.routes.js";
 import superadminRoutes from "./routes/superadmin.routes.js";
+import collegeModulesRoutes from "./routes/college.modules.routes.js";
 
 const app = express();
 
@@ -119,6 +120,7 @@ app.use("/api/exams", examRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/colleges", collegeRoutes);
 app.use("/api/college/dashboard", collegeDashboardRoutes);
+app.use("/api/college/modules", collegeModulesRoutes);
 app.use("/api/campuses", campusRoutes);
 app.use("/api/campus/students", campusStudentRoutes);
 app.use("/api/campus/drives", campusDrivesRoutes);
