@@ -37,6 +37,42 @@ export interface PortalFeaturesResponse {
   modules: EnabledLmsModule[];
 }
 
+export interface ModuleCourse {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  difficulty: string;
+  duration_hours: number | null;
+  total_modules: number;
+  enrollment_count: number;
+  enrollment_status: string | null;
+  progress_percent: number | null;
+}
+
+export interface ModulePracticeTopic {
+  topic: string;
+  total_questions: number;
+  easy: number;
+  medium: number;
+  hard: number;
+  sessions_completed: number | null;
+  avg_score: number | null;
+}
+
+export interface LmsModuleContent {
+  module: EnabledLmsModule & { question_categories: string[] };
+  courses: ModuleCourse[];
+  practice_topics: ModulePracticeTopic[];
+  student: {
+    enrolled_courses: number;
+    completed_courses: number;
+    lessons_completed: number;
+    practice_sessions: number;
+    avg_practice_score: number | null;
+  } | null;
+}
+
 export interface CreateModuleInput {
   name: string;
   description?: string;
@@ -113,6 +149,11 @@ const platformModulesService = {
       features: data.data?.features ?? [],
       modules: data.data?.modules ?? [],
     };
+  },
+
+  async getLmsModuleContent(moduleKey: string): Promise<LmsModuleContent> {
+    const { data } = await api.get(`/lms/module-groups/${moduleKey}/content`);
+    return data.data;
   },
 };
 

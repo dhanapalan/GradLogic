@@ -99,6 +99,33 @@ export const STUDENT_CORE_FEATURES: PlatformFeatureKey[] = ["student_workflow"];
 export const ALL_FEATURE_KEYS = FEATURE_CATALOG.map((f) => f.key);
 export const DEFAULT_COLLEGE_MODULE_KEYS = ["campus-core", "aptitude-reasoning"];
 
+/**
+ * Category-specific features imply the shared platform surface they run on —
+ * e.g. a module granting aptitude practice must open the Practice Arena route,
+ * and module courses need the Learn surface. Applied when resolving a
+ * college's enabled feature set.
+ */
+export const FEATURE_IMPLICATIONS: Partial<Record<PlatformFeatureKey, PlatformFeatureKey[]>> = {
+  aptitude_practice: ["practice"],
+  technical_practice: ["practice"],
+  aptitude_tests: ["tests"],
+  technical_assessments: ["tests"],
+  aptitude_workflows: ["workflows"],
+  entrance_cuet: ["learn"],
+  entrance_gate: ["learn"],
+  entrance_cat: ["learn"],
+};
+
+export function expandFeatureImplications(keys: PlatformFeatureKey[]): PlatformFeatureKey[] {
+  const set = new Set(keys);
+  for (const key of keys) {
+    for (const implied of FEATURE_IMPLICATIONS[key] ?? []) {
+      set.add(implied);
+    }
+  }
+  return [...set];
+}
+
 export function featureLabel(key: string): string {
   return FEATURE_CATALOG.find((f) => f.key === key)?.label ?? key;
 }

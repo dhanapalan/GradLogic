@@ -147,6 +147,25 @@ export async function getCollegePortalFeatures(
   }
 }
 
+/** Real content for an LMS module group (courses, practice topics, progress). */
+export async function getLmsModuleContent(
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) {
+  try {
+    const user = req.user!;
+    const data = await modulesService.getLmsModuleContent(getParam(req.params.moduleKey), {
+      // Super admins have no college — they see all platform-wide content.
+      collegeId: user.college_id ?? null,
+      studentId: user.role === "student" ? user.userId : null,
+    });
+    res.json({ success: true, data });
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function getStudentPortalFeatures(
   req: Request,
   res: Response<ApiResponse>,

@@ -5,6 +5,7 @@ import {
   COLLEGE_CORE_FEATURES,
   FEATURE_CATALOG,
   STUDENT_CORE_FEATURES,
+  expandFeatureImplications,
   type PlatformFeatureKey,
 } from "../constants/platformFeatures.js";
 
@@ -438,7 +439,7 @@ export async function getEnabledFeaturesForCollege(
       }
     }
   }
-  return [...set];
+  return expandFeatureImplications([...set]);
 }
 
 /** Student-facing features derived from college assignments + student core. */
@@ -466,13 +467,19 @@ export async function getEnabledFeaturesForStudent(
     FEATURE_CATALOG.filter((f) => f.portal === "student" || f.portal === "both").map((f) => f.key)
   );
 
-  const set = new Set<PlatformFeatureKey>(STUDENT_CORE_FEATURES);
+  // Collect raw grants first, expand implications (e.g. aptitude_practice →
+  // practice), then keep only student-portal features.
+  const granted = new Set<PlatformFeatureKey>();
   for (const row of rows) {
     for (const f of parseFeatures((row as Record<string, unknown>).features)) {
-      if (studentKeys.has(f as PlatformFeatureKey)) {
-        set.add(f as PlatformFeatureKey);
+      if (ALL_FEATURE_KEYS.includes(f as PlatformFeatureKey)) {
+        granted.add(f as PlatformFeatureKey);
       }
     }
+  }
+  const set = new Set<PlatformFeatureKey>(STUDENT_CORE_FEATURES);
+  for (const f of expandFeatureImplications([...granted])) {
+    if (studentKeys.has(f)) set.add(f);
   }
   return [...set];
 }
@@ -510,4 +517,208 @@ export async function getEnabledLmsModulesForCollege(
 
 export function getFeatureCatalog() {
   return FEATURE_CATALOG;
+}
+
+// ── LMS module content (courses + practice topics + student progress) ────────
+
+export interface ModuleCourse {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  difficulty: string;
+  duration_hours: number | null;
+  total_modules: number;
+  enrollment_count: number;
+  // Student-only fields (null for non-students)
+  enrollment_status: string | null;
+  progress_percent: number | null;
+}
+
+export interface ModulePracticeTopic {
+  topic: string;
+  total_questions: number;
+  easy: number;
+  medium: number;
+  hard: number;
+  // Student-only fields
+  sessions_completed: number | null;
+  avg_score: number | null;
+}
+
+export interface LmsModuleContent {
+  module: EnabledLmsModule & { question_categories: string[] };
+  courses: ModuleCourse[];
+  practice_topics: ModulePracticeTopic[];
+  student: {
+    enrolled_courses: number;
+    completed_courses: number;
+    lessons_completed: number;
+    practice_sessions: number;
+    avg_practice_score: number | null;
+  } | null;
+}
+
+/**
+ * Real content behind an LMS module group: published courses tagged with the
+ * module key, practice coverage for its question-bank categories, and (for
+ * students) enrollment + practice progress.
+ */
+export async function getLmsModuleContent(
+  moduleKey: string,
+  opts: { collegeId?: string | null; studentId?: string | null }
+): Promise<LmsModuleContent> {
+  const moduleRow = await queryOne(
+    `SELECT key, name, description,
+            COALESCE(module_type, 'lms') AS module_type,
+            icon, features, COALESCE(sort_order, 0) AS sort_order,
+            COALESCE(question_categories, '[]'::jsonb) AS question_categories
+     FROM feature_modules
+     WHERE key = $1 AND deleted_at IS NULL AND status = 'active'`,
+    [moduleKey]
+  );
+  if (!moduleRow) throw new AppError("Module not found", 404);
+
+  // A college-scoped user only sees modules enabled for their college.
+  if (opts.collegeId) {
+    const enabled = await queryOne(
+      `SELECT 1
+       FROM college_module_assignments cma
+       JOIN feature_modules fm ON fm.id = cma.module_id
+       WHERE cma.college_id = $1 AND fm.key = $2 AND cma.enabled = true`,
+      [opts.collegeId, moduleKey]
+    );
+    if (!enabled) throw new AppError("Module not enabled for your campus", 403);
+  }
+
+  const row = moduleRow as Record<string, unknown>;
+  const questionCategories = parseFeatures(row.question_categories);
+  const studentId = opts.studentId ?? null;
+
+  const courseRows = await query(
+    `SELECT c.id, c.title, c.description, c.category, c.difficulty,
+            c.duration_hours, c.total_modules,
+            (SELECT COUNT(*)::int FROM enrollments e WHERE e.course_id = c.id) AS enrollment_count,
+            se.status AS enrollment_status,
+            se.progress_percent
+     FROM courses c
+     LEFT JOIN enrollments se ON se.course_id = c.id AND se.student_id = $2
+     WHERE c.module_key = $1 AND c.status = 'published'
+       AND (c.college_id IS NULL OR c.college_id = $3)
+     ORDER BY c.difficulty = 'beginner' DESC, c.created_at ASC`,
+    [moduleKey, studentId, opts.collegeId ?? null]
+  );
+
+  const courses: ModuleCourse[] = courseRows.map((r) => {
+    const c = r as Record<string, unknown>;
+    return {
+      id: String(c.id),
+      title: String(c.title),
+      description: c.description != null ? String(c.description) : null,
+      category: String(c.category),
+      difficulty: String(c.difficulty ?? "beginner"),
+      duration_hours: c.duration_hours != null ? Number(c.duration_hours) : null,
+      total_modules: Number(c.total_modules) || 0,
+      enrollment_count: Number(c.enrollment_count) || 0,
+      enrollment_status: c.enrollment_status != null ? String(c.enrollment_status) : null,
+      progress_percent: c.progress_percent != null ? Number(c.progress_percent) : null,
+    };
+  });
+
+  let practiceTopics: ModulePracticeTopic[] = [];
+  if (questionCategories.length > 0) {
+    const topicRows = await query(
+      `SELECT t.topic, t.total_questions, t.easy, t.medium, t.hard,
+              ps.sessions_completed, ps.avg_score
+       FROM (
+         SELECT category::text AS topic,
+                COUNT(*)::int AS total_questions,
+                COUNT(*) FILTER (WHERE difficulty_level = 'easy')::int   AS easy,
+                COUNT(*) FILTER (WHERE difficulty_level = 'medium')::int AS medium,
+                COUNT(*) FILTER (WHERE difficulty_level = 'hard')::int   AS hard
+         FROM question_bank
+         WHERE is_active = TRUE AND category::text = ANY($1)
+         GROUP BY category
+       ) t
+       LEFT JOIN LATERAL (
+         SELECT COUNT(*)::int AS sessions_completed,
+                ROUND(AVG(score_percent), 1) AS avg_score
+         FROM practice_sessions
+         WHERE student_id = $2::uuid AND topic = t.topic AND status = 'completed'
+       ) ps ON $2::uuid IS NOT NULL
+       ORDER BY t.topic`,
+      [questionCategories, studentId]
+    );
+    practiceTopics = topicRows.map((r) => {
+      const t = r as Record<string, unknown>;
+      return {
+        topic: String(t.topic),
+        total_questions: Number(t.total_questions) || 0,
+        easy: Number(t.easy) || 0,
+        medium: Number(t.medium) || 0,
+        hard: Number(t.hard) || 0,
+        sessions_completed: t.sessions_completed != null ? Number(t.sessions_completed) : null,
+        avg_score: t.avg_score != null ? Number(t.avg_score) : null,
+      };
+    });
+  }
+
+  let student: LmsModuleContent["student"] = null;
+  if (studentId) {
+    const [enrollStats, lessonStats, practiceStats] = await Promise.all([
+      queryOne(
+        `SELECT COUNT(*)::int AS enrolled,
+                COUNT(*) FILTER (WHERE e.status = 'completed')::int AS completed
+         FROM enrollments e
+         JOIN courses c ON c.id = e.course_id
+         WHERE e.student_id = $1 AND c.module_key = $2`,
+        [studentId, moduleKey]
+      ),
+      queryOne(
+        `SELECT COUNT(*)::int AS lessons_completed
+         FROM lesson_progress lp
+         JOIN lessons l ON l.id = lp.lesson_id
+         JOIN course_modules cm ON cm.id = l.module_id
+         JOIN courses c ON c.id = cm.course_id
+         WHERE lp.student_id = $1 AND lp.is_completed = TRUE AND c.module_key = $2`,
+        [studentId, moduleKey]
+      ),
+      questionCategories.length > 0
+        ? queryOne(
+            `SELECT COUNT(*)::int AS sessions,
+                    ROUND(AVG(score_percent), 1) AS avg_score
+             FROM practice_sessions
+             WHERE student_id = $1 AND status = 'completed' AND topic = ANY($2)`,
+            [studentId, questionCategories]
+          )
+        : Promise.resolve(null),
+    ]);
+
+    const es = enrollStats as Record<string, unknown> | null;
+    const ls = lessonStats as Record<string, unknown> | null;
+    const ps = practiceStats as Record<string, unknown> | null;
+    student = {
+      enrolled_courses: Number(es?.enrolled) || 0,
+      completed_courses: Number(es?.completed) || 0,
+      lessons_completed: Number(ls?.lessons_completed) || 0,
+      practice_sessions: Number(ps?.sessions) || 0,
+      avg_practice_score: ps?.avg_score != null ? Number(ps.avg_score) : null,
+    };
+  }
+
+  return {
+    module: {
+      key: String(row.key),
+      name: String(row.name),
+      description: row.description != null ? String(row.description) : null,
+      module_type: (String(row.module_type) === "platform" ? "platform" : "lms") as "lms" | "platform",
+      icon: row.icon != null ? String(row.icon) : null,
+      features: parseFeatures(row.features),
+      sort_order: Number(row.sort_order) || 0,
+      question_categories: questionCategories,
+    },
+    courses,
+    practice_topics: practiceTopics,
+    student,
+  };
 }
