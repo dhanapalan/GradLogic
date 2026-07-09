@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { authActions, useAuthStore } from "../stores/authStore";
+import { logout } from "../lib/logout";
 import { resolveRole, type AppRole } from "../components/ProtectedRoute";
 import Logo from "../components/Logo";
 import NotificationBell from "../components/NotificationBell";
@@ -304,7 +305,7 @@ export default function DashboardLayout() {
               )}
               
               <button
-                onClick={() => authActions.logout()}
+                onClick={() => { void logout().finally(() => { window.location.href = "/auth/login"; }); }}
                 className="flex items-center justify-center p-2 rounded-xl text-slate-500 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-100 hover:text-red-600 transition-colors"
                 title="Sign out"
               >

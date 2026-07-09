@@ -15,6 +15,7 @@ import {
 } from "./components/ProtectedRoute";
 import { CollegeLegacyFeatureGuard } from "./components/CollegeLegacyFeatureGuard";
 import { StudentFeatureGuard } from "./components/FeatureGuard";
+import { PermissionGuard } from "./components/PermissionGuard";
 
 // ── Layouts ──────────────────────────────────────────────────────────────────
 import PublicLayout from "./layouts/PublicLayout";
@@ -40,6 +41,11 @@ const LoginPage = lazy(() => import("./pages/auth/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage"));
 const PasswordSetupPage = lazy(() => import("./pages/auth/PasswordSetupPage"));
 const MicrosoftCallback = lazy(() => import("./pages/auth/MicrosoftCallback"));
+const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
+const AuthChangePasswordPage = lazy(() => import("./pages/auth/ChangePasswordPage"));
+const TwoFactorLoginPage = lazy(() => import("./pages/auth/TwoFactorLoginPage"));
+const SecurityPage = lazy(() => import("./pages/settings/SecurityPage"));
 
 const HRDashboardPage = lazy(() => import("./pages/hr/HRDashboardPage"));
 const EngineerPanelPage = lazy(() => import("./pages/engineer/EngineerPanelPage"));
@@ -177,6 +183,7 @@ const SuperAdminUserDetail = lazy(() => import("./pages/superadmin/users/UserDet
 
 // Roles
 const SuperAdminRoleManagement = lazy(() => import("./pages/superadmin/roles/RoleManagementPage"));
+const SuperAdminPermissionMatrix = lazy(() => import("./pages/superadmin/roles/PermissionMatrixPage"));
 
 // Audit Trail
 const SuperAdminAuditTrail = lazy(() => import("./pages/superadmin/audit/AuditTrailPage"));
@@ -280,11 +287,25 @@ export default function App() {
               <Route path="login" element={<LoginPage />} />
               <Route path="register" element={<RegisterPage />} />
               <Route path="setup-password" element={<PasswordSetupPage />} />
+              <Route path="forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="reset-password" element={<ResetPasswordPage />} />
+              <Route path="change-password" element={<AuthChangePasswordPage />} />
+              <Route path="2fa" element={<TwoFactorLoginPage />} />
               <Route path="callback" element={<MicrosoftCallback />} />
             </Route>
 
             {/* ── Not-authorized ──────────────────────────────────────── */}
             <Route path="/not-authorized" element={<NotAuthorizedPage />} />
+
+            {/* ── Account security (any authenticated user) ───────────── */}
+            <Route
+              path="/app/security"
+              element={
+                <ProtectedRoute>
+                  <SecurityPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* ── SuperAdmin Portal ──────────────────────────────────────── */}
             <Route
@@ -300,58 +321,59 @@ export default function App() {
               <Route index element={<Navigate to="/app/superadmin/dashboard" replace />} />
 
               {/* Dashboard */}
-              <Route path="dashboard" element={<SuperAdminDashboard />} />
+              <Route path="dashboard" element={<PermissionGuard permission="dashboard_view" redirect><SuperAdminDashboard /></PermissionGuard>} />
 
               {/* Colleges */}
-              <Route path="colleges" element={<SuperAdminColleges />} />
-              <Route path="colleges/requests" element={<SuperAdminCollegeRequests />} />
-              <Route path="colleges/new" element={<SuperAdminAddCollege />} />
-              <Route path="colleges/:id" element={<SuperAdminCollegeDetail />} />
+              <Route path="colleges" element={<PermissionGuard permission="colleges_view" redirect><SuperAdminColleges /></PermissionGuard>} />
+              <Route path="colleges/requests" element={<PermissionGuard permission="colleges_view" redirect><SuperAdminCollegeRequests /></PermissionGuard>} />
+              <Route path="colleges/new" element={<PermissionGuard permission="colleges_manage" redirect><SuperAdminAddCollege /></PermissionGuard>} />
+              <Route path="colleges/:id" element={<PermissionGuard permission="colleges_view" redirect><SuperAdminCollegeDetail /></PermissionGuard>} />
 
               {/* Students */}
-              <Route path="students" element={<SuperAdminStudents />} />
-              <Route path="students/:id" element={<SuperAdminStudentDetail />} />
+              <Route path="students" element={<PermissionGuard permission="students_view" redirect><SuperAdminStudents /></PermissionGuard>} />
+              <Route path="students/:id" element={<PermissionGuard permission="students_view" redirect><SuperAdminStudentDetail /></PermissionGuard>} />
 
               {/* Approvals */}
-              <Route path="approvals" element={<SuperAdminApprovals />} />
+              <Route path="approvals" element={<PermissionGuard permission="colleges_manage" redirect><SuperAdminApprovals /></PermissionGuard>} />
 
-              <Route path="modules" element={<SuperAdminModules />} />
+              <Route path="modules" element={<PermissionGuard permission="modules_view" redirect><SuperAdminModules /></PermissionGuard>} />
 
               {/* Users */}
-              <Route path="users" element={<SuperAdminUsers />} />
-              <Route path="users/:id" element={<SuperAdminUserDetail />} />
+              <Route path="users" element={<PermissionGuard permission="users_view" redirect><SuperAdminUsers /></PermissionGuard>} />
+              <Route path="users/:id" element={<PermissionGuard permission="users_view" redirect><SuperAdminUserDetail /></PermissionGuard>} />
 
               {/* Roles */}
-              <Route path="roles" element={<SuperAdminRoleManagement />} />
+              <Route path="roles" element={<PermissionGuard permission="roles_view" redirect><SuperAdminRoleManagement /></PermissionGuard>} />
+              <Route path="roles/matrix" element={<PermissionGuard permission="permissions_view" redirect><SuperAdminPermissionMatrix /></PermissionGuard>} />
 
               {/* Audit Trail */}
-              <Route path="audit-trail" element={<SuperAdminAuditTrail />} />
+              <Route path="audit-trail" element={<PermissionGuard permission="audit_view" redirect><SuperAdminAuditTrail /></PermissionGuard>} />
 
               {/* Question Bank */}
-              <Route path="question-bank" element={<SuperAdminQuestionBank />} />
-              <Route path="question-bank/ai-generator" element={<SuperAdminAIGenerator />} />
-              <Route path="question-bank/categories" element={<SuperAdminCategories />} />
-              <Route path="question-bank/review-queue" element={<SuperAdminReviewQueue />} />
-              <Route path="question-bank/import-books" element={<SuperAdminImportBooks />} />
+              <Route path="question-bank" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminQuestionBank /></PermissionGuard>} />
+              <Route path="question-bank/ai-generator" element={<PermissionGuard permission="assessments_manage" redirect><SuperAdminAIGenerator /></PermissionGuard>} />
+              <Route path="question-bank/categories" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminCategories /></PermissionGuard>} />
+              <Route path="question-bank/review-queue" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminReviewQueue /></PermissionGuard>} />
+              <Route path="question-bank/import-books" element={<PermissionGuard permission="assessments_manage" redirect><SuperAdminImportBooks /></PermissionGuard>} />
 
               {/* Workflows */}
-              <Route path="workflows" element={<SuperAdminWorkflows />} />
-              <Route path="workflows/:id" element={<SuperAdminWorkflowDetail />} />
+              <Route path="workflows" element={<PermissionGuard permission="workflows_view" redirect><SuperAdminWorkflows /></PermissionGuard>} />
+              <Route path="workflows/:id" element={<PermissionGuard permission="workflows_view" redirect><SuperAdminWorkflowDetail /></PermissionGuard>} />
 
               {/* Analytics */}
-              <Route path="analytics" element={<SuperAdminAnalytics />} />
+              <Route path="analytics" element={<PermissionGuard permission="analytics_view" redirect><SuperAdminAnalytics /></PermissionGuard>} />
 
               {/* Notifications */}
-              <Route path="notifications" element={<SuperAdminNotifications />} />
+              <Route path="notifications" element={<PermissionGuard permission="notifications_view" redirect><SuperAdminNotifications /></PermissionGuard>} />
 
               {/* AI Configuration */}
-              <Route path="ai-config" element={<SuperAdminAIConfig />} />
+              <Route path="ai-config" element={<PermissionGuard permission="settings_view" redirect><SuperAdminAIConfig /></PermissionGuard>} />
 
               {/* Billing */}
-              <Route path="billing" element={<SuperAdminBilling />} />
+              <Route path="billing" element={<PermissionGuard permission="billing_view" redirect><SuperAdminBilling /></PermissionGuard>} />
 
               {/* Settings */}
-              <Route path="settings" element={<SuperAdminSettings />} />
+              <Route path="settings" element={<PermissionGuard permission="settings_view" redirect><SuperAdminSettings /></PermissionGuard>} />
             </Route>
 
             {/* ── College / Campus Portal (redesigned) ───────────────────── */}

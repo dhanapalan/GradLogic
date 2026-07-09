@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/rbac.js";
 import * as rolesController from "../controllers/roles.controller.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ router.get(
   "/",
   authenticate,
   authorize("super_admin"),
+  requirePermission("roles_view"),
   rolesController.listRoles
 );
 
@@ -23,6 +25,7 @@ router.get(
   "/permissions",
   authenticate,
   authorize("super_admin"),
+  requirePermission("permissions_view"),
   rolesController.getPermissions
 );
 
@@ -34,6 +37,7 @@ router.get(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("roles_view"),
   rolesController.getRole
 );
 
@@ -45,6 +49,7 @@ router.post(
   "/",
   authenticate,
   authorize("super_admin"),
+  requirePermission("roles_manage"),
   rolesController.createRole
 );
 
@@ -56,6 +61,7 @@ router.put(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("roles_manage"),
   rolesController.updateRole
 );
 
@@ -67,6 +73,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("roles_manage"),
   rolesController.deleteRole
 );
 
@@ -78,6 +85,7 @@ router.put(
   "/:id/permissions",
   authenticate,
   authorize("super_admin"),
+  requirePermission("permissions_manage"),
   rolesController.updateRolePermissions
 );
 

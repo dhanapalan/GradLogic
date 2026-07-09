@@ -19,7 +19,8 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { authActions, useAuthStore } from "../stores/authStore";
+import { useAuthStore } from "../stores/authStore";
+import { logout } from "../lib/logout";
 import studentPracticeService from "../services/studentPracticeService";
 import studentPaymentsService from "../services/studentPaymentsService";
 import { cn } from "../lib/utils";
@@ -135,8 +136,9 @@ export default function StudentPortalLayout() {
         : { text: `${formatINR(due.amount)} due`, cls: "bg-amber-50 text-amber-700 border-amber-100" };
 
   const handleLogout = () => {
-    authActions.logout();
-    window.location.href = "/auth/login";
+    void logout().finally(() => {
+      window.location.href = "/auth/login";
+    });
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -178,7 +180,7 @@ export default function StudentPortalLayout() {
                   <NavLink
                     key={item.href}
                     to={item.href}
-                    end={"end" in item && item.end === true ? true : undefined}
+                    end={(item as { end?: boolean }).end === true ? true : undefined}
                     className={navLinkClass}
                     onClick={() => setMobileOpen(false)}
                   >

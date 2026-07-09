@@ -163,7 +163,7 @@ export default function RegisterPage() {
         result = data.data;
       }
 
-      authActions.login(result.accessToken, result.user);
+      authActions.login(result.accessToken, result.user, result.refreshToken, result.permissions ?? []);
       toast.success("Account created! Welcome 🎉");
       navigate(getLandingPath(result.user));
     } catch (err: any) {

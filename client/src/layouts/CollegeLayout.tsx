@@ -17,7 +17,8 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { authActions, useAuthStore } from "../stores/authStore";
+import { useAuthStore } from "../stores/authStore";
+import { logout } from "../lib/logout";
 import NotificationBell from "../components/NotificationBell";
 import { cn } from "../lib/utils";
 import { usePortalFeatures } from "../hooks/usePortalFeatures";
@@ -64,8 +65,9 @@ export default function CollegeLayout() {
   }, [token]);
 
   const handleLogout = () => {
-    authActions.logout();
-    window.location.href = "/auth/login";
+    void logout().finally(() => {
+      window.location.href = "/auth/login";
+    });
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>

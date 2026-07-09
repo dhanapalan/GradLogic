@@ -31,7 +31,13 @@ export const authenticate = async (
   const token = authHeader.split(" ")[1];
 
   try {
-    const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
+    const payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload & { purpose?: string };
+
+    // Reject non-access tokens (e.g. the 2FA login-challenge token, which also
+    // carries a userId). Only true access tokens omit the `purpose` claim.
+    if (payload.purpose) {
+      return next(new AppError("Invalid or expired token", 401));
+    }
 
     // Verify user still exists in DB (guards against stale tokens after re-seeds or account deletion)
     const exists = await queryOne<{ id: string }>(

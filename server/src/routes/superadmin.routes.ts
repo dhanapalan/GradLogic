@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/rbac.js";
 import * as superadminController from "../controllers/superadmin.controller.js";
 import usersRoutes from "./users.routes.js";
 import rolesRoutes from "./roles.routes.js";
@@ -53,6 +54,7 @@ router.post(
   "/question-bank/bulk-action",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_manage"),
   superadminController.bulkQuestionAction
 );
 
@@ -63,6 +65,7 @@ router.get(
   "/analytics/platform",
   authenticate,
   authorize("super_admin"),
+  requirePermission("analytics_view"),
   superadminController.getAnalyticsPlatform
 );
 
@@ -70,6 +73,7 @@ router.get(
   "/analytics/colleges",
   authenticate,
   authorize("super_admin"),
+  requirePermission("analytics_view"),
   superadminController.getAnalyticsColleges
 );
 
@@ -77,6 +81,7 @@ router.get(
   "/analytics/students",
   authenticate,
   authorize("super_admin"),
+  requirePermission("analytics_view"),
   superadminController.getAnalyticsStudents
 );
 
@@ -87,6 +92,7 @@ router.get(
   "/ai-usage",
   authenticate,
   authorize("super_admin"),
+  requirePermission("settings_view"),
   superadminController.getAIUsage
 );
 
@@ -97,6 +103,7 @@ router.get(
   "/ai-services",
   authenticate,
   authorize("super_admin"),
+  requirePermission("settings_view"),
   superadminController.getAIServices
 );
 
@@ -104,6 +111,7 @@ router.post(
   "/ai-services/:key/test",
   authenticate,
   authorize("super_admin"),
+  requirePermission("settings_manage"),
   superadminController.testAIService
 );
 
@@ -114,6 +122,7 @@ router.get(
   "/backup/export",
   authenticate,
   authorize("super_admin"),
+  requirePermission("settings_manage"),
   superadminController.exportBackup
 );
 
@@ -124,6 +133,7 @@ router.get(
   "/billing/summary",
   authenticate,
   authorize("super_admin"),
+  requirePermission("billing_view"),
   superadminController.getBillingSummary
 );
 
@@ -134,6 +144,7 @@ router.get(
   "/settings",
   authenticate,
   authorize("super_admin"),
+  requirePermission("settings_view"),
   superadminController.getSystemSettings
 );
 
@@ -141,6 +152,7 @@ router.put(
   "/settings",
   authenticate,
   authorize("super_admin"),
+  requirePermission("settings_manage"),
   superadminController.updateSystemSettings
 );
 
@@ -152,6 +164,7 @@ router.get(
   "/metrics/platform",
   authenticate,
   authorize("super_admin"),
+  requirePermission("dashboard_view"),
   superadminController.getPlatformMetrics
 );
 
@@ -159,6 +172,7 @@ router.get(
   "/metrics/growth",
   authenticate,
   authorize("super_admin"),
+  requirePermission("dashboard_view"),
   superadminController.getGrowthData
 );
 
@@ -166,6 +180,7 @@ router.get(
   "/metrics/alerts",
   authenticate,
   authorize("super_admin"),
+  requirePermission("dashboard_view"),
   superadminController.getSystemAlerts
 );
 
@@ -173,6 +188,7 @@ router.get(
   "/metrics/live",
   authenticate,
   authorize("super_admin"),
+  requirePermission("dashboard_view"),
   superadminController.getLiveDashboard
 );
 
@@ -180,6 +196,7 @@ router.get(
   "/metrics/dashboard",
   authenticate,
   authorize("super_admin"),
+  requirePermission("dashboard_view"),
   superadminController.getDashboard
 );
 
@@ -191,6 +208,7 @@ router.get(
   "/colleges",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_view"),
   superadminController.listColleges
 );
 
@@ -198,6 +216,7 @@ router.post(
   "/colleges",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_manage"),
   superadminController.createCollege
 );
 
@@ -207,6 +226,7 @@ router.get(
   "/colleges/requests",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_view"),
   superadminController.getPendingCollegeRequests
 );
 
@@ -214,6 +234,7 @@ router.get(
   "/colleges/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_view"),
   superadminController.getCollege
 );
 
@@ -221,6 +242,7 @@ router.get(
   "/colleges/:id/students",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_view"),
   superadminController.getCollegeStudents
 );
 
@@ -228,6 +250,7 @@ router.get(
   "/colleges/:id/modules",
   authenticate,
   authorize("super_admin"),
+  requirePermission("modules_view"),
   modulesController.getCollegeModules
 );
 
@@ -235,6 +258,7 @@ router.put(
   "/colleges/:id/modules",
   authenticate,
   authorize("super_admin"),
+  requirePermission("modules_manage"),
   modulesController.setCollegeModules
 );
 
@@ -242,6 +266,7 @@ router.post(
   "/colleges/:id/modules/defaults",
   authenticate,
   authorize("super_admin"),
+  requirePermission("modules_manage"),
   modulesController.applyCollegeModuleDefaults
 );
 
@@ -249,6 +274,7 @@ router.put(
   "/colleges/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_manage"),
   superadminController.updateCollege
 );
 
@@ -256,6 +282,7 @@ router.delete(
   "/colleges/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_manage"),
   superadminController.deleteCollege
 );
 
@@ -263,6 +290,7 @@ router.get(
   "/colleges/requests/pending",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_view"),
   superadminController.getPendingCollegeRequests
 );
 
@@ -270,6 +298,7 @@ router.post(
   "/colleges/:id/approve",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_manage"),
   superadminController.approveCollege
 );
 
@@ -277,6 +306,7 @@ router.post(
   "/colleges/:id/reject",
   authenticate,
   authorize("super_admin"),
+  requirePermission("colleges_manage"),
   superadminController.rejectCollege
 );
 
@@ -288,6 +318,7 @@ router.get(
   "/categories",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_view"),
   superadminController.listCategories
 );
 
@@ -295,6 +326,7 @@ router.post(
   "/categories",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_manage"),
   superadminController.createCategory
 );
 
@@ -302,6 +334,7 @@ router.put(
   "/categories/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_manage"),
   superadminController.updateCategory
 );
 
@@ -309,6 +342,7 @@ router.delete(
   "/categories/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_manage"),
   superadminController.deleteCategory
 );
 
@@ -320,6 +354,7 @@ router.get(
   "/review-queue",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_view"),
   superadminController.getReviewQueue
 );
 
@@ -327,6 +362,7 @@ router.post(
   "/review-queue/:id/approve",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_manage"),
   superadminController.approveAIQuestion
 );
 
@@ -334,6 +370,7 @@ router.post(
   "/review-queue/:id/reject",
   authenticate,
   authorize("super_admin"),
+  requirePermission("assessments_manage"),
   superadminController.rejectAIQuestion
 );
 
@@ -345,6 +382,7 @@ router.get(
   "/announcements",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_view"),
   superadminController.listAnnouncements
 );
 
@@ -352,6 +390,7 @@ router.post(
   "/announcements",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_manage"),
   superadminController.createAnnouncement
 );
 
@@ -359,6 +398,7 @@ router.post(
   "/announcements/:id/activate",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_manage"),
   superadminController.activateAnnouncement
 );
 
@@ -366,6 +406,7 @@ router.delete(
   "/announcements/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_manage"),
   superadminController.deleteAnnouncement
 );
 
@@ -377,6 +418,7 @@ router.get(
   "/email-templates",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_view"),
   superadminController.listEmailTemplates
 );
 
@@ -384,6 +426,7 @@ router.post(
   "/email-templates",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_manage"),
   superadminController.createEmailTemplate
 );
 
@@ -391,6 +434,7 @@ router.put(
   "/email-templates/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_manage"),
   superadminController.updateEmailTemplate
 );
 
@@ -398,6 +442,7 @@ router.delete(
   "/email-templates/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("notifications_manage"),
   superadminController.deleteEmailTemplate
 );
 

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
+import { requirePermission } from "../middleware/rbac.js";
 import * as usersController from "../controllers/users.controller.js";
 
 const router = Router();
@@ -12,6 +13,7 @@ router.get(
   "/",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_view"),
   usersController.listUsers
 );
 
@@ -23,6 +25,7 @@ router.get(
   "/search",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_view"),
   usersController.searchUsers
 );
 
@@ -34,6 +37,7 @@ router.post(
   "/",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.createUser
 );
 
@@ -45,6 +49,7 @@ router.get(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_view"),
   usersController.getUser
 );
 
@@ -56,6 +61,7 @@ router.put(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.updateUser
 );
 
@@ -67,6 +73,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.deleteUser
 );
 
@@ -78,6 +85,7 @@ router.post(
   "/:id/activate",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.activateUser
 );
 
@@ -89,6 +97,7 @@ router.post(
   "/:id/suspend",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.suspendUser
 );
 
@@ -100,6 +109,7 @@ router.post(
   "/:id/unsuspend",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.unsuspendUser
 );
 
@@ -112,6 +122,7 @@ router.post(
   "/bulk-action",
   authenticate,
   authorize("super_admin"),
+  requirePermission("users_manage"),
   usersController.bulkUserAction
 );
 
