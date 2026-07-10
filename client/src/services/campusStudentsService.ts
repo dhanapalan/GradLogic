@@ -27,6 +27,43 @@ export interface CampusStudent {
   risk_level: RiskLevel;
 }
 
+export interface StudentAssessment {
+  drive_id: string;
+  title: string;
+  score: number;
+  created_at: string;
+}
+
+export interface StudentViolation {
+  id: string;
+  violation_type: string;
+  risk_score: number;
+  timestamp: string;
+}
+
+export interface StudentProfileResponse {
+  overview: CampusStudent & {
+    phone_number: string | null;
+    degree: string | null;
+    specialization: string | null;
+    passing_year: number | null;
+    cgpa: number | null;
+  };
+  assessments: StudentAssessment[];
+  violations: StudentViolation[];
+}
+
+export interface UpdateStudentPayload {
+  is_active?: boolean;
+  placement_status?: PlacementStatus;
+  risk_level?: RiskLevel;
+  phone_number?: string;
+  degree?: string;
+  specialization?: string;
+  passing_year?: number;
+  cgpa?: number;
+}
+
 export interface StudentAnalytics {
   totalStudents: number;
   activeStudents: number;
@@ -67,6 +104,16 @@ const campusStudentsService = {
   async getAnalytics(): Promise<StudentAnalytics> {
     const { data } = await api.get("/campus/students/analytics");
     return data.data;
+  },
+
+  async get(id: string): Promise<StudentProfileResponse> {
+    const { data } = await api.get(`/campus/students/${id}`);
+    return data.data;
+  },
+
+  async update(id: string, payload: UpdateStudentPayload) {
+    const { data } = await api.put(`/campus/students/${id}`, payload);
+    return data;
   },
 
   async bulkAction(

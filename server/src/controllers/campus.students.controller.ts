@@ -73,7 +73,7 @@ export async function listStudents(req: Request, res: Response, next: NextFuncti
                 COALESCE(sd.placement_status::text, 'Not Shortlisted') as placement_status,
                 COALESCE(sd.risk_category, 'Low') as risk_level,
                 sd.eligible_for_hiring,
-                0::float as avg_score
+                COALESCE((SELECT AVG(ms.final_score) FROM marks_scored ms WHERE ms.student_id = u.id), 0)::float as avg_score
             FROM users u
             JOIN student_details sd ON u.id = sd.user_id
             WHERE COALESCE(u.college_id, sd.college_id) = $1 AND u.role = 'student'
@@ -201,7 +201,7 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
                    COALESCE(sd.avg_integrity_score, 0)::float as avg_integrity,
                    COALESCE(sd.placement_status::text, 'Not Shortlisted') as placement_status,
                    COALESCE(sd.risk_category, 'Low') as risk_level,
-                   0::float as avg_score
+                   COALESCE((SELECT AVG(ms.final_score) FROM marks_scored ms WHERE ms.student_id = u.id), 0)::float as avg_score
             FROM users u
             JOIN student_details sd ON u.id = sd.user_id
             WHERE u.id = $1 AND COALESCE(u.college_id, sd.college_id) = $2
@@ -250,7 +250,10 @@ export async function updateStudent(req: Request, res: Response, next: NextFunct
     try {
         const collegeId = await resolveCollegeId(req);
         const studentId = req.params.id;
-        const { is_active, placement_status, risk_level } = req.body;
+        const {
+            is_active, placement_status, risk_level,
+            phone_number, degree, specialization, passing_year, cgpa,
+        } = req.body;
 
         // Verify college isolation
         const student = await queryOne(`SELECT id FROM student_details WHERE user_id = $1 AND COALESCE(
@@ -267,16 +270,31 @@ export async function updateStudent(req: Request, res: Response, next: NextFunct
                 await client.query(`UPDATE users SET is_active = $1 WHERE id = $2`, [is_active, studentId]);
             }
 
-            if (placement_status !== undefined || risk_level !== undefined) {
-                // Upsert to student_summary
-                await client.query(`
-                    INSERT INTO student_summary (student_id, college_id, placement_status, risk_level)
-                    VALUES ($1, $2, COALESCE($3, 'Not Shortlisted'), COALESCE($4, 'Low'))
-                    ON CONFLICT (student_id) DO UPDATE SET
-                        placement_status = COALESCE($3, student_summary.placement_status),
-                        risk_level = COALESCE($4, student_summary.risk_level),
-                        updated_at = NOW()
-                `, [studentId, collegeId, placement_status || null, risk_level || null]);
+            // Write placement/risk to student_details — the same table every
+            // read path (list/analytics/profile) actually queries. The old
+            // code upserted into student_summary, a table nothing reads from,
+            // so edits here silently had zero visible effect.
+            const fields: string[] = [];
+            const params: unknown[] = [];
+            let idx = 1;
+            const setField = (column: string, value: unknown) => {
+                fields.push(`${column} = $${idx++}`);
+                params.push(value);
+            };
+            if (placement_status !== undefined) setField("placement_status", placement_status);
+            if (risk_level !== undefined) setField("risk_category", risk_level);
+            if (phone_number !== undefined) setField("phone_number", phone_number);
+            if (degree !== undefined) setField("degree", degree);
+            if (specialization !== undefined) setField("specialization", specialization);
+            if (passing_year !== undefined) setField("passing_year", passing_year);
+            if (cgpa !== undefined) setField("cgpa", cgpa);
+
+            if (fields.length > 0) {
+                params.push(studentId);
+                await client.query(
+                    `UPDATE student_details SET ${fields.join(", ")} WHERE user_id = $${idx}`,
+                    params
+                );
             }
 
             await client.query("COMMIT");

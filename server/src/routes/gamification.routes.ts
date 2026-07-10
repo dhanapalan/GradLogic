@@ -246,7 +246,7 @@ router.get("/me", authorize("student"), async (req, res, next) => {
   try {
     const studentId = req.user!.userId;
 
-    const [xp, badges, streak, recentXp] = await Promise.all([
+    const [xp, badges, streak, recentXp, weeklyXp, dailyActivity] = await Promise.all([
       queryOne(
         "SELECT total_xp, level FROM student_xp WHERE student_id = $1",
         [studentId]
@@ -270,6 +270,25 @@ router.get("/me", authorize("student"), async (req, res, next) => {
         ORDER BY earned_at DESC
         LIMIT 10
       `, [studentId]),
+      queryOne(
+        `SELECT COALESCE(SUM(points), 0)::int AS total
+         FROM xp_transactions
+         WHERE student_id = $1 AND earned_at >= now() - interval '7 days'`,
+        [studentId]
+      ),
+      // Real per-day activity for the last 7 days (today inclusive), used for
+      // the dashboard streak heatmap — no fabricated data, just presence/absence
+      // of an XP-earning event on each date.
+      query(
+        `SELECT gs.day::date AS day,
+                EXISTS (
+                  SELECT 1 FROM xp_transactions xt
+                  WHERE xt.student_id = $1 AND xt.earned_at::date = gs.day
+                ) AS active
+         FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS gs(day)
+         ORDER BY gs.day`,
+        [studentId]
+      ),
     ]);
 
     const xpToNextLevel = (level: number) => Math.pow(level + 1, 2) * 100;
@@ -293,6 +312,8 @@ router.get("/me", authorize("student"), async (req, res, next) => {
         streak: streak || { current_streak: 0, longest_streak: 0, last_practice_date: null },
         badges,
         recent_xp: recentXp,
+        weekly_xp: (weeklyXp as any)?.total ?? 0,
+        activity_last_7_days: dailyActivity,
       },
     });
   } catch (err) { next(err); }
@@ -359,11 +380,21 @@ router.get("/leaderboard", authorize("student", "mentor", "super_admin", "hr", "
       ) ranked WHERE id = $1
     `, collegeId ? [studentId, collegeId] : [studentId]);
 
+    const totalParticipants = await queryOne(
+      `SELECT COUNT(*)::int AS total
+       FROM users u
+       LEFT JOIN student_details sd ON sd.user_id = u.id
+       WHERE u.role = 'student'
+         ${collegeId ? "AND COALESCE(u.college_id, sd.college_id) = $1" : ""}`,
+      collegeId ? [collegeId] : []
+    );
+
     res.json({
       success: true,
       data: {
         leaderboard: rows,
         my_rank: (myRank as any)?.rank || null,
+        total_participants: (totalParticipants as any)?.total ?? rows.length,
         period,
       },
     });
