@@ -11,10 +11,16 @@ import {
   Library,
   ArrowRight,
   Play,
+  Sparkles,
 } from "lucide-react";
 import { useAuthStore } from "../../../stores/authStore";
 import api from "../../../lib/api";
 import DailyTargetCard from "../DailyTargetCard";
+import CurrentStageCard from "../CurrentStageCard";
+import ReadinessCard from "../ReadinessCard";
+import StreakHeatmapCard from "../StreakHeatmapCard";
+import WeeklyGoalCard from "../WeeklyGoalCard";
+import { useGamificationSummary } from "../../../hooks/useGamificationSummary";
 
 const BASE = "/app/student-portal";
 
@@ -30,6 +36,7 @@ interface Drive {
 
 export default function StudentDashboardPage() {
   const user = useAuthStore((s) => s.user);
+  const { profile: gamification, myRank, totalParticipants } = useGamificationSummary();
 
   const { data: drives = [], isLoading } = useQuery({
     queryKey: ["student-drives"],
@@ -76,12 +83,26 @@ export default function StudentDashboardPage() {
               Welcome, <span className="text-indigo-600">{user?.name?.split(" ")[0]}</span>
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
-              {activeDrives.length > 0
-                ? `${activeDrives.length} active exam${activeDrives.length !== 1 ? "s" : ""} · ${completedDrives.length} completed`
-                : `No active exams · ${completedDrives.length} completed`}
+              {gamification?.streak.current_streak
+                ? `You're on a ${gamification.streak.current_streak}-day streak. Keep the momentum going!`
+                : activeDrives.length > 0
+                  ? `${activeDrives.length} active exam${activeDrives.length !== 1 ? "s" : ""} · ${completedDrives.length} completed`
+                  : `No active exams · ${completedDrives.length} completed`}
             </p>
           </div>
         </div>
+        {myRank != null && totalParticipants != null && (
+          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-100 px-3 py-1.5 text-xs font-bold text-amber-600">
+            <Sparkles className="h-3.5 w-3.5" /> Rank #{myRank} of {totalParticipants}
+          </span>
+        )}
+      </div>
+
+      {/* Readiness + streak + weekly goal */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <ReadinessCard />
+        <StreakHeatmapCard />
+        <WeeklyGoalCard />
       </div>
 
       {/* KPIs */}
@@ -103,8 +124,11 @@ export default function StudentDashboardPage() {
         ))}
       </div>
 
-      {/* Daily target (full) */}
-      <DailyTargetCard />
+      {/* Daily target + current workflow stage */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <DailyTargetCard />
+        <CurrentStageCard />
+      </div>
 
       {/* Upcoming exams + quick links */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

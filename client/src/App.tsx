@@ -61,6 +61,7 @@ const CampusSettingsPage = lazy(() => import("./pages/college/SettingsPage"));
 const BillingPage = lazy(() => import("./pages/college/BillingPage"));
 const CollegePortalDashboard = lazy(() => import("./pages/college-portal/DashboardPage"));
 const CollegePortalStudents = lazy(() => import("./pages/college-portal/StudentsPage"));
+const CollegePortalStudentDetail = lazy(() => import("./pages/college-portal/StudentDetailPage"));
 const CollegePortalAnalytics = lazy(() => import("./pages/college-portal/AnalyticsPage"));
 const CollegePortalComingSoon = lazy(() => import("./pages/college-portal/ComingSoonPage"));
 const LmsModulePage = lazy(() => import("./pages/lms/LmsModulePage"));
@@ -390,6 +391,7 @@ export default function App() {
               <Route index element={<Navigate to="/app/college-portal/dashboard" replace />} />
               <Route path="dashboard" element={<CollegePortalDashboard />} />
               <Route path="students" element={<CollegePortalStudents />} />
+              <Route path="students/:id" element={<CollegePortalStudentDetail />} />
               <Route
                 path="question-bank"
                 element={

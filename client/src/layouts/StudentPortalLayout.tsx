@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "../stores/authStore";
 import { logout } from "../lib/logout";
+import NotificationBell from "../components/NotificationBell";
 import studentPracticeService from "../services/studentPracticeService";
 import studentPaymentsService from "../services/studentPaymentsService";
 import { cn } from "../lib/utils";
@@ -143,34 +144,34 @@ export default function StudentPortalLayout() {
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
       isActive
-        ? "bg-indigo-50 text-indigo-700"
-        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+        ? "bg-white/10 text-white"
+        : "text-slate-300/90 hover:bg-white/5 hover:text-white"
     );
 
   const sidebar = (
     <>
-      <div className="border-b border-slate-100 px-4 py-4">
+      <div className="border-b border-white/10 px-4 py-4">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-lg shadow-indigo-600/20">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-admin-accent text-white shadow-admin-elegant">
             <GraduationCap className="h-5 w-5" />
           </div>
           <div className="flex flex-col leading-tight min-w-0">
-            <span className="font-black text-slate-900 truncate">GradLogic</span>
-            <span className="text-[11px] text-slate-400 truncate">Student Portal</span>
+            <span className="font-display font-semibold text-white truncate">GradLogic</span>
+            <span className="text-[11px] text-white/50 truncate">Student Portal</span>
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-orange-100 bg-orange-50/60 px-2.5 py-1.5">
-          <Flame className="h-4 w-4 text-orange-500" />
-          <span className="text-xs font-bold text-slate-700">{streak}-day streak</span>
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-orange-400/20 bg-orange-500/10 px-2.5 py-1.5">
+          <Flame className="h-4 w-4 text-orange-400" />
+          <span className="text-xs font-bold text-white/90">{streak}-day streak</span>
         </div>
       </div>
 
       <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
         {allNavGroups.map((group) => (
           <div key={group.label}>
-            <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-white/35">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -194,20 +195,20 @@ export default function StudentPortalLayout() {
         ))}
       </nav>
 
-      <div className="border-t border-slate-100 px-3 py-3">
+      <div className="border-t border-white/10 px-3 py-3">
         <div className="flex items-center gap-2.5 px-1 py-1.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-accent text-xs font-semibold text-white">
             {initials(user?.name)}
           </div>
           <div className="min-w-0 flex-col leading-tight">
-            <span className="block truncate text-sm font-bold text-slate-900">{user?.name || "Student"}</span>
-            <span className="block truncate text-[11px] text-slate-400">{user?.email}</span>
+            <span className="block truncate text-sm font-medium text-white">{user?.name || "Student"}</span>
+            <span className="block truncate text-[11px] text-white/50">{user?.email}</span>
           </div>
         </div>
         <button
           type="button"
           onClick={handleLogout}
-          className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300/80 transition-colors hover:bg-white/5 hover:text-white"
         >
           <LogOut className="h-[18px] w-[18px]" />
           Logout
@@ -217,9 +218,9 @@ export default function StudentPortalLayout() {
   );
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="admin-shell flex h-screen bg-slate-50">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white md:flex">{sidebar}</aside>
+      <aside className="hidden w-64 flex-col bg-navy-900 text-slate-300 md:flex">{sidebar}</aside>
 
       {/* Mobile drawer */}
       {mobileOpen && (
@@ -230,7 +231,7 @@ export default function StudentPortalLayout() {
             aria-label="Close menu"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative flex h-full w-64 flex-col bg-white shadow-xl">{sidebar}</aside>
+          <aside className="relative flex h-full w-64 flex-col bg-navy-900 text-slate-300 shadow-xl">{sidebar}</aside>
         </div>
       )}
 
@@ -260,13 +261,7 @@ export default function StudentPortalLayout() {
                 {feeBadge.text}
               </Link>
             )}
-            <Link
-              to={`${BASE}/notifications`}
-              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-              title="Notifications"
-            >
-              <Bell className="h-5 w-5" />
-            </Link>
+            <NotificationBell />
           </div>
         </header>
 

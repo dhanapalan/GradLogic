@@ -69,6 +69,15 @@ function riskVariant(level: RiskLevel): "success" | "warning" | "danger" {
   return "success";
 }
 
+/** Categorical performance band shown as a badge (derived from avg_score, same
+ * thresholds as the filter dropdown, just labeled for at-a-glance scanning). */
+function performanceBand(score: number): { label: string; variant: "success" | "warning" | "danger" | "info" } {
+  if (score >= 85) return { label: "Top", variant: "success" };
+  if (score >= 70) return { label: "Strong", variant: "info" };
+  if (score >= 50) return { label: "Average", variant: "warning" };
+  return { label: "At Risk", variant: "danger" };
+}
+
 function ProgressBar({ value, className }: { value: number; className?: string }) {
   const pct = Math.min(100, Math.max(0, value));
   const color =
@@ -447,9 +456,12 @@ export default function CollegePortalStudentsPage() {
                   <TableHead>Student</TableHead>
                   <TableHead className="hidden md:table-cell">Department</TableHead>
                   <TableHead className="hidden sm:table-cell">Batch</TableHead>
-                  <TableHead>Progress</TableHead>
+                  <TableHead className="hidden md:table-cell">CGPA</TableHead>
+                  <TableHead>Readiness</TableHead>
+                  <TableHead className="hidden xl:table-cell">Performance</TableHead>
                   <TableHead className="hidden lg:table-cell">Placement</TableHead>
                   <TableHead className="hidden lg:table-cell">Risk</TableHead>
+                  <TableHead className="hidden xl:table-cell">Status</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -457,14 +469,14 @@ export default function CollegePortalStudentsPage() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={8}>
+                      <TableCell colSpan={11}>
                         <div className="h-10 animate-pulse rounded bg-gray-100" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : students.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-12 text-center text-gray-500">
+                    <TableCell colSpan={11} className="py-12 text-center text-gray-500">
                       No students match your filters.
                     </TableCell>
                   </TableRow>
@@ -485,7 +497,7 @@ export default function CollegePortalStudentsPage() {
                           <StudentAvatar name={student.name} />
                           <div className="min-w-0">
                             <Link
-                              to={`/app/students/${student.user_id}`}
+                              to={`/app/college-portal/students/${student.user_id}`}
                               className="truncate font-medium text-gray-900 hover:text-admin-accent"
                             >
                               {student.name}
@@ -500,8 +512,17 @@ export default function CollegePortalStudentsPage() {
                       <TableCell className="hidden sm:table-cell tabular-nums text-gray-600">
                         {student.passing_year || "—"}
                       </TableCell>
+                      <TableCell className="hidden md:table-cell tabular-nums text-gray-600">
+                        {student.cgpa != null ? student.cgpa.toFixed(2) : "—"}
+                      </TableCell>
                       <TableCell className="min-w-[120px]">
                         <ProgressBar value={student.avg_score ?? 0} />
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {(() => {
+                          const band = performanceBand(student.avg_score ?? 0);
+                          return <Badge variant={band.variant}>{band.label}</Badge>;
+                        })()}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <Badge variant={placementVariant(student.placement_status)}>
@@ -513,9 +534,14 @@ export default function CollegePortalStudentsPage() {
                           {student.risk_level}
                         </Badge>
                       </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        <Badge variant={student.is_active ? "success" : "muted"}>
+                          {student.is_active ? "Active" : "Suspended"}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <Link
-                          to={`/app/students/${student.user_id}`}
+                          to={`/app/college-portal/students/${student.user_id}`}
                           className="inline-flex rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                           title="View profile"
                         >
