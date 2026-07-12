@@ -17,6 +17,7 @@ import StatusBadge from "../../../components/superadmin/StatusBadge";
 import ConfirmModal from "../../../components/superadmin/ConfirmModal";
 import studentsService, { StudentListItem } from "../../../services/studentsService";
 import collegeService, { College } from "../../../services/collegeService";
+import { formatCourseYears } from "../../../lib/courseYears";
 
 function readinessLabel(score: number): { label: string; status: string } {
   if (score >= 70) return { label: `${score}%`, status: "active" };
@@ -602,7 +603,7 @@ export default function AllStudentsPage() {
               className="border border-gray-200 rounded-lg px-3 py-2"
             />
             <input
-              placeholder="Passing year"
+              placeholder="Academic Year end (e.g. 2006)"
               value={createForm.passing_year}
               onChange={(e) => setCreateForm({ ...createForm, passing_year: e.target.value })}
               className="border border-gray-200 rounded-lg px-3 py-2"
@@ -720,8 +721,8 @@ export default function AllStudentsPage() {
                 </div>
                 <div>
                   <input
-                    aria-label="Passing year"
-                    placeholder="Passing year"
+                    aria-label="Academic Year"
+                    placeholder="Academic Year end (e.g. 2006)"
                     value={editForm.passing_year}
                     onChange={(e) => {
                       setEditForm({ ...editForm, passing_year: e.target.value });
@@ -733,6 +734,11 @@ export default function AllStudentsPage() {
                   />
                   {editFieldErrors.passing_year && (
                     <p className="mt-1 text-xs text-red-600">{editFieldErrors.passing_year}</p>
+                  )}
+                  {editForm.passing_year && editForm.degree && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      Shown as {formatCourseYears(editForm.degree, Number(editForm.passing_year))}
+                    </p>
                   )}
                 </div>
                 <div>
@@ -893,7 +899,7 @@ export default function AllStudentsPage() {
           </select>
           <input
             type="number"
-            placeholder="Batch (year)"
+            placeholder="Batch (end year)"
             value={batch}
             onChange={(e) => setBatch(e.target.value)}
             className="border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-admin-accent"
@@ -1015,7 +1021,7 @@ export default function AllStudentsPage() {
                     onChange={toggleAll}
                   />
                 </th>
-                {["Student Name", "College", "Batch/Department", "Email", "Registered", "Readiness", "Last Active", "Actions"].map((h) => (
+                {["Student Name", "College", "Department / Academic Year", "Email", "Registered", "Readiness", "Last Active", "Actions"].map((h) => (
                   <th
                     key={h}
                     className={`px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 ${
@@ -1056,7 +1062,12 @@ export default function AllStudentsPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">{student.college_name || "—"}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">
-                        {[student.department, student.batch].filter(Boolean).join(" · ") || "—"}
+                        {[
+                          student.department,
+                          formatCourseYears(student.degree, student.batch, ""),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">{student.email}</td>
                       <td className="px-6 py-4 text-sm text-gray-500">

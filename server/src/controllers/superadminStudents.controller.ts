@@ -98,7 +98,7 @@ export const listStudents = async (
       `SELECT
         u.id, u.name, u.email, u.status, u.is_active, u.created_at, u.last_login,
         c.id as college_id, c.name as college_name,
-        sd.student_identifier, sd.specialization as department, sd.passing_year as batch,
+        sd.student_identifier, sd.degree, sd.specialization as department, sd.passing_year as batch,
         COALESCE(ROUND(AVG(ms.final_score)::numeric, 1), 0) as readiness_score
        ${fromClause}
        ORDER BY u.created_at DESC

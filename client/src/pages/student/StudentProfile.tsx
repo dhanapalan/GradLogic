@@ -5,6 +5,11 @@ import api from "../../lib/api";
 import toast from "react-hot-toast";
 import { ArrowLeft, Edit2, Upload, User, Save, Lock, FileText, CheckCircle2, ShieldCheck, Mail, Phone, BookOpen, GraduationCap, Building2, Calendar, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  formatCourseYears,
+  getCourseStartYear,
+  getDegreeDurationYears,
+} from "../../lib/courseYears";
 
 export default function StudentProfile() {
   const user = useAuthStore((s) => s.user);
@@ -333,7 +338,17 @@ export default function StudentProfile() {
                     type="text"
                     disabled={!isEditing}
                     value={formData.degree || ""}
-                    onChange={(e) => setFormData({ ...formData, degree: e.target.value })}
+                    onChange={(e) => {
+                      const degree = e.target.value;
+                      const end = Number(formData.passing_year);
+                      setFormData({
+                        ...formData,
+                        degree,
+                        course_start_year: Number.isFinite(end)
+                          ? end - getDegreeDurationYears(degree)
+                          : formData.course_start_year,
+                      });
+                    }}
                     className={`w-full border rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 pl-10 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${!isEditing ? "bg-slate-50/50 border-slate-200" : "bg-white border-slate-300"}`}
                     placeholder="e.g. B.Tech"
                   />
@@ -354,19 +369,70 @@ export default function StudentProfile() {
                   <Building2 className={`w-4 h-4 absolute left-3.5 top-3 ${isEditing ? 'text-indigo-400' : 'text-slate-400'}`} />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700">Passing Year</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    disabled={!isEditing}
-                    value={formData.passing_year || ""}
-                    onChange={(e) => setFormData({ ...formData, passing_year: parseInt(e.target.value) })}
-                    className={`w-full border rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 pl-10 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${!isEditing ? "bg-slate-50/50 border-slate-200" : "bg-white border-slate-300"}`}
-                    placeholder="e.g. 2024"
-                  />
-                  <Calendar className={`w-4 h-4 absolute left-3.5 top-3 ${isEditing ? 'text-indigo-400' : 'text-slate-400'}`} />
-                </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-xs font-semibold text-slate-700">Academic Year</label>
+                {!isEditing ? (
+                  <div className="relative">
+                    <input
+                      type="text"
+                      disabled
+                      value={formatCourseYears(formData.degree, formData.passing_year, "")}
+                      className="w-full border rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 pl-10 bg-slate-50/50 border-slate-200"
+                      placeholder="—"
+                    />
+                    <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={
+                          formData.course_start_year ??
+                          getCourseStartYear(formData.degree, formData.passing_year) ??
+                          ""
+                        }
+                        onChange={(e) => {
+                          const start = parseInt(e.target.value, 10);
+                          const duration = getDegreeDurationYears(formData.degree);
+                          setFormData({
+                            ...formData,
+                            course_start_year: start,
+                            passing_year: Number.isFinite(start) ? start + duration : formData.passing_year,
+                          });
+                        }}
+                        className="w-full border rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 pl-10 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white border-slate-300"
+                        placeholder="Start e.g. 2002"
+                      />
+                      <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-indigo-400" />
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={formData.passing_year || ""}
+                        onChange={(e) => {
+                          const end = parseInt(e.target.value, 10);
+                          setFormData({
+                            ...formData,
+                            passing_year: end,
+                            course_start_year: Number.isFinite(end)
+                              ? end - getDegreeDurationYears(formData.degree)
+                              : formData.course_start_year,
+                          });
+                        }}
+                        className="w-full border rounded-xl px-4 py-2.5 text-sm font-medium text-slate-900 pl-10 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors bg-white border-slate-300"
+                        placeholder="End e.g. 2006"
+                      />
+                      <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-indigo-400" />
+                    </div>
+                  </div>
+                )}
+                {isEditing && (
+                  <p className="text-[11px] text-slate-500">
+                    Academic Year for {formData.degree || "this program"} (
+                    {getDegreeDurationYears(formData.degree)} yrs), e.g. B.E. → 2002 - 2006
+                  </p>
+                )}
               </div>
             </div>
 

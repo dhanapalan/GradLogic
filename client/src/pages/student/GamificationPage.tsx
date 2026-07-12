@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../../lib/api";
+import { formatCourseYears } from "../../lib/courseYears";
 
 // =============================================================================
 // TYPES
@@ -261,7 +262,9 @@ function LeaderboardSection() {
               <div className="w-8 text-center font-bold text-sm text-gray-600">{rankIcon(entry.rank)}</div>
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-sm text-gray-800 truncate">{entry.name}</div>
-                <div className="text-xs text-gray-400">{entry.degree} · {entry.passing_year}</div>
+                <div className="text-xs text-gray-400">
+                  {entry.degree} · {formatCourseYears(entry.degree, entry.passing_year, String(entry.passing_year || ""))}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-sm font-semibold text-indigo-600">{entry.total_xp.toLocaleString()} XP</div>

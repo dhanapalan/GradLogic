@@ -38,6 +38,7 @@ import campusStudentsService, {
   type RiskLevel,
 } from "../../services/campusStudentsService";
 import { cn } from "../../lib/utils";
+import { formatCourseYears } from "../../lib/courseYears";
 
 const EMPTY_CREATE = {
   name: "",
@@ -341,7 +342,7 @@ export default function CollegePortalStudentsPage() {
                   ["phone_number", "Phone"],
                   ["degree", "Degree / Dept"],
                   ["specialization", "Specialization"],
-                  ["passing_year", "Passing year"],
+                  ["passing_year", "Academic Year"],
                   ["cgpa", "CGPA"],
                 ] as const
               ).map(([key, label]) => (
@@ -617,7 +618,7 @@ export default function CollegePortalStudentsPage() {
                   </TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead className="hidden md:table-cell">Department</TableHead>
-                  <TableHead className="hidden sm:table-cell">Batch</TableHead>
+                  <TableHead className="hidden sm:table-cell">Academic Year</TableHead>
                   <TableHead className="hidden md:table-cell">CGPA</TableHead>
                   <TableHead>Readiness</TableHead>
                   <TableHead className="hidden xl:table-cell">Performance</TableHead>
@@ -672,7 +673,7 @@ export default function CollegePortalStudentsPage() {
                         {student.department || "—"}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell tabular-nums text-gray-600">
-                        {student.passing_year || "—"}
+                        {formatCourseYears(student.degree, student.passing_year)}
                       </TableCell>
                       <TableCell className="hidden md:table-cell tabular-nums text-gray-600">
                         {student.cgpa != null ? student.cgpa.toFixed(2) : "—"}

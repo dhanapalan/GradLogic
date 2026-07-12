@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import ConfirmModal from "../../../components/superadmin/ConfirmModal";
 import studentsService, { StudentDetail } from "../../../services/studentsService";
+import { formatCourseYears } from "../../../lib/courseYears";
 
 export default function StudentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -194,7 +195,7 @@ export default function StudentDetailPage() {
                 ["student_identifier", "Student ID"],
                 ["degree", "Degree"],
                 ["specialization", "Specialization"],
-                ["passing_year", "Passing year"],
+                ["passing_year", "Academic Year"],
                 ["cgpa", "CGPA"],
               ] as const
             ).map(([key, label]) => (
@@ -267,8 +268,10 @@ export default function StudentDetailPage() {
             <p className="text-sm font-medium text-gray-900">{profile.specialization || "—"}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Passing year</p>
-            <p className="text-sm font-medium text-gray-900">{profile.passing_year ?? "—"}</p>
+            <p className="text-xs text-gray-500">Academic Year</p>
+            <p className="text-sm font-medium text-gray-900">
+              {formatCourseYears(profile.degree, profile.passing_year)}
+            </p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Percentage</p>

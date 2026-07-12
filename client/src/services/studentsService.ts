@@ -11,6 +11,7 @@ export interface StudentListItem {
   college_id: string | null;
   college_name: string | null;
   student_identifier: string | null;
+  degree: string | null;
   department: string | null;
   batch: number | null;
   readiness_score: number;

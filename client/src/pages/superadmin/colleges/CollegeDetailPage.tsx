@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import CollegeModulesPanel from "../../../components/superadmin/CollegeModulesPanel";
 import collegeService, { College, CollegeStudent } from "../../../services/collegeService";
+import { formatCourseYears } from "../../../lib/courseYears";
 
 const inputCls =
   "px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-admin-accent";
@@ -258,7 +259,7 @@ export default function CollegeDetailPage() {
           <table className="w-full">
             <thead className="bg-gray-50/70 border-b border-gray-200">
               <tr>
-                {["Name", "Email", "Student ID", "Degree", "Passing Year", "CGPA", "Status"].map((h) => (
+                {["Name", "Email", "Student ID", "Degree", "Academic Year", "CGPA", "Status"].map((h) => (
                   <th key={h} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {h}
                   </th>
@@ -281,7 +282,9 @@ export default function CollegeDetailPage() {
                     <td className="px-6 py-4 text-sm text-gray-500">{student.email}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{student.student_identifier || "—"}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{student.degree || "—"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{student.passing_year ?? "—"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {formatCourseYears(student.degree, student.passing_year)}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-500">{student.cgpa ?? "—"}</td>
                     <td className="px-6 py-4 text-sm">
                       <StatusBadge status={student.is_active ? "active" : "inactive"} size="sm" />

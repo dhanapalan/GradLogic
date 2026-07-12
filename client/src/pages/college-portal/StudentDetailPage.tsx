@@ -15,6 +15,7 @@ import {
 import campusStudentsService, {
   type PlacementStatus, type RiskLevel, type UpdateStudentPayload,
 } from "../../services/campusStudentsService";
+import { formatCourseYears } from "../../lib/courseYears";
 
 function placementVariant(status: PlacementStatus): "muted" | "info" | "success" | "warning" {
   if (status === "Joined" || status === "Offered") return "success";
@@ -240,16 +241,22 @@ export default function CollegePortalStudentDetailPage() {
           />
           <Field
             icon={Calendar}
-            label="Passing Year"
+            label="Academic Year"
             value={isEditing ? (
               <input
                 type="number"
                 value={form.passing_year ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, passing_year: Number(e.target.value) }))}
                 className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
+                placeholder="End year e.g. 2006"
               />
-            ) : overview.passing_year || "—"}
+            ) : formatCourseYears(overview.degree, overview.passing_year)}
           />
+          {isEditing && form.passing_year != null && (
+            <p className="col-span-full -mt-2 text-xs text-gray-500">
+              Shown as {formatCourseYears(form.degree ?? overview.degree, form.passing_year)}
+            </p>
+          )}
           <Field
             icon={GraduationCap}
             label="CGPA"

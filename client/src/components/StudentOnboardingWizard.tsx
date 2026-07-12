@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import api from "../lib/api";
 import { authActions, useAuthStore } from "../stores/authStore";
+import { getDegreeDurationYears } from "../lib/courseYears";
 
 type OnboardingForm = {
   first_name: string;
@@ -16,6 +17,7 @@ type OnboardingForm = {
   alternate_phone?: string;
   degree: string;
   specialization: string;
+  course_start_year: string;
   passing_year: string;
   cgpa?: string;
   percentage?: string;
@@ -38,12 +40,27 @@ export default function StudentOnboardingWizard() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<OnboardingForm>({
     defaultValues: {
+      course_start_year: String(new Date().getFullYear() - 4),
       passing_year: String(new Date().getFullYear()),
     },
   });
+
+  const watchedDegree = watch("degree");
+  const watchedStart = watch("course_start_year");
+  const watchedEnd = watch("passing_year");
+
+  useEffect(() => {
+    if (!watchedDegree) return;
+    const duration = getDegreeDurationYears(watchedDegree);
+    const start = parseInt(watchedStart, 10);
+    if (Number.isFinite(start)) {
+      setValue("passing_year", String(start + duration));
+    }
+  }, [watchedDegree, watchedStart, setValue]);
 
   useEffect(() => {
     if (!user) return;
@@ -275,15 +292,51 @@ export default function StudentOnboardingWizard() {
                 {errors.specialization && <p className="mt-1 text-sm text-red-600">{errors.specialization.message}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Year of Passing</label>
-                <input
-                  type="number"
-                  {...register("passing_year", { required: "Year of passing is required" })}
-                  className="input-field mt-1"
-                  placeholder="2026"
-                />
-                {errors.passing_year && <p className="mt-1 text-sm text-red-600">{errors.passing_year.message}</p>}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Academic Year</label>
+                <div className="mt-1 grid grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      type="number"
+                      {...register("course_start_year", { required: "Start year is required" })}
+                      className="input-field"
+                      placeholder="Start e.g. 2002"
+                    />
+                    {errors.course_start_year && (
+                      <p className="mt-1 text-sm text-red-600">{errors.course_start_year.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      type="number"
+                      {...register("passing_year", {
+                        required: "End year is required",
+                        onChange: (e) => {
+                          const end = parseInt(e.target.value, 10);
+                          if (Number.isFinite(end) && watchedDegree) {
+                            setValue(
+                              "course_start_year",
+                              String(end - getDegreeDurationYears(watchedDegree)),
+                              { shouldValidate: true }
+                            );
+                          }
+                        },
+                      })}
+                      className="input-field"
+                      placeholder="End e.g. 2006"
+                    />
+                    {errors.passing_year && (
+                      <p className="mt-1 text-sm text-red-600">{errors.passing_year.message}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Full Academic Year
+                  {watchedDegree
+                    ? ` (${watchedDegree}, ${getDegreeDurationYears(watchedDegree)} yrs)`
+                    : ""}
+                  {watchedStart && watchedEnd ? `: ${watchedStart} - ${watchedEnd}` : ", e.g. B.E. → 2002 - 2006"}
+                </p>
               </div>
 
               <div>
