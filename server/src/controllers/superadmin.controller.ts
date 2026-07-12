@@ -1034,25 +1034,30 @@ export const approveCollege = async (
       throw new AppError("College not found", 404);
     }
 
-    // Core fields from prisma + approval migration (do not require compat `status` column)
+    // Core approval columns only — is_active / is_suspended / status are optional
+    // compat fields that may be missing on older DBs (undefined_column → 42703).
     await pool.query(
       `UPDATE colleges
        SET approval_status = 'approved',
            approved_by = $2,
            approved_at = NOW(),
-           updated_at = NOW(),
-           is_active = TRUE,
-           is_suspended = FALSE
+           updated_at = NOW()
        WHERE id = $1`,
       [id, actorId]
     );
 
-    // Compat column used by some list filters — ignore if column missing
+    const ignoreMissingColumn = (err: { code?: string }) => {
+      if (err?.code !== "42703") throw err;
+    };
+    await pool
+      .query(
+        `UPDATE colleges SET is_active = TRUE, is_suspended = FALSE WHERE id = $1`,
+        [id]
+      )
+      .catch(ignoreMissingColumn);
     await pool
       .query(`UPDATE colleges SET status = 'active' WHERE id = $1`, [id])
-      .catch((err: { code?: string }) => {
-        if (err?.code !== "42703") throw err;
-      });
+      .catch(ignoreMissingColumn);
 
     await query(
       `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address, changes)
@@ -1121,18 +1126,23 @@ export const rejectCollege = async (
        SET approval_status = 'rejected',
            rejection_reason = $2,
            rejection_at = NOW(),
-           updated_at = NOW(),
-           is_active = FALSE,
-           is_suspended = TRUE
+           updated_at = NOW()
        WHERE id = $1`,
       [id, reason]
     );
 
+    const ignoreMissingColumn = (err: { code?: string }) => {
+      if (err?.code !== "42703") throw err;
+    };
+    await pool
+      .query(
+        `UPDATE colleges SET is_active = FALSE, is_suspended = TRUE WHERE id = $1`,
+        [id]
+      )
+      .catch(ignoreMissingColumn);
     await pool
       .query(`UPDATE colleges SET status = 'suspended' WHERE id = $1`, [id])
-      .catch((err: { code?: string }) => {
-        if (err?.code !== "42703") throw err;
-      });
+      .catch(ignoreMissingColumn);
 
     await query(
       `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address, changes)
