@@ -2,6 +2,30 @@ import { query, queryOne } from "../config/database.js";
 
 export type ExamClientType = "web" | "mobile_app";
 
+type LiveMonitoringRow = {
+    id: string;
+    student_id: string;
+    status: string;
+    integrity_score: number | null;
+    violations: number | null;
+    started_at: Date | string | null;
+    time_remaining_seconds: number | null;
+    client_type: ExamClientType | null;
+    drive_name: string | null;
+};
+
+export type LiveMonitoringSession = {
+    id: string;
+    studentId: string;
+    driveName: string;
+    status: string;
+    integrityScore: number;
+    violations: number;
+    startedAt: Date | string | null;
+    timeRemaining: number | null;
+    clientType: ExamClientType;
+};
+
 // Browser/desktop event weights
 const WEB_EVENT_WEIGHTS: Record<string, number> = {
     TAB_SWITCH: 2,
@@ -162,7 +186,7 @@ export const proctoringService = {
         );
     },
 
-    async getLiveMonitoring(driveId?: string) {
+    async getLiveMonitoring(driveId?: string): Promise<LiveMonitoringSession[]> {
         const statuses = ["in_progress", "terminated"];
         const params: unknown[] = [statuses];
         let driveFilter = "";
@@ -171,7 +195,7 @@ export const proctoringService = {
             driveFilter = `AND ds.drive_id = $${params.length}`;
         }
 
-        const sessions = await query(
+        const sessions = await query<LiveMonitoringRow>(
             `SELECT ds.id, ds.student_id, ds.status, ds.integrity_score,
                     ds.violations, ds.started_at, ds.time_remaining_seconds,
                     COALESCE(ds.client_type, 'web') AS client_type,
@@ -184,7 +208,7 @@ export const proctoringService = {
             params,
         );
 
-        return sessions.map((s: Record<string, unknown>) => ({
+        return sessions.map((s) => ({
             id: s.id,
             studentId: s.student_id,
             driveName: s.drive_name || "Unknown",

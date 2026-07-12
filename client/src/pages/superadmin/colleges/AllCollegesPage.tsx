@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { Eye, Package, Pencil, Plus, Power, PowerOff, Search, UserPlus, Users } from "lucide-react";
+import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import collegeService, { College } from "../../../services/collegeService";
 
@@ -10,27 +11,50 @@ export default function AllCollegesPage() {
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [actionCollegeId, setActionCollegeId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_FILTERS)[number]>("all");
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const { colleges: data } = await collegeService.getAllColleges(
-          statusFilter === "all" ? undefined : statusFilter,
-          search || undefined
-        );
-        setColleges(data);
-      } catch {
-        setColleges([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    const debounce = setTimeout(load, 300);
-    return () => clearTimeout(debounce);
+  const loadColleges = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { colleges: data } = await collegeService.getAllColleges(
+        statusFilter === "all" ? undefined : statusFilter,
+        search || undefined
+      );
+      setColleges(data);
+    } catch {
+      setColleges([]);
+    } finally {
+      setLoading(false);
+    }
   }, [search, statusFilter]);
+
+  useEffect(() => {
+    const debounce = setTimeout(loadColleges, 300);
+    return () => clearTimeout(debounce);
+  }, [loadColleges]);
+
+  const toggleCollegeStatus = async (college: College) => {
+    const suspend = college.status === "active";
+    if (!confirm(`${suspend ? "Suspend" : "Activate"} ${college.name}?`)) return;
+
+    setActionCollegeId(college.id);
+    try {
+      if (suspend) {
+        await collegeService.deactivateCollege(college.id);
+        toast.success("College suspended");
+      } else {
+        await collegeService.activateCollege(college.id);
+        toast.success("College activated");
+      }
+      await loadColleges();
+    } catch {
+      toast.error("College status update failed");
+    } finally {
+      setActionCollegeId(null);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
@@ -90,7 +114,7 @@ export default function AllCollegesPage() {
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">City</th>
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Students</th>
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -113,19 +137,65 @@ export default function AllCollegesPage() {
                     <StatusBadge status={college.status} size="sm" />
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
                       <Link
                         to={`/app/superadmin/colleges/${college.id}`}
-                        className="font-medium text-admin-accent hover:underline"
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="View college"
                       >
+                        <Eye className="h-3.5 w-3.5" />
                         View
                       </Link>
                       <Link
-                        to={`/app/superadmin/colleges/${college.id}?tab=modules`}
-                        className="font-medium text-gray-600 hover:text-admin-accent hover:underline"
+                        to={`/app/superadmin/colleges/${college.id}?edit=1`}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="Edit college"
                       >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </Link>
+                      <Link
+                        to={`/app/superadmin/students?collegeId=${college.id}`}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="View students"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                        Students
+                      </Link>
+                      <Link
+                        to={`/app/superadmin/students?action=add&collegeId=${college.id}`}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="Add student"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Add Student
+                      </Link>
+                      <Link
+                        to={`/app/superadmin/colleges/${college.id}?tab=modules`}
+                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="Manage modules"
+                      >
+                        <Package className="h-3.5 w-3.5" />
                         Modules
                       </Link>
+                      <button
+                        type="button"
+                        onClick={() => toggleCollegeStatus(college)}
+                        disabled={actionCollegeId === college.id}
+                        className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 font-medium disabled:opacity-50 ${
+                          college.status === "active"
+                            ? "border-red-200 text-red-700 hover:bg-red-50"
+                            : "border-green-200 text-green-700 hover:bg-green-50"
+                        }`}
+                        title={college.status === "active" ? "Suspend college" : "Activate college"}
+                      >
+                        {college.status === "active" ? (
+                          <PowerOff className="h-3.5 w-3.5" />
+                        ) : (
+                          <Power className="h-3.5 w-3.5" />
+                        )}
+                        {college.status === "active" ? "Suspend" : "Activate"}
+                      </button>
                     </div>
                   </td>
                 </tr>
