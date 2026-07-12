@@ -227,7 +227,7 @@ export default function WorkflowDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="h-8 w-64 bg-gray-200 rounded animate-pulse" />
       </div>
     );
@@ -235,7 +235,7 @@ export default function WorkflowDetailPage() {
 
   if (notFound || !workflow) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Link
           to="/app/superadmin/workflows"
           className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"
@@ -251,7 +251,7 @@ export default function WorkflowDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <Link
         to={`/app/superadmin/workflows${workflow.category ? `?category=${workflow.category}` : ""}`}
         className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-4"

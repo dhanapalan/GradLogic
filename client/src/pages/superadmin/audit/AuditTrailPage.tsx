@@ -113,7 +113,7 @@ export default function AuditTrailPage() {
   const pages = Math.ceil(total / limit);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-8">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Audit Trail</h2>
         <p className="text-gray-600 mt-1">
@@ -247,56 +247,58 @@ export default function AuditTrailPage() {
         ) : logs.length === 0 ? (
           <div className="p-12 text-center text-gray-600">No audit logs found</div>
         ) : (
-          <div className="space-y-1 divide-y divide-gray-100">
-            {logs.map((log) => (
-              <div key={log.id} className="p-4 hover:bg-gray-50 cursor-pointer transition">
-                <button
-                  onClick={() => {
-                    setSelectedLog(log);
-                    setShowDetails(true);
-                  }}
-                  className="w-full text-left"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-semibold text-gray-900">
-                            {log.action}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {log.user_name} ({log.user_email})
-                          </p>
+          <div className="overflow-x-auto">
+            <div className="space-y-1 divide-y divide-gray-100">
+              {logs.map((log) => (
+                <div key={log.id} className="p-4 hover:bg-gray-50 cursor-pointer transition">
+                  <button
+                    onClick={() => {
+                      setSelectedLog(log);
+                      setShowDetails(true);
+                    }}
+                    className="w-full text-left"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {log.action}
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {log.user_name} ({log.user_email})
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <StatusBadge
+                            status={log.severity.toLowerCase()}
+                            label={log.severity}
+                            size="xs"
+                          />
+                          <span className="text-sm text-gray-500">
+                            {log.resource_type}
+                          </span>
+                          {log.resource_id && (
+                            <span className="text-sm text-gray-500">
+                              • ID: {log.resource_id}
+                            </span>
+                          )}
+                          <span className="text-sm text-gray-500">
+                            • IP: {log.ip_address}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <StatusBadge
-                          status={log.severity.toLowerCase()}
-                          label={log.severity}
-                          size="xs"
-                        />
-                        <span className="text-sm text-gray-500">
-                          {log.resource_type}
-                        </span>
-                        {log.resource_id && (
-                          <span className="text-sm text-gray-500">
-                            • ID: {log.resource_id}
-                          </span>
-                        )}
-                        <span className="text-sm text-gray-500">
-                          • IP: {log.ip_address}
-                        </span>
+                      <div className="text-right ml-4">
+                        <p className="text-sm text-gray-500">
+                          {formatDate(log.created_at)}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right ml-4">
-                      <p className="text-sm text-gray-500">
-                        {formatDate(log.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            ))}
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

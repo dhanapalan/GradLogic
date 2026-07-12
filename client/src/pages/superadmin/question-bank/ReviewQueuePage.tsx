@@ -81,7 +81,7 @@ export default function ReviewQueuePage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Review Queue</h2>

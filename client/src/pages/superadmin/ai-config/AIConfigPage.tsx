@@ -147,7 +147,7 @@ export default function AIConfigPage() {
   const meta = TAB_META[tab];
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-8">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">{meta.title}</h2>
         <p className="text-gray-600 mt-1">{meta.subtitle}</p>

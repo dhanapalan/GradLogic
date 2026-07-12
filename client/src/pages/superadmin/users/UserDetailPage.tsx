@@ -76,7 +76,7 @@ export default function UserDetailPage() {
 
   if (!user) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Link to="/app/superadmin/users" className="text-sm text-admin-accent hover:underline">
           ← Back to users
         </Link>

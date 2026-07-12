@@ -57,7 +57,7 @@ export default function AllCollegesPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -106,103 +106,107 @@ export default function AllCollegesPage() {
 
       {/* Colleges table */}
       <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50/70 border-b border-gray-200">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">City</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Students</th>
-              <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading ? (
-              [1, 2, 3].map((i) => (
-                <tr key={i} className="animate-pulse">
-                  <td className="px-6 py-4" colSpan={6}>
-                    <div className="h-4 bg-gray-100 rounded w-1/3" />
-                  </td>
-                </tr>
-              ))
-            ) : (
-              colleges.map((college) => (
-                <tr key={college.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900">{college.name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{college.email || "—"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{college.city || "—"}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-gray-900 tabular-nums">{college.student_count}</td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={college.status} size="sm" />
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Link
-                        to={`/app/superadmin/colleges/${college.id}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="View"
-                        aria-label="View college"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        to={`/app/superadmin/colleges/${college.id}?edit=1`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="Edit"
-                        aria-label="Edit college"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        to={`/app/superadmin/students?collegeId=${college.id}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="Students"
-                        aria-label="View students"
-                      >
-                        <Users className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        to={`/app/superadmin/students?action=add&collegeId=${college.id}`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="Add student"
-                        aria-label="Add student"
-                      >
-                        <UserPlus className="h-4 w-4" />
-                      </Link>
-                      <Link
-                        to={`/app/superadmin/colleges/${college.id}?tab=modules`}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="Modules"
-                        aria-label="Manage modules"
-                      >
-                        <Package className="h-4 w-4" />
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => toggleCollegeStatus(college)}
-                        disabled={actionCollegeId === college.id}
-                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 ${
-                          college.status === "active"
-                            ? "border-red-200 text-red-700 hover:bg-red-50"
-                            : "border-green-200 text-green-700 hover:bg-green-50"
-                        }`}
-                        title={college.status === "active" ? "Suspend" : "Activate"}
-                        aria-label={college.status === "active" ? "Suspend college" : "Activate college"}
-                      >
-                        {college.status === "active" ? (
-                          <PowerOff className="h-4 w-4" />
-                        ) : (
-                          <Power className="h-4 w-4" />
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50/70 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">City</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Students</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                [1, 2, 3].map((i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-6 py-4" colSpan={6}>
+                      <div className="h-4 bg-gray-100 rounded w-1/3" />
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                colleges.map((college) => (
+                  <tr key={college.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{college.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{college.email || "—"}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{college.city || "—"}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 tabular-nums">{college.student_count}</td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={college.status} size="sm" />
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          to={`/app/superadmin/colleges/${college.id}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                          title="View"
+                          aria-label="View college"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                        <Link
+                          to={`/app/superadmin/colleges/${college.id}?edit=1`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                          title="Edit"
+                          aria-label="Edit college"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                        <Link
+                          to={`/app/superadmin/students?collegeId=${college.id}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                          title="Students"
+                          aria-label="View students"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Link>
+                        {college.status === "active" && (
+                          <Link
+                            to={`/app/superadmin/students?action=add&collegeId=${college.id}`}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                            title="Add student"
+                            aria-label="Add student"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Link>
                         )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                        <Link
+                          to={`/app/superadmin/colleges/${college.id}?tab=modules`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                          title="Modules"
+                          aria-label="Manage modules"
+                        >
+                          <Package className="h-4 w-4" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => toggleCollegeStatus(college)}
+                          disabled={actionCollegeId === college.id}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 ${
+                            college.status === "active"
+                              ? "border-red-200 text-red-700 hover:bg-red-50"
+                              : "border-green-200 text-green-700 hover:bg-green-50"
+                          }`}
+                          title={college.status === "active" ? "Suspend" : "Activate"}
+                          aria-label={college.status === "active" ? "Suspend college" : "Activate college"}
+                        >
+                          {college.status === "active" ? (
+                            <PowerOff className="h-4 w-4" />
+                          ) : (
+                            <Power className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {!loading && colleges.length === 0 && (

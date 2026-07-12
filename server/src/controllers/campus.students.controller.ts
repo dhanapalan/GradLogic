@@ -476,6 +476,18 @@ export async function createStudent(req: Request, res: Response, next: NextFunct
             throw new AppError("name and email are required", 400);
         }
 
+        const college = await queryOne<{ id: string; status: string }>(
+            "SELECT id, status FROM colleges WHERE id = $1 AND deleted_at IS NULL",
+            [collegeId]
+        );
+        if (!college) throw new AppError("College not found", 404);
+        if (college.status === "suspended") {
+            throw new AppError("Cannot add students to a suspended college", 400);
+        }
+        if (college.status !== "active") {
+            throw new AppError("Can only add students to an active college", 400);
+        }
+
         // Ignore any client-supplied college_id — always JWT college
         const existing = await queryOne(
             "SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL",

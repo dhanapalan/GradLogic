@@ -31,7 +31,7 @@ function ModuleRow({
   const inUse = mod.assigned_colleges_count > 0;
 
   return (
-    <div className="flex items-start gap-4 px-6 py-4 transition-colors hover:bg-slate-50/80">
+    <div className="flex flex-wrap items-start gap-4 px-4 sm:px-6 py-4 transition-colors hover:bg-slate-50/80">
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-admin-accent/10 text-admin-accent">
         <Icon className="h-5 w-5" />
       </div>
@@ -213,7 +213,7 @@ export default function ModulesPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 sm:px-6 py-6 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Module Management</h2>

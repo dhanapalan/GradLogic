@@ -417,7 +417,7 @@ export default function AllQuestionsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
@@ -621,89 +621,91 @@ export default function AllQuestionsPage() {
           </div>
         ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-gray-50/70 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={questions.length > 0 && selected.size === questions.length}
-                      onChange={toggleAll}
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Question</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Subject</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Difficulty</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Bloom's</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Source</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {questions.map((question) => (
-                  <tr key={question.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50/70 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3">
                       <input
                         type="checkbox"
-                        checked={selected.has(question.id)}
-                        onChange={() => toggleOne(question.id)}
+                        checked={questions.length > 0 && selected.size === questions.length}
+                        onChange={toggleAll}
                       />
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                      <div className="max-w-xs truncate">{question.question_text}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{label(question.category)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{label(question.type)}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <StatusBadge
-                        status={
-                          question.difficulty_level === "easy"
-                            ? "success"
-                            : question.difficulty_level === "hard"
-                              ? "error"
-                              : "pending"
-                        }
-                        label={label(question.difficulty_level)}
-                        size="sm"
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {question.bloom_level ? label(question.bloom_level) : "Unclassified"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {(question.tags || []).includes("ai-generated") ? "AI Generated" : "Manual"}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <StatusBadge
-                        status={question.status === "published" ? "active" : question.status === "archived" ? "inactive" : "pending"}
-                        label={label(question.status)}
-                        size="sm"
-                      />
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => openEdit(question)}
-                          className="text-sm text-admin-accent hover:underline font-medium"
-                        >
-                          Edit
-                        </button>
-                        {question.is_active !== false && question.status !== "archived" && (
-                          <button
-                            onClick={() => handleDeactivateQuestion(question.id)}
-                            className="text-sm text-red-600 hover:text-red-800 font-medium"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Question</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Subject</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Difficulty</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Bloom's</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Source</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {questions.map((question) => (
+                    <tr key={question.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(question.id)}
+                          onChange={() => toggleOne(question.id)}
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        <div className="max-w-xs truncate">{question.question_text}</div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{label(question.category)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{label(question.type)}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <StatusBadge
+                          status={
+                            question.difficulty_level === "easy"
+                              ? "success"
+                              : question.difficulty_level === "hard"
+                                ? "error"
+                                : "pending"
+                          }
+                          label={label(question.difficulty_level)}
+                          size="sm"
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {question.bloom_level ? label(question.bloom_level) : "Unclassified"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {(question.tags || []).includes("ai-generated") ? "AI Generated" : "Manual"}
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <StatusBadge
+                          status={question.status === "published" ? "active" : question.status === "archived" ? "inactive" : "pending"}
+                          label={label(question.status)}
+                          size="sm"
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => openEdit(question)}
+                            className="text-sm text-admin-accent hover:underline font-medium"
+                          >
+                            Edit
+                          </button>
+                          {question.is_active !== false && question.status !== "archived" && (
+                            <button
+                              onClick={() => handleDeactivateQuestion(question.id)}
+                              className="text-sm text-red-600 hover:text-red-800 font-medium"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {questions.length === 0 && (
               <div className="p-12 text-center">

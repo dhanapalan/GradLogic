@@ -16,6 +16,8 @@ import {
   ChevronDown,
   LogOut,
   Package,
+  Menu,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
@@ -30,8 +32,8 @@ interface NavLeaf {
 interface NavEntry {
   name: string;
   icon: LucideIcon;
-  href?: string; // flat item
-  children?: NavLeaf[]; // collapsible group
+  href?: string;
+  children?: NavLeaf[];
 }
 
 interface NavSection {
@@ -41,8 +43,6 @@ interface NavSection {
 
 const BASE = "/app/superadmin";
 
-// Grouped into Overview / Manage / System (from the redesign) while keeping
-// every real route the portal already has.
 const SECTIONS: NavSection[] = [
   {
     label: "Overview",
@@ -149,17 +149,15 @@ export default function SuperAdminLayout() {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const current = location.pathname + location.search;
 
-  // A leaf is active when its full path (incl. query) matches. Query-less leaves
-  // require an empty search so query-siblings on the same page don't both light up.
   const leafActive = (href: string) => {
     if (href.includes("?")) return current === href;
     return location.pathname === href && location.search === "";
   };
 
-  // A group owns the current route when the pathname matches any child's base path.
   const groupOwnsRoute = (entry: NavEntry) =>
     !!entry.children?.some(
       (c) =>
@@ -169,7 +167,6 @@ export default function SuperAdminLayout() {
 
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
-  // Auto-expand whichever group contains the active route.
   useEffect(() => {
     setOpen((prev) => {
       const next = { ...prev };
@@ -181,11 +178,24 @@ export default function SuperAdminLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, location.search]);
 
-  // Route is guarded by ProtectedRoute + RoleGuard; belt-and-suspenders bounce
-  // if the session token disappears mid-session.
+  // Close mobile drawer on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname, location.search]);
+
   useEffect(() => {
     if (!token) window.location.href = "/auth/login";
   }, [token]);
+
+  // Lock body scroll when mobile drawer is open
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
 
   const handleLogout = () => {
     void logout().finally(() => {
@@ -207,117 +217,159 @@ export default function SuperAdminLayout() {
         : "text-slate-400 hover:bg-white/5 hover:text-white"
     }`;
 
-  return (
-    <div className="admin-shell flex h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="flex w-64 flex-col bg-navy-900 text-slate-300">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-4">
+  const sidebar = (
+    <>
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-4">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-admin-accent text-white shadow-admin-elegant">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <div className="flex flex-col leading-tight">
+          <div className="flex min-w-0 flex-col leading-tight">
             <span className="font-display font-semibold text-white">GradLogic</span>
             <span className="text-[11px] text-white/50">Admin Console</span>
           </div>
         </div>
+        <button
+          type="button"
+          className="rounded-lg p-1.5 text-white/60 hover:bg-white/10 hover:text-white md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
-          {SECTIONS.map((section) => (
-            <div key={section.label}>
-              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/35">
-                {section.label}
-              </p>
-              <div className="space-y-1">
-                {section.items.map((entry) => {
-                  const Icon = entry.icon;
+      <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        {SECTIONS.map((section) => (
+          <div key={section.label}>
+            <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/35">
+              {section.label}
+            </p>
+            <div className="space-y-1">
+              {section.items.map((entry) => {
+                const Icon = entry.icon;
 
-                  // Flat item
-                  if (!entry.children) {
-                    return (
-                      <NavLink
-                        key={entry.name}
-                        to={entry.href!}
-                        className={flatClasses(leafActive(entry.href!))}
-                      >
-                        <Icon className="h-[18px] w-[18px] flex-shrink-0" />
-                        <span className="flex-1">{entry.name}</span>
-                      </NavLink>
-                    );
-                  }
-
-                  // Collapsible group
-                  const isOpen = open[entry.name] ?? false;
-                  const owns = groupOwnsRoute(entry);
+                if (!entry.children) {
                   return (
-                    <div key={entry.name}>
-                      <button
-                        type="button"
-                        onClick={() => setOpen((p) => ({ ...p, [entry.name]: !isOpen }))}
-                        className={flatClasses(owns && !isOpen)}
-                      >
-                        <Icon className="h-[18px] w-[18px] flex-shrink-0" />
-                        <span className="flex-1 text-left">{entry.name}</span>
-                        <ChevronDown
-                          className={`h-4 w-4 flex-shrink-0 text-white/40 transition-transform duration-150 ${
-                            isOpen ? "rotate-180" : ""
-                          }`}
-                        />
-                      </button>
-
-                      {isOpen && (
-                        <div className="ml-[1.15rem] mt-1 space-y-0.5 border-l border-white/10 pl-3">
-                          {entry.children.map((child) => (
-                            <NavLink
-                              key={child.href}
-                              to={child.href}
-                              className={leafClasses(leafActive(child.href))}
-                            >
-                              <span className="flex-1">{child.name}</span>
-                            </NavLink>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <NavLink
+                      key={entry.name}
+                      to={entry.href!}
+                      className={flatClasses(leafActive(entry.href!))}
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                      <span className="flex-1">{entry.name}</span>
+                    </NavLink>
                   );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
+                }
 
-        {/* User footer */}
-        <div className="border-t border-white/10 px-3 py-3">
-          <div className="flex items-center gap-2.5 px-1 py-1.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-accent text-xs font-semibold text-white">
-              {initials(user?.name)}
-            </div>
-            <div className="flex min-w-0 flex-col leading-tight">
-              <span className="truncate text-sm font-medium text-white">
-                {user?.name || "Admin"}
-              </span>
-              <span className="truncate text-[11px] text-white/50">{user?.email}</span>
+                const isOpen = open[entry.name] ?? false;
+                const owns = groupOwnsRoute(entry);
+                return (
+                  <div key={entry.name}>
+                    <button
+                      type="button"
+                      onClick={() => setOpen((p) => ({ ...p, [entry.name]: !isOpen }))}
+                      className={flatClasses(owns && !isOpen)}
+                    >
+                      <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+                      <span className="flex-1 text-left">{entry.name}</span>
+                      <ChevronDown
+                        className={`h-4 w-4 flex-shrink-0 text-white/40 transition-transform duration-150 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className="ml-[1.15rem] mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                        {entry.children.map((child) => (
+                          <NavLink
+                            key={child.href}
+                            to={child.href}
+                            className={leafClasses(leafActive(child.href))}
+                            onClick={() => setMobileOpen(false)}
+                          >
+                            <span className="flex-1">{child.name}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300/80 transition-colors hover:bg-white/5 hover:text-white"
-          >
-            <LogOut className="h-[18px] w-[18px]" />
-            Logout
-          </button>
+        ))}
+      </nav>
+
+      <div className="border-t border-white/10 px-3 py-3">
+        <div className="flex items-center gap-2.5 px-1 py-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-accent text-xs font-semibold text-white">
+            {initials(user?.name)}
+          </div>
+          <div className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-medium text-white">
+              {user?.name || "Admin"}
+            </span>
+            <span className="truncate text-[11px] text-white/50">{user?.email}</span>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-300/80 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <LogOut className="h-[18px] w-[18px]" />
+          Logout
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="admin-shell flex h-[100dvh] bg-slate-50">
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 flex-col bg-navy-900 text-slate-300 md:flex">
+        {sidebar}
       </aside>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white/80 px-6 backdrop-blur">
-          <div className="text-sm text-gray-500">Admin Console</div>
-          <div className="flex items-center gap-3">
+      {/* Mobile drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+          />
+          <aside className="relative flex h-full w-[min(18rem,85vw)] flex-col bg-navy-900 text-slate-300 shadow-xl">
+            {sidebar}
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-gray-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              type="button"
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 md:hidden"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-gray-900">Admin Console</p>
+              <p className="hidden text-xs text-gray-500 sm:block">Platform operations</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <NotificationBell />
             <button
+              type="button"
               onClick={handleLogout}
               className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
               title="Log out"
@@ -327,8 +379,7 @@ export default function SuperAdminLayout() {
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 overflow-auto bg-slate-50">
+        <main className="min-w-0 flex-1 overflow-auto bg-slate-50">
           <Outlet />
         </main>
       </div>

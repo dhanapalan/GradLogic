@@ -134,12 +134,28 @@ export default function AllStudentsPage() {
     }
   }, [searchParams, setSearchParams]);
 
+  const activeColleges = colleges.filter((c) => c.status === "active");
+
   useEffect(() => {
     collegeService
       .getAllColleges()
       .then((res) => setColleges(res.colleges))
       .catch(() => setColleges([]));
   }, []);
+
+  // Keep create/import college selection limited to active colleges only.
+  useEffect(() => {
+    if (!colleges.length) return;
+    setCreateForm((prev) => {
+      if (!prev.college_id) return prev;
+      const ok = colleges.some((c) => c.id === prev.college_id && c.status === "active");
+      return ok ? prev : { ...prev, college_id: "" };
+    });
+    setImportCollegeId((prev) => {
+      if (!prev) return prev;
+      return colleges.some((c) => c.id === prev && c.status === "active") ? prev : "";
+    });
+  }, [colleges]);
 
   const load = () => {
     setLoading(true);
@@ -264,6 +280,10 @@ export default function AllStudentsPage() {
       toast.error("Name, email, and college are required");
       return;
     }
+    if (!activeColleges.some((c) => c.id === createForm.college_id)) {
+      toast.error("Cannot add students to a suspended or inactive college");
+      return;
+    }
     setCreating(true);
     try {
       const res = await studentsService.createStudent({
@@ -300,6 +320,10 @@ export default function AllStudentsPage() {
   const handleBulkImport = async () => {
     if (!importCollegeId) {
       toast.error("Select a college for this import");
+      return;
+    }
+    if (!activeColleges.some((c) => c.id === importCollegeId)) {
+      toast.error("Cannot import students to a suspended or inactive college");
       return;
     }
     setImporting(true);
@@ -488,8 +512,8 @@ export default function AllStudentsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      <div className="mb-6 flex items-start justify-between gap-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Students</h2>
           <p className="text-gray-500 mt-1">
@@ -503,7 +527,9 @@ export default function AllStudentsPage() {
               setImportOpen(true);
               setCreateOpen(false);
               setImportResult(null);
-              if (collegeId) setImportCollegeId(collegeId);
+              if (collegeId && activeColleges.some((c) => c.id === collegeId)) {
+                setImportCollegeId(collegeId);
+              }
             }}
             className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 bg-white text-gray-800 rounded-lg font-medium hover:bg-gray-50"
           >
@@ -551,7 +577,7 @@ export default function AllStudentsPage() {
               className="border border-gray-200 rounded-lg px-3 py-2"
             >
               <option value="">Select college *</option>
-              {colleges.map((c) => (
+              {activeColleges.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -712,7 +738,7 @@ export default function AllStudentsPage() {
                 <div>
                   <input
                     aria-label="CGPA"
-                    placeholder="CGPA (0–10)"
+                    placeholder="CGPA (0-10)"
                     value={editForm.cgpa}
                     onChange={(e) => {
                       setEditForm({ ...editForm, cgpa: e.target.value });
@@ -771,7 +797,7 @@ export default function AllStudentsPage() {
               className="border border-gray-200 rounded-lg px-3 py-2"
             >
               <option value="">Target college *</option>
-              {colleges.map((c) => (
+              {activeColleges.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -901,9 +927,9 @@ export default function AllStudentsPage() {
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="bg-navy-900/[0.04] border border-navy-900/10 rounded-xl p-3 mb-4 flex items-center justify-between">
+        <div className="bg-navy-900/[0.04] border border-navy-900/10 rounded-xl p-3 mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-sm font-medium text-navy-900">{selected.size} selected</span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setNotifyOpen(true)}
@@ -978,128 +1004,130 @@ export default function AllStudentsPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50/70 border-b border-gray-200">
-            <tr>
-              <th className="px-4 py-3">
-                <input
-                  type="checkbox"
-                  checked={students.length > 0 && selected.size === students.length}
-                  onChange={toggleAll}
-                />
-              </th>
-              {["Student Name", "College", "Batch/Department", "Email", "Registered", "Readiness", "Last Active", "Actions"].map((h) => (
-                <th
-                  key={h}
-                  className={`px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 ${
-                    h === "Actions" ? "text-right" : "text-left"
-                  }`}
-                >
-                  {h}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50/70 border-b border-gray-200">
+              <tr>
+                <th className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={students.length > 0 && selected.size === students.length}
+                    onChange={toggleAll}
+                  />
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {loading ? (
-              [1, 2, 3].map((i) => (
-                <tr key={i} className="animate-pulse">
-                  <td className="px-4 py-4" colSpan={9}>
-                    <div className="h-4 bg-gray-200 rounded w-1/3" />
-                  </td>
-                </tr>
-              ))
-            ) : (
-              students.map((student) => {
-                const readiness = readinessLabel(student.readiness_score);
-                return (
-                  <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(student.id)}
-                        onChange={() => toggleOne(student.id)}
-                      />
-                    </td>
-                    <td
-                      className="px-6 py-4 text-sm font-medium text-admin-accent hover:underline cursor-pointer"
-                      onClick={() => navigate(`/app/superadmin/students/${student.id}`)}
-                    >
-                      {student.name}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{student.college_name || "—"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {[student.department, student.batch].filter(Boolean).join(" · ") || "—"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{student.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(student.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={readiness.status} label={readiness.label} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {student.last_login ? new Date(student.last_login).toLocaleString() : "Never"}
-                    </td>
-                    <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link
-                          to={`/app/superadmin/students/${student.id}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                          title="View"
-                          aria-label="View student"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => openEditStudent(student)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                          title="Edit"
-                          aria-label="Edit student"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRowResetPassword(student)}
-                          disabled={actionStudentId === student.id}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent disabled:opacity-50"
-                          title="Reset password"
-                          aria-label="Reset password"
-                        >
-                          <Key className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRowToggleStatus(student)}
-                          disabled={actionStudentId === student.id}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 ${
-                            student.is_active || student.status === "active"
-                              ? "border-red-200 text-red-700 hover:bg-red-50"
-                              : "border-green-200 text-green-700 hover:bg-green-50"
-                          }`}
-                          title={student.is_active || student.status === "active" ? "Disable" : "Enable"}
-                          aria-label={
-                            student.is_active || student.status === "active"
-                              ? "Disable student"
-                              : "Enable student"
-                          }
-                        >
-                          {student.is_active || student.status === "active" ? (
-                            <PowerOff className="h-4 w-4" />
-                          ) : (
-                            <Power className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
+                {["Student Name", "College", "Batch/Department", "Email", "Registered", "Readiness", "Last Active", "Actions"].map((h) => (
+                  <th
+                    key={h}
+                    className={`px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 ${
+                      h === "Actions" ? "text-right" : "text-left"
+                    }`}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {loading ? (
+                [1, 2, 3].map((i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td className="px-4 py-4" colSpan={9}>
+                      <div className="h-4 bg-gray-200 rounded w-1/3" />
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                ))
+              ) : (
+                students.map((student) => {
+                  const readiness = readinessLabel(student.readiness_score);
+                  return (
+                    <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selected.has(student.id)}
+                          onChange={() => toggleOne(student.id)}
+                        />
+                      </td>
+                      <td
+                        className="px-6 py-4 text-sm font-medium text-admin-accent hover:underline cursor-pointer"
+                        onClick={() => navigate(`/app/superadmin/students/${student.id}`)}
+                      >
+                        {student.name}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{student.college_name || "—"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {[student.department, student.batch].filter(Boolean).join(" · ") || "—"}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">{student.email}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {new Date(student.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={readiness.status} label={readiness.label} size="sm" />
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {student.last_login ? new Date(student.last_login).toLocaleString() : "Never"}
+                      </td>
+                      <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            to={`/app/superadmin/students/${student.id}`}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                            title="View"
+                            aria-label="View student"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => openEditStudent(student)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                            title="Edit"
+                            aria-label="Edit student"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRowResetPassword(student)}
+                            disabled={actionStudentId === student.id}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent disabled:opacity-50"
+                            title="Reset password"
+                            aria-label="Reset password"
+                          >
+                            <Key className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRowToggleStatus(student)}
+                            disabled={actionStudentId === student.id}
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 ${
+                              student.is_active || student.status === "active"
+                                ? "border-red-200 text-red-700 hover:bg-red-50"
+                                : "border-green-200 text-green-700 hover:bg-green-50"
+                            }`}
+                            title={student.is_active || student.status === "active" ? "Disable" : "Enable"}
+                            aria-label={
+                              student.is_active || student.status === "active"
+                                ? "Disable student"
+                                : "Enable student"
+                            }
+                          >
+                            {student.is_active || student.status === "active" ? (
+                              <PowerOff className="h-4 w-4" />
+                            ) : (
+                              <Power className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {!loading && students.length === 0 && (

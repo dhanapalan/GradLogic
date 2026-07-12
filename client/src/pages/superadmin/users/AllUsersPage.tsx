@@ -208,7 +208,7 @@ export default function AllUsersPage() {
   const pages = Math.ceil(total / limit);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight text-gray-900">All Users</h2>
@@ -358,70 +358,72 @@ export default function AllUsersPage() {
           <div className="p-12 text-center text-gray-600">Loading users...</div>
         ) : (
           <>
-            <table className="w-full">
-              <thead className="bg-gray-50/70 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedUsers.size === users.length && users.length > 0}
-                      onChange={(e) => handleSelectAll(e.target.checked)}
-                    />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50/70 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.has(user.id)}
-                        onChange={(e) => handleSelectUser(user.id, e.target.checked)}
+                        checked={selectedUsers.size === users.length && users.length > 0}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
                       />
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.full_name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 capitalize">{user.role}</td>
-                    <td className="px-6 py-4 text-sm">
-                      <StatusBadge status={user.status} label={user.status} size="sm" />
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{user.college_name || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm flex gap-2">
-                      <button onClick={() => navigate(`/app/superadmin/users/${user.id}`)}>
-                        <EyeIcon className="w-4 h-4 text-admin-accent" />
-                      </button>
-                      {user.status === "suspended" ? (
-                        <button onClick={() => handleUnsuspendUser(user.id)}>
-                          <CheckIcon className="w-4 h-4 text-green-600" />
-                        </button>
-                      ) : (
-                        <button onClick={() => handleSuspendUser(user.id)}>
-                          <NoSymbolIcon className="w-4 h-4 text-yellow-600" />
-                        </button>
-                      )}
-                      <button onClick={() => handleToggleActive(user)} title={user.status === "inactive" ? "Activate" : "Deactivate"}>
-                        {user.status === "inactive" ? (
-                          <CheckIcon className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <TrashIcon className="w-4 h-4 text-red-600" />
-                        )}
-                      </button>
-                    </td>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Role</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">College</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {users.map((user) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedUsers.has(user.id)}
+                          onChange={(e) => handleSelectUser(user.id, e.target.checked)}
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.full_name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600 capitalize">{user.role}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <StatusBadge status={user.status} label={user.status} size="sm" />
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{user.college_name || "-"}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-sm flex gap-2">
+                        <button onClick={() => navigate(`/app/superadmin/users/${user.id}`)}>
+                          <EyeIcon className="w-4 h-4 text-admin-accent" />
+                        </button>
+                        {user.status === "suspended" ? (
+                          <button onClick={() => handleUnsuspendUser(user.id)}>
+                            <CheckIcon className="w-4 h-4 text-green-600" />
+                          </button>
+                        ) : (
+                          <button onClick={() => handleSuspendUser(user.id)}>
+                            <NoSymbolIcon className="w-4 h-4 text-yellow-600" />
+                          </button>
+                        )}
+                        <button onClick={() => handleToggleActive(user)} title={user.status === "inactive" ? "Activate" : "Deactivate"}>
+                          {user.status === "inactive" ? (
+                            <CheckIcon className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <TrashIcon className="w-4 h-4 text-red-600" />
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             {users.length === 0 && (
               <div className="p-12 text-center text-gray-600">No users found</div>

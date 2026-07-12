@@ -5,6 +5,22 @@ import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
 import { sendNotification } from "../services/notification.service.js";
 
+/** Colleges that can receive new (or reassigned) students. */
+async function assertCollegeAcceptsStudents(collegeId: string): Promise<{ id: string; name: string }> {
+  const college = await queryOne<{ id: string; name: string; status: string }>(
+    "SELECT id, name, status FROM colleges WHERE id = $1 AND deleted_at IS NULL",
+    [collegeId]
+  );
+  if (!college) throw new AppError("College not found", 404);
+  if (college.status === "suspended") {
+    throw new AppError("Cannot add students to a suspended college", 400);
+  }
+  if (college.status !== "active") {
+    throw new AppError("Can only add students to an active college", 400);
+  }
+  return college;
+}
+
 // ────────────────────────────────────────────────────────────────────
 // GET /api/superadmin/students — global roster across all colleges
 // ────────────────────────────────────────────────────────────────────
@@ -301,11 +317,7 @@ export const createStudent = async (
       throw new AppError("name, email, and college_id are required", 400);
     }
 
-    const college = await queryOne<{ id: string }>(
-      "SELECT id FROM colleges WHERE id = $1 AND deleted_at IS NULL",
-      [college_id]
-    );
-    if (!college) throw new AppError("College not found", 404);
+    await assertCollegeAcceptsStudents(college_id);
 
     const existing = await queryOne(
       "SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL",
@@ -400,11 +412,7 @@ export const bulkImport = async (
       throw new AppError("Maximum 500 students per import", 400);
     }
 
-    const college = await queryOne<{ id: string; name: string }>(
-      "SELECT id, name FROM colleges WHERE id = $1 AND deleted_at IS NULL",
-      [college_id]
-    );
-    if (!college) throw new AppError("College not found", 404);
+    const college = await assertCollegeAcceptsStudents(college_id);
 
     const created: Array<{ user_id: string; email: string; temporary_password: string }> = [];
     const skipped: Array<{ email: string; reason: string }> = [];
@@ -525,6 +533,10 @@ export const updateStudent = async (
       [id]
     );
     if (!student) throw new AppError("Student not found", 404);
+
+    if (college_id !== undefined) {
+      await assertCollegeAcceptsStudents(college_id);
+    }
 
     const client = await pool.connect();
     try {

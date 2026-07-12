@@ -32,7 +32,7 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Billing</h2>
         <div className="p-12 text-center text-gray-600">Loading billing summary...</div>
       </div>
@@ -41,7 +41,7 @@ export default function BillingPage() {
 
   if (!summary) {
     return (
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900 mb-2">Billing</h2>
         <p className="text-gray-600">Billing data is unavailable.</p>
       </div>
@@ -83,7 +83,7 @@ export default function BillingPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-8">
         <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Billing</h2>
         <p className="text-gray-600 mt-1">
