@@ -31,8 +31,8 @@ export default function CollegeRequestsPage() {
       await collegeService.approveCollege(id);
       toast.success("College approved");
       await load();
-    } catch {
-      toast.error("Failed to approve college");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || e?.response?.data?.message || "Failed to approve college");
     } finally {
       setActingOn(null);
     }
@@ -44,8 +44,8 @@ export default function CollegeRequestsPage() {
       await collegeService.rejectCollege(id, "Rejected by superadmin");
       toast.success("College rejected");
       await load();
-    } catch {
-      toast.error("Failed to reject college");
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || e?.response?.data?.message || "Failed to reject college");
     } finally {
       setActingOn(null);
     }

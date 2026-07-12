@@ -998,7 +998,13 @@ export const getPendingCollegeRequests = async (
 ) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM colleges WHERE status = 'pending' AND deleted_at IS NULL ORDER BY created_at DESC"
+      `SELECT * FROM colleges
+       WHERE deleted_at IS NULL
+         AND (
+           approval_status = 'pending'
+           OR (approval_status IS NULL AND status = 'pending')
+         )
+       ORDER BY created_at DESC`
     );
 
     res.json({
@@ -1018,43 +1024,71 @@ export const approveCollege = async (
   try {
     const { id } = req.params;
     const { note } = req.body;
+    const actorId = req.user?.userId || null;
 
-    const result = await pool.query(
-      `UPDATE colleges
-       SET status = 'active', approval_status = 'approved',
-           approved_by = $2, approved_at = NOW(), updated_at = NOW()
-       WHERE id = $1 RETURNING id`,
-      [id, req.user?.userId || null]
+    const existing = await queryOne<{ id: string; approval_status: string | null }>(
+      `SELECT id, approval_status FROM colleges WHERE id = $1`,
+      [id]
     );
-
-    if (result.rows.length === 0) {
+    if (!existing) {
       throw new AppError("College not found", 404);
     }
+
+    // Core fields from prisma + approval migration (do not require compat `status` column)
+    await pool.query(
+      `UPDATE colleges
+       SET approval_status = 'approved',
+           approved_by = $2,
+           approved_at = NOW(),
+           updated_at = NOW(),
+           is_active = TRUE,
+           is_suspended = FALSE
+       WHERE id = $1`,
+      [id, actorId]
+    );
+
+    // Compat column used by some list filters — ignore if column missing
+    await pool
+      .query(`UPDATE colleges SET status = 'active' WHERE id = $1`, [id])
+      .catch((err: { code?: string }) => {
+        if (err?.code !== "42703") throw err;
+      });
 
     await query(
       `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address, changes)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [
-        req.user?.userId || "system",
+        actorId,
         "APPROVE_COLLEGE",
         "college",
         id,
-        req.ip,
+        typeof req.ip === "string" ? req.ip : null,
         JSON.stringify({ note: note || null }),
       ]
-    );
+    ).catch((err) => {
+      console.error("[approveCollege] audit log failed (non-fatal):", err);
+    });
 
-    const hasAssignments = await queryOne(
-      `SELECT id FROM college_module_assignments WHERE college_id = $1 LIMIT 1`,
-      [id]
-    );
-    if (!hasAssignments) {
-      await assignDefaultModulesToCollege(id as string, req.user?.userId);
+    try {
+      // PK is (college_id, module_id) — there is no `id` column on this table
+      const hasAssignments = await queryOne(
+        `SELECT college_id FROM college_module_assignments WHERE college_id = $1 LIMIT 1`,
+        [id]
+      );
+      if (!hasAssignments) {
+        await assignDefaultModulesToCollege(id as string, actorId || undefined);
+      }
+    } catch (err) {
+      console.error("[approveCollege] default module assignment failed (non-fatal):", err);
     }
 
     res.json({
       success: true,
-      message: "College approved successfully",
+      message:
+        existing.approval_status === "approved"
+          ? "College was already approved"
+          : "College approved successfully",
+      data: { id, approval_status: "approved" },
     });
   } catch (error) {
     next(error);
@@ -1074,30 +1108,46 @@ export const rejectCollege = async (
       throw new AppError("Rejection reason required", 400);
     }
 
-    const result = await pool.query(
+    const existing = await queryOne<{ id: string }>(
+      "SELECT id FROM colleges WHERE id = $1",
+      [id]
+    );
+    if (!existing) {
+      throw new AppError("College not found", 404);
+    }
+
+    await pool.query(
       `UPDATE colleges
-       SET status = 'suspended', approval_status = 'rejected',
-           rejection_reason = $2, rejection_at = NOW(), updated_at = NOW()
-       WHERE id = $1 RETURNING id`,
+       SET approval_status = 'rejected',
+           rejection_reason = $2,
+           rejection_at = NOW(),
+           updated_at = NOW(),
+           is_active = FALSE,
+           is_suspended = TRUE
+       WHERE id = $1`,
       [id, reason]
     );
 
-    if (result.rows.length === 0) {
-      throw new AppError("College not found", 404);
-    }
+    await pool
+      .query(`UPDATE colleges SET status = 'suspended' WHERE id = $1`, [id])
+      .catch((err: { code?: string }) => {
+        if (err?.code !== "42703") throw err;
+      });
 
     await query(
       `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, ip_address, changes)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [
-        req.user?.userId || "system",
+        req.user?.userId || null,
         "REJECT_COLLEGE",
         "college",
         id,
-        req.ip,
+        typeof req.ip === "string" ? req.ip : null,
         JSON.stringify({ reason }),
       ]
-    );
+    ).catch((err) => {
+      console.error("[rejectCollege] audit log failed (non-fatal):", err);
+    });
 
     res.json({
       success: true,
