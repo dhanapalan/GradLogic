@@ -137,64 +137,64 @@ export default function AllCollegesPage() {
                     <StatusBadge status={college.status} size="sm" />
                   </td>
                   <td className="px-6 py-4 text-sm">
-                    <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1.5">
                       <Link
                         to={`/app/superadmin/colleges/${college.id}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="View college"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="View"
+                        aria-label="View college"
                       >
-                        <Eye className="h-3.5 w-3.5" />
-                        View
+                        <Eye className="h-4 w-4" />
                       </Link>
                       <Link
                         to={`/app/superadmin/colleges/${college.id}?edit=1`}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="Edit college"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="Edit"
+                        aria-label="Edit college"
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
+                        <Pencil className="h-4 w-4" />
                       </Link>
                       <Link
                         to={`/app/superadmin/students?collegeId=${college.id}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="View students"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="Students"
+                        aria-label="View students"
                       >
-                        <Users className="h-3.5 w-3.5" />
-                        Students
+                        <Users className="h-4 w-4" />
                       </Link>
                       <Link
                         to={`/app/superadmin/students?action=add&collegeId=${college.id}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
                         title="Add student"
+                        aria-label="Add student"
                       >
-                        <UserPlus className="h-3.5 w-3.5" />
-                        Add Student
+                        <UserPlus className="h-4 w-4" />
                       </Link>
                       <Link
                         to={`/app/superadmin/colleges/${college.id}?tab=modules`}
-                        className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1.5 font-medium text-gray-700 hover:border-admin-accent hover:text-admin-accent"
-                        title="Manage modules"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                        title="Modules"
+                        aria-label="Manage modules"
                       >
-                        <Package className="h-3.5 w-3.5" />
-                        Modules
+                        <Package className="h-4 w-4" />
                       </Link>
                       <button
                         type="button"
                         onClick={() => toggleCollegeStatus(college)}
                         disabled={actionCollegeId === college.id}
-                        className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 font-medium disabled:opacity-50 ${
+                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 ${
                           college.status === "active"
                             ? "border-red-200 text-red-700 hover:bg-red-50"
                             : "border-green-200 text-green-700 hover:bg-green-50"
                         }`}
-                        title={college.status === "active" ? "Suspend college" : "Activate college"}
+                        title={college.status === "active" ? "Suspend" : "Activate"}
+                        aria-label={college.status === "active" ? "Suspend college" : "Activate college"}
                       >
                         {college.status === "active" ? (
-                          <PowerOff className="h-3.5 w-3.5" />
+                          <PowerOff className="h-4 w-4" />
                         ) : (
-                          <Power className="h-3.5 w-3.5" />
+                          <Power className="h-4 w-4" />
                         )}
-                        {college.status === "active" ? "Suspend" : "Activate"}
                       </button>
                     </div>
                   </td>

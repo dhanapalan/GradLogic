@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { Search, Bell, Key, Upload, UserPlus, X } from "lucide-react";
+import {
+  Bell,
+  Eye,
+  Key,
+  Pencil,
+  Power,
+  PowerOff,
+  Search,
+  Upload,
+  UserPlus,
+  X,
+} from "lucide-react";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import studentsService, { StudentListItem } from "../../../services/studentsService";
 import collegeService, { College } from "../../../services/collegeService";
@@ -74,6 +85,20 @@ export default function AllStudentsPage() {
     skipped_count: number;
     skipped: Array<{ email: string; reason: string }>;
   } | null>(null);
+  const [actionStudentId, setActionStudentId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editForm, setEditForm] = useState({
+    id: "",
+    name: "",
+    email: "",
+    degree: "",
+    specialization: "",
+    passing_year: "",
+    cgpa: "",
+    student_identifier: "",
+  });
 
   const [search, setSearch] = useState("");
   const [collegeId, setCollegeId] = useState("");
@@ -270,6 +295,98 @@ export default function AllStudentsPage() {
     }
   };
 
+  const openEditStudent = async (student: StudentListItem) => {
+    setEditOpen(true);
+    setEditLoading(true);
+    setEditForm({
+      id: student.id,
+      name: student.name,
+      email: student.email,
+      degree: student.department || "",
+      specialization: "",
+      passing_year: student.batch != null ? String(student.batch) : "",
+      cgpa: "",
+      student_identifier: student.student_identifier || "",
+    });
+    try {
+      const detail = await studentsService.getStudentProfile(student.id);
+      const p = detail.profile;
+      setEditForm({
+        id: p.id,
+        name: p.name || "",
+        email: p.email || "",
+        degree: p.degree || "",
+        specialization: p.specialization || "",
+        passing_year: p.passing_year != null ? String(p.passing_year) : "",
+        cgpa: p.cgpa != null ? String(p.cgpa) : "",
+        student_identifier: p.student_identifier || "",
+      });
+    } catch {
+      toast.error("Failed to load student for editing");
+      setEditOpen(false);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm.id || !editForm.name.trim() || !editForm.email.trim()) {
+      toast.error("Name and email are required");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      await studentsService.updateStudent(editForm.id, {
+        name: editForm.name.trim(),
+        email: editForm.email.trim(),
+        degree: editForm.degree || null,
+        specialization: editForm.specialization || null,
+        passing_year: editForm.passing_year ? Number(editForm.passing_year) : null,
+        cgpa: editForm.cgpa ? Number(editForm.cgpa) : null,
+        student_identifier: editForm.student_identifier || null,
+      });
+      toast.success("Student updated");
+      setEditOpen(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || e.response?.data?.message || "Failed to update student");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const handleRowResetPassword = async (student: StudentListItem) => {
+    if (!confirm(`Reset password for ${student.name}? They must set a new password on next login.`)) {
+      return;
+    }
+    setActionStudentId(student.id);
+    try {
+      const res = await studentsService.resetPasswords([student.id]);
+      toast.success(res.message || "Password reset");
+    } catch {
+      toast.error("Failed to reset password");
+    } finally {
+      setActionStudentId(null);
+    }
+  };
+
+  const handleRowToggleStatus = async (student: StudentListItem) => {
+    const deactivate = student.is_active || student.status === "active";
+    if (!confirm(`${deactivate ? "Disable" : "Enable"} ${student.name}?`)) return;
+    setActionStudentId(student.id);
+    try {
+      const res = deactivate
+        ? await studentsService.deactivateStudents([student.id])
+        : await studentsService.activateStudents([student.id]);
+      toast.success(res.message || (deactivate ? "Student disabled" : "Student enabled"));
+      load();
+    } catch {
+      toast.error(`Failed to ${deactivate ? "disable" : "enable"} student`);
+    } finally {
+      setActionStudentId(null);
+    }
+  };
+
   const onCsvFile = (file: File | null) => {
     if (!file) return;
     const reader = new FileReader();
@@ -399,6 +516,84 @@ export default function AllStudentsPage() {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {editOpen && (
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Edit Student</h3>
+            <button type="button" onClick={() => setEditOpen(false)} aria-label="Close">
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+          {editLoading ? (
+            <div className="h-24 animate-pulse rounded-lg bg-gray-100" />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  placeholder="Full name *"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <input
+                  placeholder="Email *"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <input
+                  placeholder="Student / Roll ID"
+                  value={editForm.student_identifier}
+                  onChange={(e) => setEditForm({ ...editForm, student_identifier: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <input
+                  placeholder="Degree / Department"
+                  value={editForm.degree}
+                  onChange={(e) => setEditForm({ ...editForm, degree: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <input
+                  placeholder="Specialization"
+                  value={editForm.specialization}
+                  onChange={(e) => setEditForm({ ...editForm, specialization: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <input
+                  placeholder="Passing year"
+                  value={editForm.passing_year}
+                  onChange={(e) => setEditForm({ ...editForm, passing_year: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+                <input
+                  placeholder="CGPA"
+                  value={editForm.cgpa}
+                  onChange={(e) => setEditForm({ ...editForm, cgpa: e.target.value })}
+                  className="border border-gray-200 rounded-lg px-3 py-2"
+                />
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={editSaving}
+                  className="px-4 py-2 bg-navy-900 text-white rounded-lg font-medium disabled:opacity-50"
+                >
+                  {editSaving ? "Saving..." : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -579,17 +774,19 @@ export default function AllStudentsPage() {
               type="button"
               onClick={() => handleBulkStudentStatus("deactivate")}
               disabled={acting}
-              className="px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50"
             >
-              Deactivate
+              <PowerOff className="w-4 h-4" />
+              Disable
             </button>
             <button
               type="button"
               onClick={() => handleBulkStudentStatus("activate")}
               disabled={acting}
-              className="px-3 py-1.5 bg-white border border-green-300 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 disabled:opacity-50"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-green-300 text-green-700 rounded-lg text-sm font-medium hover:bg-green-50 disabled:opacity-50"
             >
-              Activate
+              <Power className="w-4 h-4" />
+              Enable
             </button>
           </div>
         </div>
@@ -639,8 +836,13 @@ export default function AllStudentsPage() {
                   onChange={toggleAll}
                 />
               </th>
-              {["Student Name", "College", "Batch/Department", "Email", "Registered", "Readiness", "Last Active"].map((h) => (
-                <th key={h} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              {["Student Name", "College", "Batch/Department", "Email", "Registered", "Readiness", "Last Active", "Actions"].map((h) => (
+                <th
+                  key={h}
+                  className={`px-6 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 ${
+                    h === "Actions" ? "text-right" : "text-left"
+                  }`}
+                >
                   {h}
                 </th>
               ))}
@@ -650,7 +852,7 @@ export default function AllStudentsPage() {
             {loading ? (
               [1, 2, 3].map((i) => (
                 <tr key={i} className="animate-pulse">
-                  <td className="px-4 py-4" colSpan={8}>
+                  <td className="px-4 py-4" colSpan={9}>
                     <div className="h-4 bg-gray-200 rounded w-1/3" />
                   </td>
                 </tr>
@@ -686,6 +888,59 @@ export default function AllStudentsPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {student.last_login ? new Date(student.last_login).toLocaleString() : "Never"}
+                    </td>
+                    <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          to={`/app/superadmin/students/${student.id}`}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                          title="View"
+                          aria-label="View student"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => openEditStudent(student)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent"
+                          title="Edit"
+                          aria-label="Edit student"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRowResetPassword(student)}
+                          disabled={actionStudentId === student.id}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 text-gray-700 hover:border-admin-accent hover:text-admin-accent disabled:opacity-50"
+                          title="Reset password"
+                          aria-label="Reset password"
+                        >
+                          <Key className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRowToggleStatus(student)}
+                          disabled={actionStudentId === student.id}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-md border disabled:opacity-50 ${
+                            student.is_active || student.status === "active"
+                              ? "border-red-200 text-red-700 hover:bg-red-50"
+                              : "border-green-200 text-green-700 hover:bg-green-50"
+                          }`}
+                          title={student.is_active || student.status === "active" ? "Disable" : "Enable"}
+                          aria-label={
+                            student.is_active || student.status === "active"
+                              ? "Disable student"
+                              : "Enable student"
+                          }
+                        >
+                          {student.is_active || student.status === "active" ? (
+                            <PowerOff className="h-4 w-4" />
+                          ) : (
+                            <Power className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
