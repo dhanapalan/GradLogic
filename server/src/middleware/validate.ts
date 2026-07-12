@@ -4,6 +4,7 @@ import { ApiResponse } from "../types/index.js";
 
 /**
  * Express middleware to validate request body, query, or params against a Zod schema.
+ * Returns 400 with `message` (joined) and `fieldErrors` map for form UIs.
  */
 export const validate = (
   schema: ZodSchema,
@@ -16,11 +17,18 @@ export const validate = (
       next();
     } catch (err) {
       if (err instanceof ZodError) {
-        const messages = err.errors.map((e) => `${e.path.join(".")}: ${e.message}`);
+        const fieldErrors: Record<string, string> = {};
+        const messages: string[] = [];
+        for (const e of err.errors) {
+          const key = e.path.length ? e.path.join(".") : "_form";
+          if (!fieldErrors[key]) fieldErrors[key] = e.message;
+          messages.push(`${key}: ${e.message}`);
+        }
         res.status(400).json({
           success: false,
           error: "Validation failed",
           message: messages.join("; "),
+          fieldErrors,
         });
         return;
       }

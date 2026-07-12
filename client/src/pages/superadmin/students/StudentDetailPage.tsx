@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
+import ConfirmModal from "../../../components/superadmin/ConfirmModal";
 import studentsService, { StudentDetail } from "../../../services/studentsService";
 
 export default function StudentDetailPage() {
@@ -13,6 +14,9 @@ export default function StudentDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -51,6 +55,32 @@ export default function StudentDetailPage() {
 
   const handleSave = async () => {
     if (!id) return;
+    const errors: Record<string, string> = {};
+    if (!form.name.trim()) errors.name = "Name is required";
+    if (!form.email.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      errors.email = "Enter a valid email";
+    }
+    if (form.passing_year.trim()) {
+      const year = Number(form.passing_year);
+      const maxYear = new Date().getFullYear() + 20;
+      if (!Number.isInteger(year) || Number.isNaN(year)) {
+        errors.passing_year = "Passing year must be a whole number";
+      } else if (year < 1900 || year > maxYear) {
+        errors.passing_year = `Enter a valid passing year (1900–${maxYear})`;
+      }
+    }
+    if (form.cgpa.trim()) {
+      const gpa = Number(form.cgpa);
+      if (Number.isNaN(gpa)) errors.cgpa = "CGPA must be a number";
+      else if (gpa < 0 || gpa > 10) errors.cgpa = "CGPA must be between 0 and 10";
+    }
+    setFieldErrors(errors);
+    if (Object.keys(errors).length) {
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+
     setSaving(true);
     try {
       await studentsService.updateStudent(id, {
@@ -63,23 +93,34 @@ export default function StudentDetailPage() {
         student_identifier: form.student_identifier || null,
       });
       toast.success("Student updated");
+      setFieldErrors({});
       setEditing(false);
       load();
-    } catch {
-      toast.error("Failed to update student");
+    } catch (e: any) {
+      const apiFields = e.response?.data?.fieldErrors as Record<string, string> | undefined;
+      if (apiFields && Object.keys(apiFields).length) {
+        setFieldErrors(apiFields);
+        toast.error(e.response?.data?.message || "Please fix the highlighted fields");
+      } else {
+        toast.error(e.response?.data?.error || e.response?.data?.message || "Failed to update student");
+      }
     } finally {
       setSaving(false);
     }
   };
 
   const handleSoftDelete = async () => {
-    if (!id || !confirm("Soft-delete this student?")) return;
+    if (!id) return;
+    setDeleting(true);
     try {
       await studentsService.softDeleteStudent(id);
       toast.success("Student soft-deleted");
+      setDeleteOpen(false);
       navigate("/app/superadmin/students");
     } catch {
       toast.error("Failed to delete student");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -134,7 +175,7 @@ export default function StudentDetailPage() {
             {editing ? "Cancel edit" : "Edit"}
           </button>
           <button
-            onClick={handleSoftDelete}
+            onClick={() => setDeleteOpen(true)}
             className="px-3 py-1.5 text-sm font-medium border border-red-300 text-red-700 rounded-lg hover:bg-red-50"
           >
             Delete
@@ -161,9 +202,17 @@ export default function StudentDetailPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
                 <input
                   value={form[key]}
-                  onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  onChange={(e) => {
+                    setForm({ ...form, [key]: e.target.value });
+                    setFieldErrors((prev) => ({ ...prev, [key]: "" }));
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg ${
+                    fieldErrors[key] ? "border-red-400" : "border-gray-300"
+                  }`}
                 />
+                {fieldErrors[key] && (
+                  <p className="mt-1 text-xs text-red-600">{fieldErrors[key]}</p>
+                )}
               </div>
             ))}
           </div>
@@ -260,6 +309,19 @@ export default function StudentDetailPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={deleteOpen}
+        title="Delete student"
+        message={`Soft-delete ${detail.profile.name}? They will be deactivated and hidden from active lists.`}
+        confirmLabel="Delete"
+        tone="danger"
+        busy={deleting}
+        onConfirm={handleSoftDelete}
+        onCancel={() => {
+          if (!deleting) setDeleteOpen(false);
+        }}
+      />
     </div>
   );
 }

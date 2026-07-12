@@ -575,13 +575,46 @@ export const updateStudent = async (
 
       await client.query("COMMIT");
       res.json({ success: true, message: "Student updated successfully" });
-    } catch (e) {
+    } catch (e: unknown) {
       await client.query("ROLLBACK");
+      const pg = e as { code?: string; constraint?: string; detail?: string };
+      if (pg.code === "23514") {
+        // CHECK constraint (passing_year / cgpa) — should be rare after Zod
+        const fieldErrors: Record<string, string> = {};
+        if (pg.constraint?.includes("passing_year")) {
+          fieldErrors.passing_year = "Enter a valid passing year";
+        } else if (pg.constraint?.includes("cgpa")) {
+          fieldErrors.cgpa = "CGPA must be between 0 and 10";
+        }
+        throw new AppError(
+          Object.values(fieldErrors)[0] || "Invalid student field value",
+          400,
+          true
+        );
+      }
+      if (pg.code === "23505") {
+        throw new AppError("Email already in use", 409);
+      }
       throw e;
     } finally {
       client.release();
     }
   } catch (error) {
+    // Attach fieldErrors when AppError was built from CHECK — wrap via response
+    if (error instanceof AppError && error.statusCode === 400) {
+      const msg = error.message;
+      const fieldErrors: Record<string, string> = {};
+      if (msg.toLowerCase().includes("passing year")) fieldErrors.passing_year = msg;
+      if (msg.toLowerCase().includes("cgpa")) fieldErrors.cgpa = msg;
+      if (Object.keys(fieldErrors).length) {
+        return res.status(400).json({
+          success: false,
+          error: "Validation failed",
+          message: msg,
+          fieldErrors,
+        });
+      }
+    }
     next(error);
   }
 };

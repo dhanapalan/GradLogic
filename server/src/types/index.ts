@@ -241,6 +241,8 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
   message?: string;
+  /** Per-field validation messages, e.g. { passing_year: "..." } */
+  fieldErrors?: Record<string, string>;
   errors?: Array<{ index: number; error: string }>;
   meta?: {
     page: number;

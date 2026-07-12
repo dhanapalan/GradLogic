@@ -41,7 +41,7 @@ BEGIN
   ) THEN
     ALTER TABLE student_details
       ADD CONSTRAINT chk_student_details_passing_year
-      CHECK (passing_year IS NULL OR (passing_year BETWEEN 2000 AND 2100));
+      CHECK (passing_year IS NULL OR (passing_year >= 1900 AND passing_year <= 2200));
   END IF;
 END $$;
 

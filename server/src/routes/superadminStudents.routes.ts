@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middleware/auth.js";
 import { requirePermission } from "../middleware/rbac.js";
+import { validate } from "../middleware/validate.js";
+import { createStudentSchema, updateStudentSchema } from "../validators/student.schemas.js";
 import * as superadminStudentsController from "../controllers/superadminStudents.controller.js";
 
 const router = Router();
@@ -18,6 +20,7 @@ router.post(
   authenticate,
   authorize("super_admin"),
   requirePermission("students_manage"),
+  validate(createStudentSchema),
   superadminStudentsController.createStudent
 );
 
@@ -50,6 +53,7 @@ router.put(
   authenticate,
   authorize("super_admin"),
   requirePermission("students_manage"),
+  validate(updateStudentSchema),
   superadminStudentsController.updateStudent
 );
 

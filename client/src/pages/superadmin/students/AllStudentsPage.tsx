@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
+import ConfirmModal from "../../../components/superadmin/ConfirmModal";
 import studentsService, { StudentListItem } from "../../../services/studentsService";
 import collegeService, { College } from "../../../services/collegeService";
 
@@ -99,7 +100,16 @@ export default function AllStudentsPage() {
     cgpa: "",
     student_identifier: "",
   });
+  const [editFieldErrors, setEditFieldErrors] = useState<Record<string, string>>({});
   const editRequestId = useRef(0);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    tone: "default" | "danger";
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const [search, setSearch] = useState("");
   const [collegeId, setCollegeId] = useState("");
@@ -192,38 +202,61 @@ export default function AllStudentsPage() {
     }
   };
 
-  const handleResetPasswords = async () => {
-    if (!confirm(`Reset passwords for ${selected.size} student(s)? They will be required to set a new password on next login.`)) {
-      return;
-    }
-    setActing(true);
+  const runConfirm = async () => {
+    if (!confirmDialog) return;
+    setConfirmBusy(true);
     try {
-      const res = await studentsService.resetPasswords(Array.from(selected));
-      toast.success(res.message);
-      setSelected(new Set());
-    } catch {
-      toast.error("Failed to reset passwords");
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
     } finally {
-      setActing(false);
+      setConfirmBusy(false);
     }
   };
 
-  const handleBulkStudentStatus = async (action: "deactivate" | "activate") => {
-    if (!confirm(`${action === "deactivate" ? "Soft-delete" : "Activate"} ${selected.size} student(s)?`)) return;
-    setActing(true);
-    try {
-      const res =
-        action === "deactivate"
-          ? await studentsService.deactivateStudents(Array.from(selected))
-          : await studentsService.activateStudents(Array.from(selected));
-      toast.success(res.message);
-      setSelected(new Set());
-      load();
-    } catch {
-      toast.error(`Failed to ${action} students`);
-    } finally {
-      setActing(false);
-    }
+  const handleResetPasswords = () => {
+    setConfirmDialog({
+      title: "Reset passwords",
+      message: `Reset passwords for ${selected.size} selected student(s)? They will be required to set a new password on next login.`,
+      confirmLabel: "Reset passwords",
+      tone: "default",
+      onConfirm: async () => {
+        setActing(true);
+        try {
+          const res = await studentsService.resetPasswords(Array.from(selected));
+          toast.success(res.message);
+          setSelected(new Set());
+        } catch {
+          toast.error("Failed to reset passwords");
+        } finally {
+          setActing(false);
+        }
+      },
+    });
+  };
+
+  const handleBulkStudentStatus = (action: "deactivate" | "activate") => {
+    const disable = action === "deactivate";
+    setConfirmDialog({
+      title: disable ? "Disable students" : "Enable students",
+      message: `${disable ? "Disable" : "Enable"} ${selected.size} selected student(s)?`,
+      confirmLabel: disable ? "Disable" : "Enable",
+      tone: disable ? "danger" : "default",
+      onConfirm: async () => {
+        setActing(true);
+        try {
+          const res = disable
+            ? await studentsService.deactivateStudents(Array.from(selected))
+            : await studentsService.activateStudents(Array.from(selected));
+          toast.success(res.message);
+          setSelected(new Set());
+          load();
+        } catch {
+          toast.error(`Failed to ${disable ? "disable" : "enable"} students`);
+        } finally {
+          setActing(false);
+        }
+      },
+    });
   };
 
   const handleCreateStudent = async () => {
@@ -300,6 +333,7 @@ export default function AllStudentsPage() {
     const requestId = ++editRequestId.current;
     setEditOpen(true);
     setEditLoading(true);
+    setEditFieldErrors({});
     setEditForm({
       id: student.id,
       name: student.name,
@@ -333,11 +367,42 @@ export default function AllStudentsPage() {
     }
   };
 
+  const validateEditForm = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    if (!editForm.name.trim()) errors.name = "Name is required";
+    if (!editForm.email.trim()) errors.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email.trim())) {
+      errors.email = "Enter a valid email";
+    }
+    if (editForm.passing_year.trim()) {
+      const year = Number(editForm.passing_year);
+      const maxYear = new Date().getFullYear() + 20;
+      if (!Number.isInteger(year) || Number.isNaN(year)) {
+        errors.passing_year = "Passing year must be a whole number";
+      } else if (year < 1900 || year > maxYear) {
+        errors.passing_year = `Enter a valid passing year (1900–${maxYear})`;
+      }
+    }
+    if (editForm.cgpa.trim()) {
+      const gpa = Number(editForm.cgpa);
+      if (Number.isNaN(gpa)) {
+        errors.cgpa = "CGPA must be a number";
+      } else if (gpa < 0 || gpa > 10) {
+        errors.cgpa = "CGPA must be between 0 and 10";
+      }
+    }
+    return errors;
+  };
+
   const handleSaveEdit = async () => {
-    if (!editForm.id || !editForm.name.trim() || !editForm.email.trim()) {
-      toast.error("Name and email are required");
+    const localErrors = validateEditForm();
+    setEditFieldErrors(localErrors);
+    if (Object.keys(localErrors).length > 0) {
+      toast.error("Please fix the highlighted fields");
       return;
     }
+    if (!editForm.id) return;
+
     const savingId = editForm.id;
     const requestIdAtSave = editRequestId.current;
     setEditSaving(true);
@@ -352,48 +417,66 @@ export default function AllStudentsPage() {
         student_identifier: editForm.student_identifier || null,
       });
       toast.success("Student updated");
-      // Don't close if the admin already opened another student's edit panel
+      setEditFieldErrors({});
       if (editRequestId.current === requestIdAtSave) {
         setEditOpen(false);
       }
       load();
     } catch (e: any) {
-      toast.error(e.response?.data?.error || e.response?.data?.message || "Failed to update student");
+      const fieldErrors = e.response?.data?.fieldErrors as Record<string, string> | undefined;
+      if (fieldErrors && Object.keys(fieldErrors).length) {
+        setEditFieldErrors(fieldErrors);
+        toast.error(e.response?.data?.message || "Please fix the highlighted fields");
+      } else {
+        toast.error(e.response?.data?.error || e.response?.data?.message || "Failed to update student");
+      }
     } finally {
       setEditSaving(false);
     }
   };
 
-  const handleRowResetPassword = async (student: StudentListItem) => {
-    if (!confirm(`Reset password for ${student.name}? They must set a new password on next login.`)) {
-      return;
-    }
-    setActionStudentId(student.id);
-    try {
-      const res = await studentsService.resetPasswords([student.id]);
-      toast.success(res.message || "Password reset");
-    } catch {
-      toast.error("Failed to reset password");
-    } finally {
-      setActionStudentId(null);
-    }
+  const handleRowResetPassword = (student: StudentListItem) => {
+    setConfirmDialog({
+      title: "Reset password",
+      message: `Reset password for ${student.name}? They must set a new password on next login.`,
+      confirmLabel: "Reset password",
+      tone: "default",
+      onConfirm: async () => {
+        setActionStudentId(student.id);
+        try {
+          const res = await studentsService.resetPasswords([student.id]);
+          toast.success(res.message || "Password reset");
+        } catch {
+          toast.error("Failed to reset password");
+        } finally {
+          setActionStudentId(null);
+        }
+      },
+    });
   };
 
-  const handleRowToggleStatus = async (student: StudentListItem) => {
+  const handleRowToggleStatus = (student: StudentListItem) => {
     const deactivate = student.is_active || student.status === "active";
-    if (!confirm(`${deactivate ? "Disable" : "Enable"} ${student.name}?`)) return;
-    setActionStudentId(student.id);
-    try {
-      const res = deactivate
-        ? await studentsService.deactivateStudents([student.id])
-        : await studentsService.activateStudents([student.id]);
-      toast.success(res.message || (deactivate ? "Student disabled" : "Student enabled"));
-      load();
-    } catch {
-      toast.error(`Failed to ${deactivate ? "disable" : "enable"} student`);
-    } finally {
-      setActionStudentId(null);
-    }
+    setConfirmDialog({
+      title: deactivate ? "Disable student" : "Enable student",
+      message: `${deactivate ? "Disable" : "Enable"} ${student.name}?`,
+      confirmLabel: deactivate ? "Disable" : "Enable",
+      tone: deactivate ? "danger" : "default",
+      onConfirm: async () => {
+        setActionStudentId(student.id);
+        try {
+          const res = deactivate
+            ? await studentsService.deactivateStudents([student.id])
+            : await studentsService.activateStudents([student.id]);
+          toast.success(res.message || (deactivate ? "Student disabled" : "Student enabled"));
+          load();
+        } catch {
+          toast.error(`Failed to ${deactivate ? "disable" : "enable"} student`);
+        } finally {
+          setActionStudentId(null);
+        }
+      },
+    });
   };
 
   const onCsvFile = (file: File | null) => {
@@ -548,55 +631,101 @@ export default function AllStudentsPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  aria-label="Full name"
-                  placeholder="Full name *"
-                  value={editForm.name}
-                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <input
-                  aria-label="Email"
-                  placeholder="Email *"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <input
-                  aria-label="Student or roll ID"
-                  placeholder="Student / Roll ID"
-                  value={editForm.student_identifier}
-                  onChange={(e) => setEditForm({ ...editForm, student_identifier: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <input
-                  aria-label="Degree or department"
-                  placeholder="Degree / Department"
-                  value={editForm.degree}
-                  onChange={(e) => setEditForm({ ...editForm, degree: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <input
-                  aria-label="Specialization"
-                  placeholder="Specialization"
-                  value={editForm.specialization}
-                  onChange={(e) => setEditForm({ ...editForm, specialization: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <input
-                  aria-label="Passing year"
-                  placeholder="Passing year"
-                  value={editForm.passing_year}
-                  onChange={(e) => setEditForm({ ...editForm, passing_year: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
-                <input
-                  aria-label="CGPA"
-                  placeholder="CGPA"
-                  value={editForm.cgpa}
-                  onChange={(e) => setEditForm({ ...editForm, cgpa: e.target.value })}
-                  className="border border-gray-200 rounded-lg px-3 py-2"
-                />
+                <div>
+                  <input
+                    aria-label="Full name"
+                    placeholder="Full name *"
+                    value={editForm.name}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, name: e.target.value });
+                      setEditFieldErrors((prev) => ({ ...prev, name: "" }));
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      editFieldErrors.name ? "border-red-400" : "border-gray-200"
+                    }`}
+                  />
+                  {editFieldErrors.name && (
+                    <p className="mt-1 text-xs text-red-600">{editFieldErrors.name}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    aria-label="Email"
+                    placeholder="Email *"
+                    value={editForm.email}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, email: e.target.value });
+                      setEditFieldErrors((prev) => ({ ...prev, email: "" }));
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      editFieldErrors.email ? "border-red-400" : "border-gray-200"
+                    }`}
+                  />
+                  {editFieldErrors.email && (
+                    <p className="mt-1 text-xs text-red-600">{editFieldErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    aria-label="Student or roll ID"
+                    placeholder="Student / Roll ID"
+                    value={editForm.student_identifier}
+                    onChange={(e) => setEditForm({ ...editForm, student_identifier: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <input
+                    aria-label="Degree or department"
+                    placeholder="Degree / Department"
+                    value={editForm.degree}
+                    onChange={(e) => setEditForm({ ...editForm, degree: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <input
+                    aria-label="Specialization"
+                    placeholder="Specialization"
+                    value={editForm.specialization}
+                    onChange={(e) => setEditForm({ ...editForm, specialization: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <input
+                    aria-label="Passing year"
+                    placeholder="Passing year"
+                    value={editForm.passing_year}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, passing_year: e.target.value });
+                      setEditFieldErrors((prev) => ({ ...prev, passing_year: "" }));
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      editFieldErrors.passing_year ? "border-red-400" : "border-gray-200"
+                    }`}
+                  />
+                  {editFieldErrors.passing_year && (
+                    <p className="mt-1 text-xs text-red-600">{editFieldErrors.passing_year}</p>
+                  )}
+                </div>
+                <div>
+                  <input
+                    aria-label="CGPA"
+                    placeholder="CGPA (0–10)"
+                    value={editForm.cgpa}
+                    onChange={(e) => {
+                      setEditForm({ ...editForm, cgpa: e.target.value });
+                      setEditFieldErrors((prev) => ({ ...prev, cgpa: "" }));
+                    }}
+                    className={`w-full border rounded-lg px-3 py-2 ${
+                      editFieldErrors.cgpa ? "border-red-400" : "border-gray-200"
+                    }`}
+                  />
+                  {editFieldErrors.cgpa && (
+                    <p className="mt-1 text-xs text-red-600">{editFieldErrors.cgpa}</p>
+                  )}
+                </div>
               </div>
               <div className="mt-3 flex gap-2">
                 <button
@@ -978,6 +1107,19 @@ export default function AllStudentsPage() {
           <p className="text-gray-500">No students match your filters</p>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmDialog}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmLabel={confirmDialog?.confirmLabel}
+        tone={confirmDialog?.tone}
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onCancel={() => {
+          if (!confirmBusy) setConfirmDialog(null);
+        }}
+      />
     </div>
   );
 }
