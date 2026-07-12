@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Search, Bell, Key, Upload, UserPlus, X } from "lucide-react";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
@@ -44,6 +44,7 @@ function parseStudentCsv(text: string) {
 
 export default function AllStudentsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
   const [total, setTotal] = useState(0);
@@ -79,6 +80,23 @@ export default function AllStudentsPage() {
   const [batch, setBatch] = useState("");
   const [performance, setPerformance] = useState("");
   const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    const selectedCollegeId = searchParams.get("collegeId") || "";
+    if (selectedCollegeId) {
+      setCollegeId(selectedCollegeId);
+    }
+
+    if (searchParams.get("action") === "add" && selectedCollegeId) {
+      setCreateOpen(true);
+      setImportOpen(false);
+      setCreateForm((prev) => ({ ...prev, college_id: selectedCollegeId }));
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("action");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     collegeService

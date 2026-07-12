@@ -185,10 +185,9 @@ class CollegeService {
   /**
    * Deactivate college (status → suspended)
    */
-  async deactivateCollege(id: string): Promise<{ success: boolean; message: string }> {
+  async deactivateCollege(id: string): Promise<College> {
     try {
-      const response = await api.delete(`/superadmin/colleges/${id}`);
-      return response.data;
+      return this.updateCollege(id, { status: "suspended" } as Partial<CreateCollegeInput & { status: string }>);
     } catch (error) {
       console.error(`Failed to deactivate college ${id}:`, error);
       throw error;

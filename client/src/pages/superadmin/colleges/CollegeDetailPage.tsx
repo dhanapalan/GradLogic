@@ -39,6 +39,9 @@ export default function CollegeDetailPage() {
       .getCollege(id)
       .then((c) => {
         setCollege(c);
+        if (searchParams.get("edit") === "1") {
+          setEditing(true);
+        }
         setForm({
           name: c.name || "",
           email: c.email || "",
@@ -50,7 +53,7 @@ export default function CollegeDetailPage() {
       })
       .catch(() => setCollege(null))
       .finally(() => setLoadingCollege(false));
-  }, [id]);
+  }, [id, searchParams]);
 
   useEffect(() => {
     if (!id) return;
