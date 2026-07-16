@@ -21,6 +21,7 @@ import { ensureBucket } from "./config/storage.js";
 import { initSocketIO } from "./config/socket.js";
 import { ensureAuditTable } from "./services/audit.service.js";
 import { ensureNotificationTable } from "./services/notification.service.js";
+import { ensureUserRoleEnum } from "./utils/ensureUserRoleEnum.js";
 import { startDriveScheduler, stopDriveScheduler } from "./scheduler/driveScheduler.js";
 import { startExamTimerWorker, stopExamTimerWorker } from "./workers/examTimer.worker.js";
 
@@ -34,6 +35,7 @@ async function bootstrap() {
   await connectDatabase();
   await ensureAuditTable();
   await ensureNotificationTable();
+  await ensureUserRoleEnum();
   await connectRedis();
   logger.info("✓ Database + Redis connected");
 

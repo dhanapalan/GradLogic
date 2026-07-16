@@ -98,7 +98,7 @@ export function IntegrationsPage() {
   useEffect(() => {
     Promise.all([
       settingsService.getSettings().catch(() => ({})),
-      api.get("/superadmin/ai-config").then((r) => r.data?.data?.services || r.data?.services || []).catch(() => []),
+      api.get("/superadmin/ai-services").then((r) => r.data?.data || r.data?.services || []).catch(() => []),
     ])
       .then(([s, services]) => {
         setForm({
