@@ -14,6 +14,7 @@ import cors from "cors";
 import express from "express";
 import { AppModule } from "./nest/app.module.js";
 import { env } from "./config/env.js";
+import { corsOriginDelegate } from "./config/corsOrigins.js";
 import { logger } from "./config/logger.js";
 import { connectDatabase } from "./config/database.js";
 import { connectRedis } from "./config/redis.js";
@@ -49,18 +50,19 @@ async function bootstrap() {
   });
 
   // 4. Security middleware (same as old app.ts)
-  app.use(helmet());
+  // cross-origin: SPA on gradlogic.* calls API on api.gradlogic.* (Socket.IO + XHR)
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    })
+  );
   app.use(
     cors({
-      origin: (origin, callback) => {
-        if (!origin || env.CLIENT_URLS.includes(origin)) {
-          callback(null, true);
-          return;
-        }
-        callback(null, false);
-      },
+      origin: corsOriginDelegate,
       credentials: true,
-      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
     }),
   );
 

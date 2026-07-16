@@ -1,6 +1,6 @@
 import { Server as HTTPServer } from "http";
 import { Server, Socket } from "socket.io";
-import { env } from "./env.js";
+import { allowedCorsOrigins, isAllowedCorsOrigin } from "./corsOrigins.js";
 import { logger } from "./logger.js";
 
 let io: Server;
@@ -8,9 +8,14 @@ let io: Server;
 export const initSocketIO = (server: HTTPServer): Server => {
   io = new Server(server, {
     cors: {
-      origin: env.CLIENT_URLS,
+      origin: allowedCorsOrigins(),
       methods: ["GET", "POST"],
       credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"],
+    },
+    allowRequest: (req, callback) => {
+      const origin = req.headers.origin;
+      callback(null, isAllowedCorsOrigin(typeof origin === "string" ? origin : undefined));
     },
     pingInterval: 10000,
     pingTimeout: 5000,
