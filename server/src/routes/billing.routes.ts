@@ -5,6 +5,7 @@ import { z } from "zod";
 import { query, queryOne } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { v4 as uuidv4 } from "uuid";
+import * as mockPaymentGateway from "../services/mockPaymentGateway.service.js";
 
 const router = Router();
 
@@ -636,7 +637,10 @@ router.get(
 
 /**
  * POST /api/billing/student-fees/:id/pay
- * Record a payment against a student fee (offline collection: cash/UPI/etc.).
+ * Record an OFFLINE payment against a student fee (cash/UPI/card/bank
+ * transfer collected in person by the college). Kept as a fallback path —
+ * the primary path going forward is the student paying directly online via
+ * /student-fees/:id/create-order + /verify-payment below.
  */
 router.post(
   "/student-fees/:id/pay",
@@ -681,8 +685,9 @@ router.post(
 /**
  * GET /api/billing/my-fees
  * Self-service: the logged-in student's own fee records across all academic
- * years, plus a small summary. Read-only — fees are collected offline and
- * recorded by the college placement office.
+ * years, plus a small summary. Pending fees can be paid directly via
+ * /student-fees/:id/create-order + /verify-payment below (mock gateway for
+ * now); colleges can also still record an offline payment as a fallback.
  */
 router.get(
   "/my-fees",
@@ -719,6 +724,99 @@ router.get(
           history: rows,
         },
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── Direct Student Payment (MOCK gateway) ────────────────────────────────────
+// Mirrors a Razorpay-style order-create → checkout → verify flow so the real
+// gateway can be dropped in later without changing the route shape or the
+// frontend call sites. See services/mockPaymentGateway.service.ts for the
+// TODOs to address before this goes to production with real money.
+
+/**
+ * POST /api/billing/student-fees/:id/create-order
+ * Student-initiated: create a (mock) payment order for one of the caller's
+ * own pending fee records. Returns an order the client would normally hand
+ * to a checkout widget; here it's just echoed back for the mock flow.
+ */
+router.post(
+  "/student-fees/:id/create-order",
+  authenticate,
+  authorize("student"),
+  async (req, res, next) => {
+    try {
+      const studentId = (req as any).user?.userId;
+      if (!studentId) return res.status(403).json({ success: false, error: "No student context" });
+
+      const fee = await queryOne<{ id: string; amount: string; status: string }>(
+        `SELECT id, amount, status FROM student_payments WHERE id = $1 AND student_id = $2`,
+        [req.params.id, studentId]
+      );
+
+      if (!fee) return res.status(404).json({ success: false, error: "Fee record not found" });
+      if (fee.status !== "pending") {
+        return res.status(400).json({ success: false, error: `Fee is already ${fee.status}` });
+      }
+
+      const order = mockPaymentGateway.createOrder({
+        amount: Number(fee.amount),
+        receipt: fee.id,
+      });
+
+      res.json({ success: true, data: order });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /api/billing/student-fees/:id/verify-payment
+ * Student-initiated: confirm a (mock) payment and mark the fee paid. A real
+ * integration would verify a signature/webhook here instead of trusting the
+ * client-supplied payment_id.
+ */
+router.post(
+  "/student-fees/:id/verify-payment",
+  authenticate,
+  authorize("student"),
+  validate(
+    z.object({
+      order_id: z.string().min(1),
+      payment_id: z.string().min(1),
+      signature: z.string().optional(),
+    })
+  ),
+  async (req, res, next) => {
+    try {
+      const studentId = (req as any).user?.userId;
+      if (!studentId) return res.status(403).json({ success: false, error: "No student context" });
+      const { order_id, payment_id, signature } = req.body as {
+        order_id: string; payment_id: string; signature?: string;
+      };
+
+      const result = mockPaymentGateway.verifyPayment({ order_id, payment_id, signature });
+      if (!result.verified) {
+        throw new AppError("Payment verification failed", 402);
+      }
+
+      const updated = await queryOne(
+        `UPDATE student_payments
+         SET status = 'paid', paid_at = NOW(), payment_method = 'online',
+             payment_ref = $1, updated_at = NOW()
+         WHERE id = $2 AND student_id = $3 AND status = 'pending'
+         RETURNING id, student_id, amount, status, paid_at, payment_method, payment_ref`,
+        [payment_id, req.params.id, studentId]
+      );
+
+      if (!updated) {
+        return res.status(404).json({ success: false, error: "Fee record not found or already settled" });
+      }
+
+      res.json({ success: true, data: updated, message: "Payment successful" });
     } catch (err) {
       next(err);
     }

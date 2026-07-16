@@ -11,8 +11,11 @@ import { Printer, ArrowLeft, Award, CheckCircle2, Loader2 } from "lucide-react";
 interface Certificate {
   id: string;
   student_name: string;
-  course_title: string;
+  course_title?: string;
+  path_title?: string;
+  drive_name?: string;
   title: string;
+  cert_type?: string;
   category: string | null;
   difficulty: string | null;
   issued_at: string;
@@ -47,7 +50,7 @@ export default function CertificatePage() {
     </div>
   );
 
-  const displayTitle = data.course_title || data.title;
+  const displayTitle = data.course_title || data.path_title || data.drive_name || data.title;
 
   return (
     <div className="min-h-screen bg-slate-100 p-4 md:p-8 print:bg-white print:p-0">

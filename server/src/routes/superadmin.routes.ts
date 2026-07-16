@@ -10,6 +10,7 @@ import questionBankRoutes from "./questionBank.routes.js";
 import superadminStudentsRoutes from "./superadminStudents.routes.js";
 import platformModulesRoutes from "./platformModules.routes.js";
 import * as modulesController from "../controllers/platformModules.controller.js";
+import * as aiServiceConfigController from "../controllers/aiServiceConfig.controller.js";
 
 const router = Router();
 
@@ -97,14 +98,54 @@ router.get(
 );
 
 // ────────────────────────────────────────────────────────────────────
-// AI SERVICES REGISTRY (key status)
+// AI SERVICES REGISTRY (CRUD + encrypted keys)
 // ────────────────────────────────────────────────────────────────────
+router.get(
+  "/ai-services/providers",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_view"),
+  aiServiceConfigController.listProviders
+);
+
 router.get(
   "/ai-services",
   authenticate,
   authorize("super_admin"),
   requirePermission("settings_view"),
-  superadminController.getAIServices
+  aiServiceConfigController.list
+);
+
+router.post(
+  "/ai-services",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_manage"),
+  aiServiceConfigController.create
+);
+
+router.get(
+  "/ai-services/:key",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_view"),
+  aiServiceConfigController.getOne
+);
+
+router.put(
+  "/ai-services/:key",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_manage"),
+  aiServiceConfigController.update
+);
+
+router.delete(
+  "/ai-services/:key",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_manage"),
+  aiServiceConfigController.remove
 );
 
 router.post(
@@ -112,7 +153,32 @@ router.post(
   authenticate,
   authorize("super_admin"),
   requirePermission("settings_manage"),
-  superadminController.testAIService
+  aiServiceConfigController.test
+);
+
+router.post(
+  "/ai-services/:key/key",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_manage"),
+  aiServiceConfigController.setKey
+);
+
+/** @deprecated Prefer POST /ai-services/:key/key — kept for older clients */
+router.post(
+  "/ai-services/:key/set-key",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_manage"),
+  aiServiceConfigController.setKey
+);
+
+router.delete(
+  "/ai-services/:key/key",
+  authenticate,
+  authorize("super_admin"),
+  requirePermission("settings_manage"),
+  aiServiceConfigController.revokeKey
 );
 
 // ────────────────────────────────────────────────────────────────────

@@ -55,19 +55,28 @@ export default function QuestionBankPage() {
             <BookOpen className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">Question Bank</h1>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Practice Hub</p>
+            <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">Question Library</h1>
             <p className="text-xs text-slate-400 font-medium mt-0.5">
               {topics.length} topics · {totalQuestions} questions — pick a topic to practise
             </p>
           </div>
         </div>
-        <Link
-          to="/app/student-portal/practice"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-bold text-white transition-all active:scale-95 shadow-sm"
-        >
-          <Play className="h-4 w-4" />
-          <span className="hidden sm:inline">Quick Practice</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/app/student-portal/practice"
+            className="hidden items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50 sm:inline-flex"
+          >
+            ← Practice Hub
+          </Link>
+          <Link
+            to="/app/student-portal/practice"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-bold text-white transition-all active:scale-95 shadow-sm"
+          >
+            <Play className="h-4 w-4" />
+            <span className="hidden sm:inline">Quick Practice</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search */}

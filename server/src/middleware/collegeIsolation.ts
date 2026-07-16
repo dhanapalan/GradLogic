@@ -7,6 +7,7 @@ const COLLEGE_SCOPED_ROLES = new Set([
   "college",
   "college_staff",
   "tpo",
+  "placement_cell",
 ]);
 
 export function isCollegeScopedRole(role?: string): boolean {

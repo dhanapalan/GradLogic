@@ -50,10 +50,19 @@ router.get("/courses", authorize(...READ_ROLES), async (req, res, next) => {
     const { category, difficulty, search, status } = req.query as Record<string, string>;
     const user = req.user!;
 
-    let statusFilter = "c.status = 'published'";
+    // Every branch must reference $1 in the built SQL text, even when logically
+    // a no-op — otherwise Postgres can't infer its type ("could not determine
+    // data type of parameter $1") since the bound param is passed regardless.
+    let statusFilter = "($1::text IS NULL OR TRUE) AND c.status = 'published'";
     if (["super_admin", "hr", "instructor"].includes(user.role)) {
-      statusFilter = status ? `c.status = $1` : "TRUE";
+      statusFilter = status ? `c.status = $1` : "$1::text IS NULL";
     }
+
+    // College-scoped roles only see courses with no assignment restriction
+    // (available to everyone) or an explicit assignment to their own college.
+    const callerCollegeId = ["student", "college_admin", "college", "college_staff"].includes(user.role)
+      ? await resolveCallerCollegeId(req)
+      : null;
 
     const rows = await query(`
       SELECT c.*,
@@ -67,13 +76,20 @@ router.get("/courses", authorize(...READ_ROLES), async (req, res, next) => {
         AND ($2::text IS NULL OR c.category = $2)
         AND ($3::text IS NULL OR c.difficulty = $3)
         AND ($4::text IS NULL OR c.title ILIKE '%' || $4 || '%')
-        ${user.role === "instructor" ? "AND c.created_by = '" + user.userId + "'" : ""}
+        AND ($5::uuid IS NULL OR c.created_by = $5)
+        AND (
+          $6::uuid IS NULL
+          OR NOT EXISTS (SELECT 1 FROM course_college_assignments cca WHERE cca.course_id = c.id)
+          OR EXISTS (SELECT 1 FROM course_college_assignments cca WHERE cca.course_id = c.id AND cca.college_id = $6)
+        )
       ORDER BY c.created_at DESC
     `, [
       status || null,
       category || null,
       difficulty || null,
       search || null,
+      user.role === "instructor" ? user.userId : null,
+      callerCollegeId,
     ]);
 
     res.json({ success: true, data: rows });
@@ -119,16 +135,19 @@ router.post("/courses", authorize(...CONTENT_ROLES), async (req, res, next) => {
       title, description, category, difficulty,
       duration_hours, thumbnail_url, intro_video_url,
       is_free, tags, college_id,
+      language, subject, estimated_minutes,
     } = req.body;
 
     const course = await queryOne(`
       INSERT INTO courses (title, description, category, difficulty, duration_hours,
-        thumbnail_url, intro_video_url, is_free, tags, college_id, created_by, status)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft')
+        thumbnail_url, intro_video_url, is_free, tags, college_id, created_by, status,
+        language, subject, estimated_minutes)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'draft',$12,$13,$14)
       RETURNING *
     `, [title, description, category, difficulty || "beginner", duration_hours || null,
         thumbnail_url || null, intro_video_url || null, is_free ?? true,
-        tags || [], college_id || null, req.user!.userId]);
+        tags || [], college_id || null, req.user!.userId,
+        language || "en", subject || null, estimated_minutes ?? null]);
 
     res.status(201).json({ success: true, data: course });
   } catch (err) { next(err); }
@@ -143,6 +162,7 @@ router.put("/courses/:id", authorize(...CONTENT_ROLES), async (req, res, next) =
     const {
       title, description, category, difficulty, duration_hours,
       thumbnail_url, intro_video_url, is_free, tags, status,
+      language, subject, estimated_minutes,
     } = req.body;
 
     const course = await queryOne(`
@@ -157,11 +177,15 @@ router.put("/courses/:id", authorize(...CONTENT_ROLES), async (req, res, next) =
         is_free = COALESCE($8, is_free),
         tags = COALESCE($9, tags),
         status = COALESCE($10, status),
+        language = COALESCE($11, language),
+        subject = COALESCE($12, subject),
+        estimated_minutes = COALESCE($13, estimated_minutes),
         updated_at = NOW()
-      WHERE id = $11
+      WHERE id = $14
       RETURNING *
     `, [title, description, category, difficulty, duration_hours,
-        thumbnail_url, intro_video_url, is_free, tags, status, req.params.id]);
+        thumbnail_url, intro_video_url, is_free, tags, status,
+        language, subject, estimated_minutes, req.params.id]);
 
     if (!course) return res.status(404).json({ success: false, error: "Course not found" });
     res.json({ success: true, data: course });
@@ -175,6 +199,94 @@ router.delete("/courses/:id", authorize("super_admin", "hr"), async (req, res, n
   try {
     await query("UPDATE courses SET status = 'archived' WHERE id = $1", [req.params.id]);
     res.json({ success: true, message: "Course archived" });
+  } catch (err) { next(err); }
+});
+
+// =============================================================================
+// COURSE ⇄ COLLEGE AVAILABILITY
+// A course with no rows here is available to every college. Assigning at
+// least one college restricts it to just those colleges.
+// =============================================================================
+
+/**
+ * GET /api/lms/courses/:id/colleges
+ */
+router.get("/courses/:id/colleges", authorize(...CONTENT_ROLES), async (req, res, next) => {
+  try {
+    try {
+      const rows = await query(`
+        SELECT cca.college_id, col.name AS college_name, cca.assigned_at,
+               cca.notes, COALESCE(cca.meta, '{}'::jsonb) AS meta,
+               cca.batch_id, b.name AS batch_name
+        FROM course_college_assignments cca
+        JOIN colleges col ON col.id = cca.college_id
+        LEFT JOIN college_batches b ON b.id = cca.batch_id
+        WHERE cca.course_id = $1
+        ORDER BY col.name
+      `, [req.params.id]);
+      res.json({ success: true, data: rows });
+    } catch {
+      const rows = await query(`
+        SELECT cca.college_id, col.name AS college_name, cca.assigned_at
+        FROM course_college_assignments cca
+        JOIN colleges col ON col.id = cca.college_id
+        WHERE cca.course_id = $1
+        ORDER BY col.name
+      `, [req.params.id]);
+      res.json({ success: true, data: rows });
+    }
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/lms/courses/:id/colleges
+ * body: { college_id, notes?, batch_id?, meta? }
+ */
+router.post("/courses/:id/colleges", authorize(...CONTENT_ROLES), async (req, res, next) => {
+  try {
+    const { college_id, notes, batch_id, meta } = req.body;
+    if (!college_id) throw new AppError("college_id is required", 400);
+
+    try {
+      await query(`
+        INSERT INTO course_college_assignments (course_id, college_id, assigned_by, notes, batch_id, meta)
+        VALUES ($1, $2, $3, $4, $5, COALESCE($6::jsonb, '{}'::jsonb))
+        ON CONFLICT (course_id, college_id) DO UPDATE SET
+          notes = COALESCE(EXCLUDED.notes, course_college_assignments.notes),
+          batch_id = COALESCE(EXCLUDED.batch_id, course_college_assignments.batch_id),
+          meta = COALESCE(course_college_assignments.meta, '{}'::jsonb) || COALESCE(EXCLUDED.meta, '{}'::jsonb),
+          assigned_by = EXCLUDED.assigned_by,
+          assigned_at = NOW()
+      `, [
+        req.params.id,
+        college_id,
+        req.user!.userId,
+        notes ?? null,
+        batch_id || null,
+        meta ? JSON.stringify(meta) : "{}",
+      ]);
+    } catch {
+      await query(`
+        INSERT INTO course_college_assignments (course_id, college_id, assigned_by)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (course_id, college_id) DO NOTHING
+      `, [req.params.id, college_id, req.user!.userId]);
+    }
+
+    res.status(201).json({ success: true });
+  } catch (err) { next(err); }
+});
+
+/**
+ * DELETE /api/lms/courses/:id/colleges/:collegeId
+ */
+router.delete("/courses/:id/colleges/:collegeId", authorize(...CONTENT_ROLES), async (req, res, next) => {
+  try {
+    await query(
+      "DELETE FROM course_college_assignments WHERE course_id = $1 AND college_id = $2",
+      [req.params.id, req.params.collegeId]
+    );
+    res.json({ success: true });
   } catch (err) { next(err); }
 });
 
@@ -642,9 +754,9 @@ router.post("/courses/:courseId/certificate", authorize("student"), async (req, 
     }
 
     const cert = await queryOne(
-      `INSERT INTO certificates (student_id, course_id, title)
-       VALUES ($1,$2,$3)
-       ON CONFLICT (student_id, course_id) DO UPDATE SET issued_at = EXCLUDED.issued_at
+      `INSERT INTO certificates (student_id, course_id, title, cert_type)
+       VALUES ($1,$2,$3,'course_completion')
+       ON CONFLICT (student_id, course_id) DO UPDATE SET issued_at = NOW(), title = EXCLUDED.title, cert_type = 'course_completion'
        RETURNING *`,
       [studentId, courseId, (enrollment as any).title]
     );
@@ -688,10 +800,14 @@ router.get("/certificates/:id", authorize("student", "super_admin", "hr"), async
   try {
     const cert = await queryOne(`
       SELECT cert.*, u.name AS student_name,
-             c.title AS course_title, c.category, c.difficulty
+             c.title AS course_title, c.category, c.difficulty,
+             lp.title AS path_title,
+             ad.name AS drive_name
       FROM certificates cert
       JOIN users u ON u.id = cert.student_id
       LEFT JOIN courses c ON c.id = cert.course_id
+      LEFT JOIN learning_paths lp ON lp.id = cert.path_id
+      LEFT JOIN assessment_drives ad ON ad.id = cert.drive_id
       WHERE cert.id = $1
     `, [req.params.id]);
     if (!cert) return res.status(404).json({ error: "Certificate not found" });

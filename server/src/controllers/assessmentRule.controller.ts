@@ -14,6 +14,24 @@ export const list = async (req: Request, res: Response<ApiResponse>, next: NextF
     } catch (err) { next(err); }
 };
 
+// POST /api/assessment-rules/seed-phase1
+export const seedPhase1 = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const userId = req.user?.userId;
+        const data = await ruleService.seedPhase1PlacementTemplates(userId);
+        res.status(201).json({
+            success: true,
+            data,
+            message:
+                data.created_count > 0
+                    ? `Seeded ${data.created_count} Placement Preparation templates`
+                    : "Placement Preparation templates already present",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
 // GET /api/assessment-rules/:id
 export const getById = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
     try {

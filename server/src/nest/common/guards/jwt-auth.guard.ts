@@ -33,10 +33,16 @@ export class JwtAuthGuard implements CanActivate {
 
     const token = authHeader.split(" ")[1];
 
-    let payload: AuthPayload;
+    let payload: AuthPayload & { purpose?: string };
     try {
-      payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
+      payload = jwt.verify(token, env.JWT_SECRET) as AuthPayload & { purpose?: string };
     } catch {
+      throw new UnauthorizedException("Invalid or expired token");
+    }
+
+    // Reject non-access tokens (e.g. 2FA login-challenge JWTs).
+    // Mirrors Express authenticate() in middleware/auth.ts.
+    if (payload.purpose) {
       throw new UnauthorizedException("Invalid or expired token");
     }
 

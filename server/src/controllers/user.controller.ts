@@ -47,6 +47,38 @@ export const listUsers = async (
 };
 
 /**
+ * List all company accounts with their profile and activity stats — the
+ * "Company Management" superadmin view. company.routes.ts only exposes
+ * self-service endpoints (a company managing its own profile/drives), so
+ * this is genuinely new: an admin-facing list across all companies.
+ */
+export const listCompanies = async (
+    _req: Request,
+    res: Response<ApiResponse<unknown[]>>,
+    next: NextFunction
+) => {
+    try {
+        const rows = await query(`
+            SELECT
+                u.id, u.email, u.name AS contact_name, u.is_active, u.status, u.created_at,
+                c.id AS company_id, c.name AS company_name, c.industry, c.website, c.headquarters,
+                (SELECT COUNT(*)::int FROM assessment_drives ad WHERE ad.created_by = u.id) AS drives_created,
+                (SELECT COUNT(*)::int FROM drive_students ds
+                   JOIN assessment_drives ad2 ON ad2.id = ds.drive_id
+                   WHERE ad2.created_by = u.id) AS candidates_reached
+            FROM users u
+            LEFT JOIN companies c ON c.user_id = u.id
+            WHERE u.role = 'company'
+            ORDER BY u.created_at DESC
+            LIMIT 200
+        `);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
  * Update a user's system role
  */
 export const updateUserRole = async (
@@ -116,7 +148,7 @@ export const updateUser = async (
             throw new AppError("Invalid role specified", 400);
         }
 
-        const isCollegeRole = ["college_admin", "college_staff", "college", "student"].includes(role);
+        const isCollegeRole = ["college_admin", "college_staff", "college", "student", "instructor"].includes(role);
         const finalCollegeId = isCollegeRole && college_id ? college_id : null;
 
         const existing = await queryOne<UserRow>("SELECT id FROM users WHERE email = $1 AND id != $2", [email, id]);
@@ -166,7 +198,7 @@ export const createUser = async (
         const loginTypeVal = login_type || "Email_Password";
 
 
-        const isCollegeRole = ["college_admin", "college_staff", "college", "student"].includes(role);
+        const isCollegeRole = ["college_admin", "college_staff", "college", "student", "instructor"].includes(role);
         const finalCollegeId = isCollegeRole && college_id ? college_id : null;
 
         const user = await queryOne<UserRow>(

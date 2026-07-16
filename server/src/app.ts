@@ -14,11 +14,18 @@ import cheatingRoutes from "./routes/cheating.routes.js";
 import examRoutes from "./routes/exam.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import collegeRoutes from "./routes/college.routes.js";
+import collegeProfileRoutes from "./routes/college.profile.routes.js";
 import collegeDashboardRoutes from "./routes/college.dashboard.routes.js";
 import questionBankRoutes from "./routes/questionBank.routes.js";
+import questionCollectionsRoutes from "./routes/questionCollections.routes.js";
 import campusRoutes from "./routes/campus.routes.js";
 import campusStudentRoutes from "./routes/campus.students.routes.js";
+import campusQuestionsRoutes from "./routes/campus.questions.routes.js";
+import campusAssessmentsRoutes from "./routes/campus.assessments.routes.js";
+import campusCampaignsRoutes from "./routes/campus.campaigns.routes.js";
+import campusAssessmentAnalyticsRoutes from "./routes/campus.assessmentAnalytics.routes.js";
 import campusDrivesRoutes from "./routes/campus.drives.routes.js";
+import sessionsRoutes from "./routes/sessions.routes.js";
 import hrRoutes from "./routes/hr.routes.js";
 import roleRoutes from "./routes/role.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -29,6 +36,7 @@ import assessmentRuleRoutes from "./routes/assessmentRule.routes.js";
 import driveRoutes from "./routes/drive.routes.js";
 import examSessionRoutes from "./routes/examSession.routes.js";
 import { proctoringRoutes } from "./routes/proctoring.routes.js";
+import platformProctoringRoutes from "./routes/platformProctoring.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import lmsRoutes from "./routes/lms.routes.js";
 import practiceRoutes from "./routes/practice.routes.js";
@@ -41,11 +49,43 @@ import learningModulesRoutes from "./routes/learningModules.routes.js";
 import skillProgramsRoutes from "./routes/skillPrograms.routes.js";
 import skillPartnersRoutes from "./routes/skillPartners.routes.js";
 import studentLearningRoutes from "./routes/studentLearning.routes.js";
+import studentAssessmentsRoutes from "./routes/studentAssessments.routes.js";
+import assessmentWorkspaceRoutes from "./routes/assessmentWorkspace.routes.js";
+import studentResultsRoutes from "./routes/studentResults.routes.js";
+import studentQuestionsRoutes from "./routes/studentQuestions.routes.js";
+import studentAiCoachRoutes from "./routes/studentAiCoach.routes.js";
+import {
+  dashboardRouter,
+  assessmentsDashboardRouter,
+  learningDashboardRouter,
+  recommendationsRouter,
+  campusDrivesStudentRouter,
+  achievementsRouter,
+  calendarRouter,
+} from "./routes/studentDashboard.routes.js";
 import collegeSkillsRoutes from "./routes/collegeSkills.routes.js";
 import mockInterviewRoutes from "./routes/mockInterview.routes.js";
 import companyRoutes from "./routes/company.routes.js";
 import billingRoutes from "./routes/billing.routes.js";
 import questionBankAIRoutes from "./routes/questionBankAI.routes.js";
+import aiKnowledgeEngineRoutes from "./routes/aiKnowledgeEngine.routes.js";
+import voiceTutorRoutes from "./routes/voiceTutor.routes.js";
+import adaptiveLearningRoutes from "./routes/adaptiveLearning.routes.js";
+import placementCoachRoutes from "./routes/placementCoach.routes.js";
+import aiSearchRoutes from "./routes/aiSearch.routes.js";
+import aiAnalyticsRoutes from "./routes/aiAnalytics.routes.js";
+import knowledgeGraphRoutes from "./routes/knowledgeGraph.routes.js";
+import contentImproverRoutes from "./routes/contentImprover.routes.js";
+import translatorRoutes from "./routes/translator.routes.js";
+import learningCompanionRoutes from "./routes/learningCompanion.routes.js";
+import superadminFeaturesRoutes from "./routes/superadminFeatures.routes.js";
+import knowledgeTaxonomyRoutes from "./routes/knowledgeTaxonomy.routes.js";
+import knowledgeLibraryAiRoutes from "./routes/knowledgeLibraryAi.routes.js";
+import knowledgeLibraryEnterpriseRoutes from "./routes/knowledgeLibraryEnterprise.routes.js";
+import courseBuilderRoutes from "./routes/courseBuilder.routes.js";
+import courseCatalogRoutes from "./routes/courseCatalog.routes.js";
+import learningJourneyRoutes from "./routes/learningJourney.routes.js";
+import assessmentHubRoutes from "./routes/assessmentHub.routes.js";
 import superadminRoutes from "./routes/superadmin.routes.js";
 import collegeModulesRoutes from "./routes/college.modules.routes.js";
 
@@ -114,27 +154,35 @@ app.get("/api/health", (_req, res) => {
 
 // ── API Routes ───────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
+app.use("/api/sessions", sessionsRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/cheating-logs", cheatingRoutes);
 app.use("/api/exams", examRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/colleges", collegeRoutes);
+app.use("/api/college/profile", collegeProfileRoutes);
 app.use("/api/college/dashboard", collegeDashboardRoutes);
 app.use("/api/college/modules", collegeModulesRoutes);
 app.use("/api/campuses", campusRoutes);
 app.use("/api/campus/students", campusStudentRoutes);
+app.use("/api/campus/questions", campusQuestionsRoutes);
+app.use("/api/campus/assessments", campusAssessmentsRoutes);
+app.use("/api/campus/campaigns", campusCampaignsRoutes);
+app.use("/api/campus/assessment-analytics", campusAssessmentAnalyticsRoutes);
 app.use("/api/campus/drives", campusDrivesRoutes);
 app.use("/api/hr", hrRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/question-bank", questionBankRoutes);
+app.use("/api/question-collections", questionCollectionsRoutes);
 app.use("/api/segmentation", segmentationRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/assessment-rules", assessmentRuleRoutes);
 app.use("/api/drives", driveRoutes);
 app.use("/api/exam-sessions", examSessionRoutes);
 app.use("/api/proctoring", proctoringRoutes);
+app.use("/api/platform/proctoring", platformProctoringRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/lms", lmsRoutes);
 app.use("/api/practice", practiceRoutes);
@@ -148,11 +196,44 @@ app.use("/api/learning-modules", learningModulesRoutes);
 app.use("/api/skill-programs", skillProgramsRoutes);
 app.use("/api/skill-partners", skillPartnersRoutes);
 app.use("/api/student-learning", studentLearningRoutes);
+app.use("/api/student-assessments", studentAssessmentsRoutes);
+app.use("/api/assessment-workspace", assessmentWorkspaceRoutes);
+// Student Portal Module 07 — Results & Performance Analytics
+app.use("/api/results", studentResultsRoutes);
+app.use("/api/questions", studentQuestionsRoutes);
+// Student Portal Module 08 — AI Learning Coach
+app.use("/api/ai", studentAiCoachRoutes);
+// Student Portal Module 02 — dashboard facade (thin adapters)
+app.use("/api/dashboard", dashboardRouter);
+app.use("/api/assessments", assessmentsDashboardRouter);
+app.use("/api/learning", learningDashboardRouter);
+app.use("/api/recommendations", recommendationsRouter);
+app.use("/api/campus-drives", campusDrivesStudentRouter);
+app.use("/api/achievements", achievementsRouter);
+app.use("/api/calendar", calendarRouter);
 app.use("/api/college-skills", collegeSkillsRoutes);
 app.use("/api/mock-interviews", mockInterviewRoutes);
 app.use("/api/company", companyRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/qb-ai", questionBankAIRoutes);
+app.use("/api/ai-knowledge", aiKnowledgeEngineRoutes);
+app.use("/api/voice-tutor", voiceTutorRoutes);
+app.use("/api/adaptive-learning", adaptiveLearningRoutes);
+app.use("/api/placement-coach", placementCoachRoutes);
+app.use("/api/ai-search", aiSearchRoutes);
+app.use("/api/ai-analytics", aiAnalyticsRoutes);
+app.use("/api/knowledge-graph", knowledgeGraphRoutes);
+app.use("/api/content-improver", contentImproverRoutes);
+app.use("/api/translator", translatorRoutes);
+app.use("/api/learning-companion", learningCompanionRoutes);
+app.use("/api/superadmin-features", superadminFeaturesRoutes);
+app.use("/api/knowledge-taxonomy", knowledgeTaxonomyRoutes);
+app.use("/api/knowledge-library-ai", knowledgeLibraryAiRoutes);
+app.use("/api/knowledge-library-enterprise", knowledgeLibraryEnterpriseRoutes);
+app.use("/api/course-builder", courseBuilderRoutes);
+app.use("/api/course-catalog", courseCatalogRoutes);
+app.use("/api/learning-journey", learningJourneyRoutes);
+app.use("/api/assessment-hub", assessmentHubRoutes);
 // ── SuperAdmin Portal ─────────────────────────────────────────────────────────
 app.use("/api/superadmin", superadminRoutes);
 

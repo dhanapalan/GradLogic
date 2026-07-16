@@ -4,6 +4,7 @@ import { z } from "zod";
 import { validate } from "../middleware/validate.js";
 import { authenticate, authorize } from "../middleware/auth.js";
 import * as studentController from "../controllers/student.controller.js";
+import * as profileCtrl from "../controllers/studentProfile.controller.js";
 import * as modulesController from "../controllers/platformModules.controller.js";
 import { passwordSchema } from "../validators/password.js";
 
@@ -131,6 +132,117 @@ router.put(
   ]),
   validate(onboardingSchema),
   studentController.completeOnboarding,
+);
+
+/** Module 01 + 03 — student self profile adapters (before /:id). */
+router.get("/me", authenticate, authorize("student"), studentController.getMeProfile);
+router.get("/profile", authenticate, authorize("student"), profileCtrl.getProfile);
+router.put(
+  "/profile",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.fields([
+    { name: "profile_photo", maxCount: 1 },
+    { name: "resume", maxCount: 1 },
+  ]),
+  profileCtrl.putProfile
+);
+router.post(
+  "/photo",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("profile_photo"),
+  studentController.uploadPhoto
+);
+router.delete("/photo", authenticate, authorize("student"), profileCtrl.deletePhoto);
+router.post(
+  "/resume",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("resume"),
+  studentController.uploadResume
+);
+router.get("/resume", authenticate, authorize("student"), profileCtrl.getResume);
+router.delete("/resume", authenticate, authorize("student"), profileCtrl.deleteResume);
+
+router.get("/skills", authenticate, authorize("student"), profileCtrl.getSkills);
+router.put("/skills", authenticate, authorize("student"), profileCtrl.putSkills);
+
+router.get("/certifications", authenticate, authorize("student"), profileCtrl.getCertifications);
+router.post(
+  "/certifications",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("certificate"),
+  profileCtrl.postCertification
+);
+router.put(
+  "/certifications/:id",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("certificate"),
+  profileCtrl.putCertification
+);
+router.delete("/certifications/:id", authenticate, authorize("student"), profileCtrl.deleteCertification);
+
+router.get("/projects", authenticate, authorize("student"), profileCtrl.getProjects);
+router.post(
+  "/projects",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("document"),
+  profileCtrl.postProject
+);
+router.put(
+  "/projects/:id",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("document"),
+  profileCtrl.putProject
+);
+router.delete("/projects/:id", authenticate, authorize("student"), profileCtrl.deleteProject);
+
+router.get("/experience", authenticate, authorize("student"), profileCtrl.getExperience);
+router.post(
+  "/experience",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("certificate"),
+  profileCtrl.postExperience
+);
+router.put(
+  "/experience/:id",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("certificate"),
+  profileCtrl.putExperience
+);
+router.delete("/experience/:id", authenticate, authorize("student"), profileCtrl.deleteExperience);
+
+router.get("/preferences", authenticate, authorize("student"), profileCtrl.getPreferences);
+router.put("/preferences", authenticate, authorize("student"), profileCtrl.putPreferences);
+
+router.get("/documents", authenticate, authorize("student"), profileCtrl.getDocuments);
+router.post(
+  "/documents",
+  authenticate,
+  authorize("student"),
+  onboardingUpload.single("file"),
+  profileCtrl.postDocument
+);
+router.delete("/documents/:id", authenticate, authorize("student"), profileCtrl.deleteDocument);
+
+router.get(
+  "/profile-completion",
+  authenticate,
+  authorize("student"),
+  profileCtrl.getCompletion
+);
+router.post(
+  "/accept-policy",
+  authenticate,
+  authorize("student"),
+  studentController.acceptPolicy
 );
 
 /**

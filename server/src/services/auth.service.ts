@@ -112,35 +112,41 @@ async function finalizeLogin(user: LoginUserRow, ip?: string, meta: TokenMeta = 
 }
 
 /**
- * Authenticate a user by email + password.
+ * Authenticate a user by email or student ID + password.
  *
  * If the account has 2FA enabled, no session is issued yet — instead a
  * short-lived challenge token is returned and the client must complete
  * verifyTwoFactorLogin() with a valid TOTP code.
  */
 export async function loginUser(
-  email: string,
+  identifier: string,
   password: string,
   ip?: string,
   meta: TokenMeta = {},
 ) {
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalized = identifier.toLowerCase().trim();
   const user = await queryOne<LoginUserRow>(
-    `SELECT u.*, c.name as college_name 
+    `SELECT u.*, c.name as college_name
      FROM users u
      LEFT JOIN colleges c ON c.id = u.college_id
-     WHERE u.email = $1 AND u.is_active = TRUE`,
-    [normalizedEmail],
+     LEFT JOIN student_details sd ON sd.user_id = u.id
+     WHERE u.is_active = TRUE
+       AND (
+         LOWER(u.email) = $1
+         OR LOWER(TRIM(COALESCE(sd.student_identifier, ''))) = $1
+       )
+     LIMIT 1`,
+    [normalized],
   );
 
   if (!user) {
-    logLoginFailure(email, ip, "User not found or inactive").catch(() => { });
+    logLoginFailure(identifier, ip, "User not found or inactive").catch(() => { });
     throw new AppError("Invalid email or password", 401);
   }
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) {
-    logLoginFailure(email, ip, "Invalid password").catch(() => { });
+    logLoginFailure(identifier, ip, "Invalid password").catch(() => { });
     throw new AppError("Invalid email or password", 401);
   }
 
@@ -594,10 +600,12 @@ export async function changePassword(
 
 /**
  * Begin the forgot-password flow. Always resolves successfully (no account
- * enumeration). If the account exists, a single-use reset token (hashed at
- * rest) is stored and an email is sent.
+ * enumeration). Stores a hashed OTP (and link token) and emails the user.
  */
-export async function requestPasswordReset(email: string, ip?: string): Promise<{ resetUrl?: string }> {
+export async function requestPasswordReset(
+  email: string,
+  ip?: string
+): Promise<{ resetUrl?: string; otp?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
   const user = await queryOne<{ id: string; email: string; name: string | null; full_name: string | null }>(
     "SELECT id, email, name, full_name FROM users WHERE email = $1 AND is_active = TRUE",
@@ -607,8 +615,12 @@ export async function requestPasswordReset(email: string, ip?: string): Promise<
   // Do not reveal whether the account exists.
   if (!user) return {};
 
+  const otp = String(crypto.randomInt(100000, 999999));
+  const otpHash = crypto.createHash("sha256").update(`otp:${otp}`).digest("hex");
   const rawToken = crypto.randomBytes(32).toString("base64url");
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  // Store OTP hash with a marker; verify-otp exchanges it for the link token.
+  const storedHash = `otp:${otpHash}:${tokenHash}`;
   const expiresAt = new Date(Date.now() + env.PASSWORD_RESET_EXPIRES_MIN * 60 * 1000);
 
   try {
@@ -616,7 +628,7 @@ export async function requestPasswordReset(email: string, ip?: string): Promise<
       `UPDATE users
        SET password_reset_token_hash = $1, password_reset_expires_at = $2, updated_at = NOW()
        WHERE id = $3 RETURNING id`,
-      [tokenHash, expiresAt, user.id],
+      [storedHash, expiresAt, user.id],
     );
   } catch (err: unknown) {
     const code = (err as { code?: string })?.code;
@@ -634,6 +646,7 @@ export async function requestPasswordReset(email: string, ip?: string): Promise<
     name: user.full_name || user.name || "there",
     email: user.email,
     resetUrl,
+    otp,
   });
 
   recordAuditEvent({
@@ -644,10 +657,94 @@ export async function requestPasswordReset(email: string, ip?: string): Promise<
     ipAddress: ip,
   }).catch(() => { });
 
-  // When SMTP is not configured, emails are only logged. Return the link so
-  // forgot/reset password remains usable in that environment.
+  // Never expose OTP / reset links in production — even if SMTP is misconfigured.
+  // Local/dev (and explicit non-production) may return them when SMTP is unset.
+  const isProd = env.NODE_ENV === "production";
   const smtpConfigured = Boolean(env.SMTP_USER && env.SMTP_PASS);
-  return smtpConfigured ? {} : { resetUrl };
+  if (isProd || smtpConfigured) {
+    return {};
+  }
+  return { resetUrl, otp };
+}
+
+/**
+ * Verify a forgot-password OTP and return a one-time reset token for
+ * POST /auth/reset-password. Does not change the password.
+ */
+export async function verifyPasswordResetOtp(
+  email: string,
+  otp: string,
+  ip?: string
+): Promise<{ resetToken: string }> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const code = (otp || "").trim();
+  if (!/^\d{6}$/.test(code)) {
+    throw new AppError("Enter the 6-digit verification code", 400);
+  }
+
+  const user = await queryOne<{
+    id: string;
+    password_reset_token_hash: string | null;
+    password_reset_expires_at: string | null;
+  }>(
+    `SELECT id, password_reset_token_hash, password_reset_expires_at
+     FROM users WHERE email = $1 AND is_active = TRUE`,
+    [normalizedEmail],
+  );
+
+  if (
+    !user?.password_reset_token_hash ||
+    !user.password_reset_expires_at ||
+    new Date(user.password_reset_expires_at).getTime() < Date.now()
+  ) {
+    throw new AppError("Invalid or expired verification code", 400);
+  }
+
+  const stored = user.password_reset_token_hash;
+  if (!stored.startsWith("otp:")) {
+    throw new AppError("Invalid or expired verification code", 400);
+  }
+  const parts = stored.split(":");
+  const otpHash = parts[1] || "";
+  const expected = crypto.createHash("sha256").update(`otp:${code}`).digest("hex");
+  let hashOk = false;
+  try {
+    const a = Buffer.from(otpHash, "hex");
+    const b = Buffer.from(expected, "hex");
+    hashOk = a.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    hashOk = false;
+  }
+  if (!hashOk) {
+    recordAuditEvent({
+      userId: user.id,
+      action: "PASSWORD_RESET_OTP_FAILED",
+      resourceType: "user",
+      resourceId: user.id,
+      ipAddress: ip,
+    }).catch(() => {});
+    throw new AppError("Invalid or expired verification code", 400);
+  }
+
+  // Issue a fresh one-time reset token for POST /auth/reset-password.
+  const rawToken = crypto.randomBytes(32).toString("base64url");
+  const newHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+  await queryOne(
+    `UPDATE users
+     SET password_reset_token_hash = $1, updated_at = NOW()
+     WHERE id = $2 RETURNING id`,
+    [newHash, user.id],
+  );
+
+  recordAuditEvent({
+    userId: user.id,
+    action: "PASSWORD_RESET_OTP_VERIFIED",
+    resourceType: "user",
+    resourceId: user.id,
+    ipAddress: ip,
+  }).catch(() => {});
+
+  return { resetToken: rawToken };
 }
 
 /**
@@ -655,15 +752,27 @@ export async function requestPasswordReset(email: string, ip?: string): Promise<
  */
 export async function resetPassword(rawToken: string, newPassword: string, ip?: string) {
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-  const user = await queryOne<{ id: string; password_reset_expires_at: string | null }>(
-    `SELECT id, password_reset_expires_at
+  // Matches post-OTP hashes and email-link hashes embedded as otp:<otpHash>:<tokenHash>.
+  const user = await queryOne<{
+    id: string;
+    password_reset_expires_at: string | null;
+    password_reset_token_hash: string | null;
+  }>(
+    `SELECT id, password_reset_expires_at, password_reset_token_hash
      FROM users
-     WHERE password_reset_token_hash = $1 AND is_active = TRUE`,
+     WHERE is_active = TRUE
+       AND (
+         password_reset_token_hash = $1
+         OR password_reset_token_hash LIKE ('otp:%:' || $1)
+       )`,
     [tokenHash],
   );
 
-  if (!user || !user.password_reset_expires_at ||
-      new Date(user.password_reset_expires_at).getTime() < Date.now()) {
+  if (
+    !user ||
+    !user.password_reset_expires_at ||
+    new Date(user.password_reset_expires_at).getTime() < Date.now()
+  ) {
     throw new AppError("This password reset link is invalid or has expired", 400);
   }
 

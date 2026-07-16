@@ -5,10 +5,11 @@ import { ApiResponse } from "../types/index.js";
 // GET /api/drives
 export const list = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
     try {
-        const { status, rule_id } = req.query;
+        const { status, rule_id, drive_type } = req.query;
         const drives = await driveService.listDrives({
             status: status as string | undefined,
             rule_id: rule_id as string | undefined,
+            drive_type: drive_type as string | undefined,
         });
         res.json({ success: true, data: drives });
     } catch (err) { next(err); }
@@ -124,6 +125,47 @@ export const publish = async (req: Request, res: Response<ApiResponse>, next: Ne
     try {
         const drive = await driveService.publishDrive(req.params.id as string);
         res.json({ success: true, data: drive, message: "Drive published" });
+    } catch (err) { next(err); }
+};
+
+// GET /api/drives/:id/collections
+export const listCollections = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const data = await driveService.listDriveCollections(req.params.id as string);
+        res.json({ success: true, data });
+    } catch (err) { next(err); }
+};
+
+// POST /api/drives/:id/collections — attach collections and reseed pool (assemble only)
+export const attachCollections = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const driveId = req.params.id as string;
+        const collectionIds: string[] = req.body?.collection_ids || [];
+        const sections = req.body?.sections;
+        if (!Array.isArray(collectionIds) || collectionIds.length === 0) {
+            return res.status(400).json({ success: false, error: "collection_ids required" });
+        }
+        await driveService.attachDriveCollections(driveId, collectionIds, sections);
+        const seed = await driveService.seedPoolFromCollections(driveId);
+        const drive = await driveService.getDriveById(driveId);
+        res.json({
+            success: true,
+            data: { drive, seed },
+            message: `Pool assembled from collections (${seed.inserted} questions)`,
+        });
+    } catch (err) { next(err); }
+};
+
+// POST /api/drives/:id/seed-from-collections
+export const seedFromCollections = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const seed = await driveService.seedPoolFromCollections(req.params.id as string);
+        const drive = await driveService.getDriveById(req.params.id as string);
+        res.json({
+            success: true,
+            data: { drive, seed },
+            message: `Reseeded pool (${seed.inserted} questions)`,
+        });
     } catch (err) { next(err); }
 };
 

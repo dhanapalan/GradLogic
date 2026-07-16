@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   MagnifyingGlassIcon,
   PlusIcon,
@@ -10,12 +10,23 @@ import {
 } from "@heroicons/react/24/outline";
 import toast from "react-hot-toast";
 import userService, { User, UserFilters } from "../../../services/userService";
+import collegeService, { College } from "../../../services/collegeService";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
+
+const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
+  college_admin: { title: "College Administrators", subtitle: "College admin accounts across the platform" },
+  instructor: { title: "Faculty", subtitle: "Faculty / instructor accounts across the platform" },
+};
+
+// Roles the backend actually persists a college_id for (see user.controller.ts isCollegeRole).
+const COLLEGE_SCOPED_ROLES = new Set(["college_admin", "college_staff", "college", "student", "instructor"]);
 
 export default function AllUsersPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialRole = searchParams.get("role") || "all";
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>(initialRole);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +44,16 @@ export default function AllUsersPage() {
     password: "",
     role: "college_admin",
     phone: "",
+    college_id: "",
   });
+  const [colleges, setColleges] = useState<College[]>([]);
+
+  useEffect(() => {
+    collegeService
+      .getAllColleges()
+      .then((res) => setColleges(res.colleges))
+      .catch(() => setColleges([]));
+  }, []);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -155,6 +175,10 @@ export default function AllUsersPage() {
       toast.error("Name, email, and password are required");
       return;
     }
+    if (COLLEGE_SCOPED_ROLES.has(inviteForm.role) && !inviteForm.college_id) {
+      toast.error("Select a college for this role");
+      return;
+    }
     setInviteLoading(true);
     try {
       await userService.createUser({
@@ -163,10 +187,11 @@ export default function AllUsersPage() {
         password: inviteForm.password,
         role: inviteForm.role,
         phone: inviteForm.phone || undefined,
+        college_id: COLLEGE_SCOPED_ROLES.has(inviteForm.role) ? inviteForm.college_id : undefined,
       });
       toast.success("User invited successfully");
       setShowInvite(false);
-      setInviteForm({ full_name: "", email: "", password: "", role: "college_admin", phone: "" });
+      setInviteForm({ full_name: "", email: "", password: "", role: "college_admin", phone: "", college_id: "" });
       const response = await userService.listUsers({ page, limit });
       setUsers(response.data);
       setTotal(response.pagination.total);
@@ -211,8 +236,12 @@ export default function AllUsersPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">All Users</h2>
-          <p className="text-gray-500 mt-1">Manage platform users ({total} total).</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+            {PAGE_TITLES[roleFilter]?.title || "All Users"}
+          </h2>
+          <p className="text-gray-500 mt-1">
+            {PAGE_TITLES[roleFilter]?.subtitle || "Manage platform users"} ({total} total).
+          </p>
         </div>
         <button
           onClick={() => setShowInvite(true)}
@@ -254,9 +283,24 @@ export default function AllUsersPage() {
             >
               <option value="college_admin">College Admin</option>
               <option value="super_admin">Super Admin</option>
+              <option value="instructor">Instructor / Faculty</option>
               <option value="hr">HR</option>
               <option value="student">Student</option>
             </select>
+            {COLLEGE_SCOPED_ROLES.has(inviteForm.role) && (
+              <select
+                value={inviteForm.college_id}
+                onChange={(e) => setInviteForm({ ...inviteForm, college_id: e.target.value })}
+                className="px-4 py-2 border border-gray-200 rounded-lg"
+              >
+                <option value="">Select college *</option>
+                {colleges.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="flex gap-2 mt-4">
             <button
@@ -300,6 +344,7 @@ export default function AllUsersPage() {
             <option value="all">All Roles</option>
             <option value="super_admin">Super Admin</option>
             <option value="college_admin">College Admin</option>
+            <option value="instructor">Instructor / Faculty</option>
             <option value="tpo">TPO</option>
             <option value="mentor">Mentor</option>
             <option value="student">Student</option>

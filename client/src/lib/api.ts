@@ -3,7 +3,7 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { authActions, getRefreshToken } from "../stores/authStore";
+import { authActions, getAccessToken, getRefreshToken } from "../stores/authStore";
 
 // In dev: relative "/api" is proxied by Vite → localhost:5050
 // In staging (Docker): http://localhost:5050
@@ -17,7 +17,7 @@ const api = axios.create({ baseURL });
 
 // Attach access token to every request
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = sessionStorage.getItem("accessToken");
+  const token = getAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -106,4 +106,5 @@ api.interceptors.response.use(
   }
 );
 
+export { baseURL };
 export default api;

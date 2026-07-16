@@ -41,6 +41,7 @@ interface SessionData {
     saved_answers: Record<string, { selected: string[]; flagged?: boolean }>;
     time_remaining_seconds: number;
     drive_name: string;
+    drive_type?: string;
     duration_minutes: number;
     total_questions: number;
     total_marks: number;
@@ -49,6 +50,22 @@ interface SessionData {
     overall_cutoff: number;
     score: number | null;
     completed_at: string | null;
+    section_timers?: Array<{ section_name: string; time_limit_minutes: number }>;
+}
+
+function matchSectionTimer(
+    category: string | undefined,
+    timers: Array<{ section_name: string; time_limit_minutes: number }> | undefined,
+) {
+    if (!category || !timers?.length) return null;
+    const norm = (s: string) => s.toLowerCase().replace(/[_-]+/g, " ").trim();
+    const cat = norm(category);
+    return (
+        timers.find((t) => {
+            const name = norm(t.section_name);
+            return name === cat || name.includes(cat) || cat.includes(name);
+        }) || null
+    );
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -61,11 +78,15 @@ export default function ExamPlayerPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, { selected: string[]; flagged?: boolean }>>({});
     const [timeLeft, setTimeLeft] = useState(0);
+    const [sectionTimeLeft, setSectionTimeLeft] = useState<number | null>(null);
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [violationAlert, setViolationAlert] = useState<string | null>(null);
     const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastSavedRef = useRef<string>("");
+    const sectionRemainingRef = useRef<Record<string, number>>({});
+    const activeSectionKeyRef = useRef<string | null>(null);
+    const prevOverallTimeRef = useRef<number | null>(null);
 
     // Fetch session + questions
     const { data, isLoading, error } = useQuery({
@@ -80,6 +101,7 @@ export default function ExamPlayerPage() {
 
     const session = data?.session;
     const questions = data?.questions || [];
+    const isMock = session?.drive_type === "mock_test";
 
     // Setup regular events proctoring hook (browser events)
     useProctoring({
@@ -106,6 +128,7 @@ export default function ExamPlayerPage() {
             setAnswers(session.saved_answers || {});
             setCurrentIndex(session.current_question_index || 0);
             setTimeLeft(session.time_remaining_seconds || 0);
+            prevOverallTimeRef.current = null;
             if (session.status === "completed") setSubmitted(true);
         }
     }, [session]);
@@ -128,12 +151,65 @@ export default function ExamPlayerPage() {
         return () => clearInterval(interval);
     }, [submitted, timeLeft > 0]); // eslint-disable-line
 
-    // Auto-submit when timer reaches zero
+    // Auto-submit when overall timer hits zero (countdown finished or server already expired)
     useEffect(() => {
-        if (timeLeft === 0 && !submitted) {
-            submitMutation.mutate();
+        if (!submitted && session?.status === "in_progress" && timeLeft === 0) {
+            const prev = prevOverallTimeRef.current;
+            const serverExpired = (session.time_remaining_seconds ?? 0) === 0;
+            if (prev === null ? serverExpired : prev > 0) {
+                submitMutation.mutate();
+            }
         }
-    }, [timeLeft]); // eslint-disable-line
+        prevOverallTimeRef.current = timeLeft;
+    }, [timeLeft, session?.status, session?.time_remaining_seconds]); // eslint-disable-line
+
+    // Section timer (mock tests) — soft enforce: auto-advance when section budget expires
+    useEffect(() => {
+        if (!isMock || submitted || !session?.section_timers?.length || questions.length === 0) {
+            setSectionTimeLeft(null);
+            return;
+        }
+        const q = questions[currentIndex];
+        const matched = matchSectionTimer(q?.category, session.section_timers);
+        if (!matched) {
+            setSectionTimeLeft(null);
+            activeSectionKeyRef.current = null;
+            return;
+        }
+        const key = matched.section_name.toLowerCase();
+        if (sectionRemainingRef.current[key] == null) {
+            sectionRemainingRef.current[key] = matched.time_limit_minutes * 60;
+        }
+        activeSectionKeyRef.current = key;
+        setSectionTimeLeft(sectionRemainingRef.current[key]);
+
+        const interval = setInterval(() => {
+            const k = activeSectionKeyRef.current;
+            if (!k) return;
+            const next = Math.max(0, (sectionRemainingRef.current[k] ?? 0) - 1);
+            sectionRemainingRef.current[k] = next;
+            setSectionTimeLeft(next);
+            if (next === 0) {
+                const nextIdx = questions.findIndex((qq, i) => {
+                    if (i <= currentIndex) return false;
+                    const m = matchSectionTimer(qq.category, session.section_timers);
+                    if (!m) return true;
+                    const nk = m.section_name.toLowerCase();
+                    return nk !== k && (sectionRemainingRef.current[nk] ?? m.time_limit_minutes * 60) > 0;
+                });
+                if (nextIdx >= 0) {
+                    setViolationAlert("Section time ended — moved to the next section.");
+                    setTimeout(() => setViolationAlert(null), 4000);
+                    setCurrentIndex(nextIdx);
+                } else {
+                    setViolationAlert("Section time ended. Overall exam timer still running.");
+                    setTimeout(() => setViolationAlert(null), 4000);
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [isMock, submitted, session?.section_timers, currentIndex, questions.length]); // eslint-disable-line
 
     // ── Auto-Save ────────────────────────────────────────────────────────────
 
@@ -329,9 +405,52 @@ export default function ExamPlayerPage() {
                         </div>
                     </div>
 
-                    <button onClick={() => navigate("/app/student-portal")} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all">
-                        Back to Portal
-                    </button>
+                    {session.drive_type === "mock_test" && (
+                        <div className="rounded-2xl border border-violet-100 bg-violet-50/80 px-4 py-3 mb-6 text-left">
+                            <p className="text-xs font-bold text-violet-700 uppercase tracking-wider mb-1">
+                                Placement readiness
+                            </p>
+                            <p className="text-sm text-violet-900/80">
+                                This mock feeds your Placement Score and AI recommendations. Review
+                                weak topics in Placement Coach.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigate(`/app/student-portal/results/${session.drive_id}`)
+                            }
+                            className="w-full py-3.5 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition-all"
+                        >
+                            Results &amp; Evaluation
+                        </button>
+                        {session.drive_type === "mock_test" && (
+                            <button
+                                type="button"
+                                onClick={() => navigate("/app/student-portal/placement-coach")}
+                                className="w-full py-3.5 bg-violet-600 text-white rounded-2xl font-black hover:bg-violet-700 transition-all"
+                            >
+                                View Placement Score &amp; AI tips
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => navigate("/app/student-portal/tests")}
+                            className="w-full py-3.5 border border-gray-200 text-gray-800 rounded-2xl font-bold hover:bg-gray-50 transition-all"
+                        >
+                            All tests
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/app/student-portal")}
+                            className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-black transition-all"
+                        >
+                            Back to Portal
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -353,6 +472,15 @@ export default function ExamPlayerPage() {
                 <div className="p-4 border-b border-gray-100 flex-shrink-0">
                     <h2 className="font-black text-gray-900 text-sm truncate">{session.drive_name}</h2>
                     <p className="text-xs text-gray-400 font-bold mt-1">{questions.length} Questions</p>
+                    {isMock && (session.section_timers?.length ?? 0) > 0 && (
+                        <ul className="mt-2 space-y-0.5">
+                            {session.section_timers!.map((t) => (
+                                <li key={t.section_name} className="text-[10px] font-bold text-violet-600">
+                                    {t.section_name}: {t.time_limit_minutes}m
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
 
                 {/* Question Grid */}
@@ -459,7 +587,20 @@ export default function ExamPlayerPage() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Timer */}
+                        {isMock && sectionTimeLeft != null && (
+                            <div
+                                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-black text-xs ${
+                                    sectionTimeLeft <= 60
+                                        ? "bg-red-50 text-red-600"
+                                        : "bg-violet-50 text-violet-700"
+                                }`}
+                                title="Section timer"
+                            >
+                                <span className="uppercase tracking-wider text-[10px] opacity-70">Section</span>
+                                {formatTime(sectionTimeLeft)}
+                            </div>
+                        )}
+                        {/* Overall timer */}
                         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm ${timeLeft <= 300 ? "bg-red-50 text-red-600 animate-pulse" :
                             timeLeft <= 600 ? "bg-amber-50 text-amber-600" :
                                 "bg-gray-100 text-gray-700"

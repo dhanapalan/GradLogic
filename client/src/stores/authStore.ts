@@ -1,5 +1,6 @@
 // =============================================================================
 // TalentSecure AI — Auth Store (React 18 useSyncExternalStore)
+// Secure token handling with optional Remember Me (localStorage).
 // =============================================================================
 
 import { useSyncExternalStore } from "react";
@@ -25,33 +26,48 @@ interface AuthState {
   token: string | null;
   /** Effective RBAC permission keys for the current user. */
   permissions: string[];
+  rememberMe: boolean;
 }
 
-// ── Storage keys ─────────────────────────────────────────────────────────────
 const ACCESS_KEY = "accessToken";
 const REFRESH_KEY = "refreshToken";
 const USER_KEY = "user";
 const PERMS_KEY = "permissions";
+const REMEMBER_KEY = "authRememberMe";
 
-// ── Internal state ───────────────────────────────────────────────────────────
+function storage(): Storage {
+  try {
+    if (localStorage.getItem(REMEMBER_KEY) === "1") return localStorage;
+  } catch {
+    /* ignore */
+  }
+  return sessionStorage;
+}
 
-// Tokens are stored in sessionStorage (cleared on tab close) rather than
-// localStorage to reduce XSS token-theft exposure window.
-// The ideal fix is httpOnly cookies — migrate when backend cookie auth is added.
 function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = storage().getItem(key) ?? sessionStorage.getItem(key) ?? localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
 }
 
+function readToken(key: string): string | null {
+  return storage().getItem(key) ?? sessionStorage.getItem(key) ?? localStorage.getItem(key);
+}
+
+function clearBoth(key: string) {
+  sessionStorage.removeItem(key);
+  localStorage.removeItem(key);
+}
+
 let state: AuthState = {
-  isAuthenticated: !!sessionStorage.getItem(ACCESS_KEY),
+  isAuthenticated: !!readToken(ACCESS_KEY),
   user: readJson<AuthUser | null>(USER_KEY, null),
-  token: sessionStorage.getItem(ACCESS_KEY),
+  token: readToken(ACCESS_KEY),
   permissions: readJson<string[]>(PERMS_KEY, []),
+  rememberMe: localStorage.getItem(REMEMBER_KEY) === "1",
 };
 
 const listeners = new Set<() => void>();
@@ -71,58 +87,93 @@ function getSnapshot(): AuthState {
   return state;
 }
 
-// ── React hook ───────────────────────────────────────────────────────────────
-
 export function useAuthStore<T>(selector: (s: AuthState) => T): T {
   const snap = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return selector(snap);
 }
 
-// ── Token accessors (used by the axios interceptor) ──────────────────────────
-
 export function getRefreshToken(): string | null {
-  return sessionStorage.getItem(REFRESH_KEY);
+  return readToken(REFRESH_KEY);
 }
 
-// ── Actions ──────────────────────────────────────────────────────────────────
+export function getAccessToken(): string | null {
+  return readToken(ACCESS_KEY);
+}
+
+function persistAll(
+  accessToken: string,
+  user: AuthUser | null,
+  refreshToken: string | undefined,
+  permissions: string[],
+  rememberMe: boolean
+) {
+  const store = rememberMe ? localStorage : sessionStorage;
+  const other = rememberMe ? sessionStorage : localStorage;
+  [ACCESS_KEY, REFRESH_KEY, USER_KEY, PERMS_KEY].forEach((k) => other.removeItem(k));
+  store.setItem(ACCESS_KEY, accessToken);
+  if (refreshToken) store.setItem(REFRESH_KEY, refreshToken);
+  if (user) store.setItem(USER_KEY, JSON.stringify(user));
+  store.setItem(PERMS_KEY, JSON.stringify(permissions));
+  if (rememberMe) localStorage.setItem(REMEMBER_KEY, "1");
+  else localStorage.removeItem(REMEMBER_KEY);
+}
 
 export const authActions = {
-  login(accessToken: string, user: AuthUser, refreshToken?: string, permissions: string[] = []) {
-    sessionStorage.setItem(ACCESS_KEY, accessToken);
-    if (refreshToken) sessionStorage.setItem(REFRESH_KEY, refreshToken);
-    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
-    sessionStorage.setItem(PERMS_KEY, JSON.stringify(permissions));
-    state = { isAuthenticated: true, user, token: accessToken, permissions };
+  login(
+    accessToken: string,
+    user: AuthUser,
+    refreshToken?: string,
+    permissions: string[] = [],
+    rememberMe = false
+  ) {
+    persistAll(accessToken, user, refreshToken, permissions, rememberMe);
+    state = {
+      isAuthenticated: true,
+      user,
+      token: accessToken,
+      permissions,
+      rememberMe,
+    };
     emitChange();
   },
 
-  /** Update tokens after a silent refresh without disturbing user/permissions. */
   setTokens(accessToken: string, refreshToken?: string, permissions?: string[]) {
-    sessionStorage.setItem(ACCESS_KEY, accessToken);
-    if (refreshToken) sessionStorage.setItem(REFRESH_KEY, refreshToken);
+    const rememberMe = state.rememberMe || localStorage.getItem(REMEMBER_KEY) === "1";
+    const store = rememberMe ? localStorage : sessionStorage;
+    store.setItem(ACCESS_KEY, accessToken);
+    if (refreshToken) store.setItem(REFRESH_KEY, refreshToken);
     const nextPerms = permissions ?? state.permissions;
-    if (permissions) sessionStorage.setItem(PERMS_KEY, JSON.stringify(permissions));
-    state = { ...state, isAuthenticated: true, token: accessToken, permissions: nextPerms };
+    if (permissions) store.setItem(PERMS_KEY, JSON.stringify(permissions));
+    state = { ...state, isAuthenticated: true, token: accessToken, permissions: nextPerms, rememberMe };
     emitChange();
   },
 
   setPermissions(permissions: string[]) {
-    sessionStorage.setItem(PERMS_KEY, JSON.stringify(permissions));
+    const store = state.rememberMe ? localStorage : sessionStorage;
+    store.setItem(PERMS_KEY, JSON.stringify(permissions));
     state = { ...state, permissions };
     emitChange();
   },
 
   logout() {
-    sessionStorage.removeItem(ACCESS_KEY);
-    sessionStorage.removeItem(REFRESH_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem(PERMS_KEY);
-    state = { isAuthenticated: false, user: null, token: null, permissions: [] };
+    clearBoth(ACCESS_KEY);
+    clearBoth(REFRESH_KEY);
+    clearBoth(USER_KEY);
+    clearBoth(PERMS_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+    state = {
+      isAuthenticated: false,
+      user: null,
+      token: null,
+      permissions: [],
+      rememberMe: false,
+    };
     emitChange();
   },
 
   setUser(user: AuthUser) {
-    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
+    const store = state.rememberMe ? localStorage : sessionStorage;
+    store.setItem(USER_KEY, JSON.stringify(user));
     state = { ...state, user };
     emitChange();
   },

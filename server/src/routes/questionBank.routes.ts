@@ -70,6 +70,9 @@ const createQuestionSchema = z
     explanation: z.string().nullable().optional(),
     bloom_level: bloomLevelEnum.nullable().optional(),
     status: z.string().optional(),
+    hint: z.string().nullable().optional(),
+    learning_objectives: z.array(z.string()).optional(),
+    reference_links: z.array(z.string()).optional(),
   })
   .refine(
     (q) =>
@@ -107,6 +110,12 @@ const updateQuestionSchema = z.object({
   marks: z.number().min(0).max(100).optional(),
   tags: z.array(z.string()).optional(),
   explanation: z.string().nullable().optional(),
+  hint: z.string().nullable().optional(),
+  learning_objectives: z.array(z.string()).optional(),
+  reference_links: z.array(z.string()).optional(),
+  // Allow bloom/status on update so browse edit stays in sync with create/list
+  bloom_level: bloomLevelEnum.nullable().optional(),
+  status: z.string().min(1).max(40).optional(),
 });
 
 const bulkCreateSchema = z.object({

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { pool } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
+import * as campusDash from "../services/collegeDashboard.service.js";
 
 // Ensure college ID exists in the request
 const getCollegeId = (req: Request): string => {
@@ -12,84 +13,60 @@ const getCollegeId = (req: Request): string => {
     return collegeId;
 };
 
+async function dashCtx(req: Request) {
+    return campusDash.buildContext(
+        req.user!.id,
+        req.user?.college_id,
+        req.user?.role
+    );
+}
+
+/** Phase 2 Module 01 — expanded summary KPIs + role projection */
 export const getSummary = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
     try {
+        const ctx = await dashCtx(req);
+        const data = await campusDash.getDashboardSummary(ctx, req.query as Record<string, unknown>);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getCharts = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const ctx = await dashCtx(req);
+        const data = await campusDash.getDashboardCharts(ctx, req.query as Record<string, unknown>);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getActivities = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const ctx = await dashCtx(req);
+        const data = await campusDash.getDashboardActivities(ctx, req.query as Record<string, unknown>);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getPendingActions = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        const ctx = await dashCtx(req);
+        const data = await campusDash.getPendingActions(ctx, req.query as Record<string, unknown>);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getFilterOptions = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
         const collegeId = getCollegeId(req);
-
-        // 1. Total & Active Students
-        const studentCounts = await pool.query(
-            `SELECT 
-                COUNT(*) as total_students,
-                SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END) as active_students
-             FROM users 
-             WHERE college_id = $1 AND role = 'student'`,
-            [collegeId]
-        );
-
-        // 2. Placed students — placement tracking columns are optional; degrade to 0 when absent.
-        let placedStudents = 0;
-        let placementConversion = 0;
-        try {
-            const placement = await pool.query(
-                `SELECT
-                    COUNT(*) as placed_students,
-                    (COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM student_details WHERE college_id = $1), 0)) as placement_conversion
-                 FROM student_details
-                 WHERE college_id = $1 AND placement_status IN ('Offered', 'Joined')`,
-                [collegeId]
-            );
-            placedStudents = parseInt(placement.rows[0]?.placed_students || 0);
-            placementConversion = parseFloat(placement.rows[0]?.placement_conversion || 0);
-        } catch { /* placement_status column not present in this deployment */ }
-
-        // 3. Avg integrity from real drive results; 0 when no proctored drives exist yet.
-        let avgIntegrityScore = 0;
-        try {
-            const avgIntegrity = await pool.query(
-                `SELECT COALESCE(AVG(ds.integrity_score), 0) as avg_integrity
-                 FROM drive_students ds
-                 JOIN student_details sd ON ds.student_id = sd.user_id
-                 WHERE sd.college_id = $1`,
-                [collegeId]
-            );
-            avgIntegrityScore = parseFloat(avgIntegrity.rows[0]?.avg_integrity || 0);
-        } catch { /* drive_students may not exist yet */ }
-
-        // 4. Active Drives (safe — may not exist)
-        let activeDrivesCount = 0;
-        let avgScore = 0;
-        try {
-            const activeDrives = await pool.query(
-                `SELECT COUNT(DISTINCT d.id) as active_drives 
-                 FROM assessment_drives d
-                 JOIN drive_assignments da ON da.drive_id = d.id
-                 WHERE da.college_id = $1 AND d.status = 'active'`,
-                [collegeId]
-            );
-            activeDrivesCount = parseInt(activeDrives.rows[0]?.active_drives || 0);
-
-            const avgScoreRes = await pool.query(
-                `SELECT COALESCE(AVG(ms.final_score), 0) as avg_score
-                 FROM marks_scored ms
-                 JOIN student_details sd ON ms.student_id = sd.user_id
-                 WHERE sd.college_id = $1`,
-                [collegeId]
-            );
-            avgScore = parseFloat(avgScoreRes.rows[0]?.avg_score || 0);
-        } catch { /* tables may not exist yet */ }
-
-        res.json({
-            success: true,
-            data: {
-                total_students: parseInt(studentCounts.rows[0]?.total_students || 0),
-                active_students: parseInt(studentCounts.rows[0]?.active_students || 0),
-                active_drives: activeDrivesCount,
-                avg_score: parseFloat(avgScore.toFixed(1)),
-                avg_integrity: parseFloat(avgIntegrityScore.toFixed(1)),
-                placed_students: placedStudents,
-                placement_conversion: parseFloat(placementConversion.toFixed(1))
-            }
-        });
+        const data = await campusDash.getFilterOptions(collegeId);
+        res.json({ success: true, data });
     } catch (error) {
         next(error);
     }

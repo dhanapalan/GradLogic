@@ -90,6 +90,55 @@ export async function generate(
 }
 
 /**
+ * Streaming variant of `generate`. Calls `onDelta` with each text chunk as it
+ * arrives from the model so a caller (e.g. the Voice Tutor) can start acting
+ * on partial output — speaking sentences aloud — before generation finishes.
+ * Returns the same shape as `generate` once the stream completes.
+ */
+export async function generateStream(
+  userPrompt: string,
+  onDelta: (chunk: string) => void,
+  opts: GenerateOptions = {},
+): Promise<GenerateResult> {
+  const { system, maxTokens = 2000, riskLevel = "practice" } = opts;
+
+  logger.info("[AI] generateStream called", {
+    model: env.ANTHROPIC_MODEL,
+    maxTokens,
+    riskLevel,
+    promptLength: userPrompt.length,
+  });
+
+  const stream = getClient().messages.stream({
+    model: env.ANTHROPIC_MODEL,
+    max_tokens: maxTokens,
+    ...(system ? { system } : {}),
+    messages: [{ role: "user", content: userPrompt }],
+  });
+
+  stream.on("text", (delta) => onDelta(delta));
+
+  const message = await stream.finalMessage();
+
+  if (message.stop_reason === "max_tokens") {
+    throw new AppError(
+      "AI response exceeded token limit. Try requesting a shorter output.",
+      502,
+    );
+  }
+
+  const text = (message.content[0] as { type: string; text: string }).text;
+  if (!text) throw new AppError("AI returned an empty response", 502);
+
+  return {
+    text,
+    inputTokens: message.usage.input_tokens,
+    outputTokens: message.usage.output_tokens,
+    requiresReview: riskLevel !== "practice",
+  };
+}
+
+/**
  * Convenience wrapper: call `generate` and parse the response as JSON.
  * Strips markdown fences the model occasionally adds.
  */
@@ -113,9 +162,16 @@ export async function generateJSON<T>(
 }
 
 // ── Embeddings ─────────────────────────────────────────────────────────────────
-// Anthropic doesn't expose an embedding endpoint; we use a lightweight
-// open-source model via the sentence-transformers API (ai-engine) or
-// fall back to a hash-based stub for local dev when the AI engine is down.
+// Anthropic doesn't expose an embedding endpoint; we use the lightweight
+// open-source sentence-transformers model already loaded by the question-bank
+// Python engine (QUESTION_ENGINE_URL, port 8001 in local dev — same engine
+// questionBankAI.routes.ts talks to) rather than AI_ENGINE_URL (port 8000,
+// the proctoring/matching engine, which has no /embed route). No pgvector
+// extension is installed in this database — embeddings are stored as a plain
+// float array and ranked with in-application cosine similarity (see
+// aiSearch.service.ts), not an indexed vector column.
+
+const QUESTION_ENGINE_URL = process.env.QUESTION_ENGINE_URL || "http://host.docker.internal:8001";
 
 export interface EmbeddingResult {
   vector: number[];
@@ -123,18 +179,15 @@ export interface EmbeddingResult {
 }
 
 /**
- * Generate an embedding vector for `text`.
- * Sends the request to the Python AI engine, which runs sentence-transformers.
- * The vector is stored in pgvector for semantic search and duplicate detection.
+ * Generate an embedding vector for `text` via the question-bank engine's
+ * /embed route (added for Phase 10 AI Search), which reuses its already-
+ * loaded sentence-transformers model — no extra model download/cost.
  */
 export async function embed(text: string): Promise<EmbeddingResult> {
   try {
-    const res = await fetch(`${env.AI_ENGINE_URL}/embed`, {
+    const res = await fetch(`${QUESTION_ENGINE_URL}/embed`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": env.AI_ENGINE_API_KEY,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
 

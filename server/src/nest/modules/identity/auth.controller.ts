@@ -4,18 +4,39 @@ import {
 import { Throttle } from "@nestjs/throttler";
 import { Request } from "express";
 import crypto from "crypto";
+import { z } from "zod";
 import * as authService from "../../../services/auth.service.js";
+import * as twoFactorService from "../../../services/twoFactor.service.js";
 import { Public } from "../../common/decorators/public.decorator.js";
 import { CurrentUser } from "../../common/decorators/current-user.decorator.js";
 import { AuthPayload } from "../../../types/index.js";
 import { env } from "../../../config/env.js";
-import { setupPasswordSchema } from "../../../validators/password.js";
+import { setupPasswordSchema, passwordSchema } from "../../../validators/password.js";
 
-// Strict brute-force guard for credential endpoints: 10 attempts / 15 min per IP.
-// Mirrors the legacy Express authLimiter that the global 100/15min throttle replaced.
-// This per-route @Throttle() override is NOT affected by the global default in
-// app.module.ts, so it needs its own DISABLE_RATE_LIMIT check (dev/test escape
-// hatch — see docker-compose.yml) to avoid hard-blocking automated test runs.
+const studentRegisterSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(200),
+  email: z.string().email("Invalid email"),
+  password: passwordSchema,
+  phone: z.string().optional(),
+  degree: z.string().optional(),
+  specialization: z.string().optional(),
+  passing_year: z.number().int().min(2000).max(2040).optional(),
+  college_name: z.string().optional(),
+});
+
+const companyRegisterSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(200),
+  email: z.string().email("Invalid email"),
+  password: passwordSchema,
+  company_name: z.string().min(2, "Company name required").max(255),
+  industry: z.string().optional(),
+  headquarters: z.string().optional(),
+});
+
+function zodErrorMessage(err: z.ZodError): string {
+  return err.errors.map((e) => e.message).join("; ");
+}
+
 const AUTH_THROTTLE = { default: { limit: env.DISABLE_RATE_LIMIT ? 1_000_000 : 10, ttl: 15 * 60 * 1000 } };
 
 function generateOAuthState(): string {
@@ -46,22 +67,43 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  async login(@Body() body: { email: string; password: string }, @Req() req: Request) {
-    const result = await authService.loginUser(body.email, body.password, req.ip ?? undefined);
+  async login(
+    @Body() body: { email?: string; student_id?: string; password?: string },
+    @Req() req: Request,
+  ) {
+    const identifier = (body.email || body.student_id || "").trim();
+    const password = body.password || "";
+    if (!identifier || !password) {
+      throw new BadRequestException("Email/Student ID and password are required");
+    }
+    const result = await authService.loginUser(identifier, password, req.ip ?? undefined, {
+      userAgent: req.headers["user-agent"],
+      ip: req.ip,
+    });
     return { success: true, data: result };
   }
 
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @Post("register/student")
   async registerStudent(@Body() body: unknown, @Req() req: Request) {
-    const result = await authService.registerStudent(body as any, req.ip ?? undefined);
+    const parsed = studentRegisterSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(zodErrorMessage(parsed.error));
+    }
+    const result = await authService.registerStudent(parsed.data, req.ip ?? undefined);
     return { success: true, data: result };
   }
 
   @Public()
+  @Throttle(AUTH_THROTTLE)
   @Post("register/company")
   async registerCompany(@Body() body: unknown, @Req() req: Request) {
-    const result = await authService.registerCompany(body as any, req.ip ?? undefined);
+    const parsed = companyRegisterSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException(zodErrorMessage(parsed.error));
+    }
+    const result = await authService.registerCompany(parsed.data, req.ip ?? undefined);
     return { success: true, data: result };
   }
 
@@ -83,11 +125,167 @@ export class AuthController {
   }
 
   @Public()
-  @Get("microsoft")
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() body: { refreshToken?: string }, @Req() req: Request) {
+    if (!body.refreshToken) throw new BadRequestException("Refresh token is required");
+    const result = await authService.refreshSession(body.refreshToken, {
+      ip: req.ip ?? undefined,
+      userAgent: req.headers["user-agent"],
+    });
+    return { success: true, data: result };
+  }
+
+  @Public()
+  @Post("logout")
+  @HttpCode(HttpStatus.OK)
+  async logout(@Body() body: { refreshToken?: string }, @Req() req: Request) {
+    const actorId = (req as Request & { user?: AuthPayload }).user?.userId;
+    await authService.logout(body?.refreshToken, actorId, req.ip ?? undefined);
+    return { success: true, message: "Logged out" };
+  }
+
+  @Post("change-password")
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Body() body: { currentPassword?: string; newPassword?: string },
+    @CurrentUser() user: AuthPayload,
+  ) {
+    if (!body.currentPassword || !body.newPassword) {
+      throw new BadRequestException("Current and new password are required");
+    }
+    const parsed = passwordSchema.safeParse(body.newPassword);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.errors.map((e) => e.message).join("; "));
+    }
+    await authService.changePassword(user.userId, body.currentPassword, body.newPassword);
+    return { success: true, message: "Password changed successfully. Please log in again." };
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post("forgot-password")
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() body: { email?: string }, @Req() req: Request) {
+    if (!body.email) throw new BadRequestException("Email is required");
+    const result = await authService.requestPasswordReset(body.email, req.ip ?? undefined);
+    return {
+      success: true,
+      message: "If an account exists for that email, a reset code has been sent.",
+      data: Object.keys(result).length ? result : undefined,
+    };
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post("verify-otp")
+  @HttpCode(HttpStatus.OK)
+  async verifyOtp(
+    @Body() body: { email?: string; otp?: string },
+    @Req() req: Request,
+  ) {
+    if (!body.email || !body.otp) {
+      throw new BadRequestException("Email and OTP are required");
+    }
+    const data = await authService.verifyPasswordResetOtp(
+      body.email,
+      body.otp,
+      req.ip ?? undefined,
+    );
+    return { success: true, data, message: "OTP verified" };
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post("reset-password")
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body() body: { token?: string; password?: string },
+    @Req() req: Request,
+  ) {
+    if (!body.token || !body.password) {
+      throw new BadRequestException("Token and password are required");
+    }
+    const parsed = passwordSchema.safeParse(body.password);
+    if (!parsed.success) {
+      throw new BadRequestException(parsed.error.errors.map((e) => e.message).join("; "));
+    }
+    await authService.resetPassword(body.token, body.password, req.ip ?? undefined);
+    return { success: true, message: "Password reset successfully. You can now log in." };
+  }
+
+  @Get("permissions")
+  async permissions(@CurrentUser() user: AuthPayload) {
+    const perms = await authService.getUserPermissions(user.role);
+    return { success: true, data: { permissions: perms } };
+  }
+
+  @Public()
+  @Throttle(AUTH_THROTTLE)
+  @Post("2fa/verify")
+  @HttpCode(HttpStatus.OK)
+  async verifyTwoFactor(
+    @Body() body: { challengeToken?: string; code?: string },
+    @Req() req: Request,
+  ) {
+    if (!body.challengeToken || !body.code) {
+      throw new BadRequestException("2FA session and code are required");
+    }
+    const result = await authService.verifyTwoFactorLogin(
+      body.challengeToken,
+      body.code,
+      req.ip ?? undefined,
+      { userAgent: req.headers["user-agent"], ip: req.ip },
+    );
+    return { success: true, data: result };
+  }
+
+  @Get("2fa/status")
+  async twoFactorStatus(@CurrentUser() user: AuthPayload) {
+    const data = await twoFactorService.getStatus(user.userId);
+    return { success: true, data };
+  }
+
+  @Post("2fa/setup")
+  async twoFactorSetup(@CurrentUser() user: AuthPayload) {
+    const data = await twoFactorService.beginSetup(user.userId, user.email);
+    return { success: true, data };
+  }
+
+  @Post("2fa/enable")
+  @HttpCode(HttpStatus.OK)
+  async twoFactorEnable(
+    @Body() body: { code?: string },
+    @CurrentUser() user: AuthPayload,
+  ) {
+    if (!body.code) throw new BadRequestException("Enter the 6-digit code");
+    await twoFactorService.enable(user.userId, body.code);
+    return { success: true, message: "Two-factor authentication enabled" };
+  }
+
+  @Post("2fa/disable")
+  @HttpCode(HttpStatus.OK)
+  async twoFactorDisable(
+    @Body() body: { code?: string },
+    @CurrentUser() user: AuthPayload,
+  ) {
+    if (!body.code) throw new BadRequestException("Enter the 6-digit code");
+    await twoFactorService.disable(user.userId, body.code);
+    return { success: true, message: "Two-factor authentication disabled" };
+  }
+
+  @Public()
+  @Get("microsoft/url")
   async microsoftUrl() {
     const state = generateOAuthState();
     const url = await authService.getMicrosoftAuthUrl(state);
     return { success: true, data: { url, state } };
+  }
+
+  @Public()
+  @Get("microsoft")
+  async microsoftUrlAlias() {
+    return this.microsoftUrl();
   }
 
   @Public()

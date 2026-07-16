@@ -96,6 +96,28 @@ export class DriveController {
     return ExpressAdapter.invoke(ctrl.publish, { params: { id }, user });
   }
 
+  @Get(":id/collections")
+  @Roles("super_admin", "hr", "engineer", "college_admin")
+  listCollections(@Param("id") id: string, @CurrentUser() user: AuthPayload) {
+    return ExpressAdapter.invoke(ctrl.listCollections, { params: { id }, user });
+  }
+
+  @Post(":id/collections")
+  @Roles("super_admin", "hr")
+  attachCollections(
+    @Param("id") id: string,
+    @Body() body: any,
+    @CurrentUser() user: AuthPayload
+  ) {
+    return ExpressAdapter.invoke(ctrl.attachCollections, { params: { id }, body, user });
+  }
+
+  @Post(":id/seed-from-collections")
+  @Roles("super_admin", "hr")
+  seedFromCollections(@Param("id") id: string, @CurrentUser() user: AuthPayload) {
+    return ExpressAdapter.invoke(ctrl.seedFromCollections, { params: { id }, user });
+  }
+
   @Get(":id/students")
   @Roles("super_admin", "hr", "engineer", "college_admin")
   getStudents(@Param("id") id: string, @Query() query: any, @CurrentUser() user: AuthPayload) {

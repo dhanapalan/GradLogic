@@ -128,12 +128,21 @@ export const COLLEGE_NAV_FEATURE_MAP: Record<string, PlatformFeatureKey | null> 
 export const STUDENT_ROUTE_FEATURE_RULES: { prefix: string; feature: PlatformFeatureKey | null }[] = [
   { prefix: "workflow", feature: "student_workflow" },
   { prefix: "learn", feature: "learn" },
+  { prefix: "my-learning", feature: "learn" },
   { prefix: "practice", feature: "practice" },
   { prefix: "tests", feature: "tests" },
+  { prefix: "my-assessments", feature: "tests" },
+  { prefix: "results", feature: "tests" },
   { prefix: "question-bank", feature: "question_bank" },
+  { prefix: "placement-coach", feature: "learn" },
+  { prefix: "adaptive-learning", feature: "learn" },
+  { prefix: "ai-search", feature: "learn" },
   { prefix: "achievements", feature: "gamification" },
   { prefix: "payments", feature: "payments" },
   { prefix: "notifications", feature: "notifications" },
+  { prefix: "profile", feature: null },
+  { prefix: "settings", feature: null },
+  { prefix: "sessions", feature: null },
   { prefix: "lms", feature: null },
   { prefix: "mock-interview", feature: "interview_mock" },
   { prefix: "exam", feature: "tests" },
@@ -166,6 +175,7 @@ export function resolveCollegeLegacyRouteFeature(pathname: string): PlatformFeat
 export const STUDENT_STANDALONE_ROUTE_FEATURES: Record<string, PlatformFeatureKey> = {
   "/app/student-portal/exam": "tests",
   "/app/student-portal/mock": "interview_mock",
+  "/app/student-portal/my-assessments": "tests",
 };
 
 export function resolveStudentStandaloneFeature(pathname: string): PlatformFeatureKey | null {
@@ -177,15 +187,25 @@ export function resolveStudentStandaloneFeature(pathname: string): PlatformFeatu
 
 export const STUDENT_NAV_FEATURE_MAP: Record<string, PlatformFeatureKey | null> = {
   "": null,
-  workflow: "student_workflow",
-  learn: "learn",
+  // MVP primary nav
+  "my-learning": "learn",
   practice: "practice",
-  tests: "tests",
   "question-bank": "question_bank",
-  achievements: "gamification",
-  payments: "payments",
+  "my-assessments": "tests",
+  results: "tests",
+  "placement-coach": "learn",
   notifications: "notifications",
   profile: null,
+  settings: null,
+  sessions: null,
+  // Retained for direct URLs / future nav re-enable (not shown in MVP sidebar)
+  workflow: "student_workflow",
+  learn: "learn",
+  tests: "tests",
+  achievements: "gamification",
+  payments: "payments",
+  "adaptive-learning": "learn",
+  "ai-search": "learn",
 };
 
 export function extractLmsModuleKey(pathname: string, portal: "college" | "student"): string | null {

@@ -228,6 +228,49 @@ Respond ONLY in this JSON format:
     "topic": "{topic}"
 }}"""
 
+        elif question_type == "flashcard":
+            return f"""Create a {difficulty} difficulty flashcard on the topic: "{topic}"
+
+{f"Use this context: {context}" if context else ""}
+
+Requirements:
+- Front: a short, specific prompt/question/term (memorable, not a full paragraph)
+- Back: a concise, correct answer (1-3 sentences)
+
+Respond ONLY in this JSON format:
+{{
+    "question": "The flashcard front here",
+    "answer": "The flashcard back here",
+    "explanation": "Optional extra context, or empty string",
+    "difficulty": "{difficulty}",
+    "topic": "{topic}"
+}}"""
+
+        elif question_type in ("lesson", "voice_lesson"):
+            style = (
+                "Write it as a spoken narration script — natural, conversational sentences a "
+                "narrator would read aloud, no bullet points or headings."
+                if question_type == "voice_lesson"
+                else "Write it as a structured lesson with short paragraphs; headings are fine."
+            )
+            return f"""Write a {difficulty} difficulty lesson on the topic: "{topic}"
+
+{f"Use this context: {context}" if context else ""}
+
+Requirements:
+- {style}
+- 3-6 paragraphs, self-contained, teaches the topic from scratch
+- Clear and accurate
+
+Respond ONLY in this JSON format:
+{{
+    "question": "Lesson title here",
+    "answer": "Full lesson body here (the paragraphs)",
+    "explanation": "One-sentence summary of what this lesson covers",
+    "difficulty": "{difficulty}",
+    "topic": "{topic}"
+}}"""
+
         else:
             # Generic format
             return f"""Generate a {difficulty} difficulty {question_type} question on: "{topic}"
@@ -247,7 +290,11 @@ Respond in JSON format with: question, answer/options, explanation, difficulty, 
 
             if json_start != -1 and json_end > json_start:
                 json_str = response[json_start:json_end]
-                question = json.loads(json_str)
+                # strict=False: multi-paragraph answers (lessons) commonly contain
+                # raw newlines inside string values, which strict JSON rejects as
+                # invalid control characters even though the content is otherwise
+                # well-formed.
+                question = json.loads(json_str, strict=False)
 
                 # Validate required fields
                 if "question" in question:

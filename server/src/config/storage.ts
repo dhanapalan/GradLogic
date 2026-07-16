@@ -3,7 +3,9 @@ import {
   CreateBucketCommand,
   HeadBucketCommand,
   PutObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
+import { Readable } from "stream";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
 
@@ -57,4 +59,40 @@ export async function uploadFile(
   );
 
   return `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${key}`;
+}
+
+/**
+ * Fetch an object from S3 / MinIO as a Buffer (for authenticated download/preview).
+ */
+export async function getFileBuffer(key: string): Promise<{
+  body: Buffer;
+  contentType?: string;
+}> {
+  const res = await s3.send(
+    new GetObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: key,
+    })
+  );
+  const stream = res.Body;
+  if (!stream) throw new Error("Empty S3 object body");
+
+  let body: Buffer;
+  if (Buffer.isBuffer(stream)) {
+    body = stream;
+  } else if (stream instanceof Readable || typeof (stream as any).transformToByteArray === "function") {
+    if (typeof (stream as any).transformToByteArray === "function") {
+      body = Buffer.from(await (stream as any).transformToByteArray());
+    } else {
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as Readable) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      }
+      body = Buffer.concat(chunks);
+    }
+  } else {
+    throw new Error("Unsupported S3 body type");
+  }
+
+  return { body, contentType: res.ContentType };
 }

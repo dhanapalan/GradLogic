@@ -1,21 +1,47 @@
+/**
+ * Sprint 2.1 — Student Details (read-only profile foundation).
+ * Tabs: Overview · Academic · Placement · Documents (Sprint 2.4).
+ */
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import toast from "react-hot-toast";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft, Mail, Hash, Building2, GraduationCap, Calendar,
-  Edit2, Save, X, ShieldCheck, ClipboardList, AlertTriangle, Trash2,
+  ArrowLeft,
+  Edit2,
+  Mail,
+  Phone,
+  Hash,
+  User,
+  Building2,
+  GraduationCap,
+  Calendar,
+  Layers,
+  BookOpen,
+  Briefcase,
+  Gauge,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "../../components/ui/table";
+import StudentDocumentsPanel from "../../components/college-portal/StudentDocumentsPanel";
+import StudentEligibilityPanel from "../../components/college-portal/StudentEligibilityPanel";
 import campusStudentsService, {
-  type PlacementStatus, type RiskLevel, type UpdateStudentPayload,
+  type PlacementStatus,
+  type RiskLevel,
+  type StudentOverview,
 } from "../../services/campusStudentsService";
 import { formatCourseYears } from "../../lib/courseYears";
+import { useAuthStore } from "../../stores/authStore";
+
+type DetailTab = "overview" | "academic" | "placement" | "documents";
+
+const TABS: { id: DetailTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "academic", label: "Academic" },
+  { id: "placement", label: "Placement" },
+  { id: "documents", label: "Documents" },
+];
 
 function placementVariant(status: PlacementStatus): "muted" | "info" | "success" | "warning" {
   if (status === "Joined" || status === "Offered") return "success";
@@ -30,44 +56,42 @@ function riskVariant(level: RiskLevel): "success" | "warning" | "danger" {
   return "success";
 }
 
+function formatGender(g: string | null | undefined) {
+  if (!g) return "—";
+  return g.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function initials(name: string) {
-  return name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function canManageStudents(role: string) {
+  return ["college_admin", "college", "college_staff", "super_admin", "hr"].includes(
+    role.toLowerCase()
+  );
+}
+
+function canEditStudent(role: string) {
+  return ["college_admin", "college", "placement_cell", "super_admin", "hr"].includes(
+    role.toLowerCase()
+  );
 }
 
 export default function CollegePortalStudentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState<UpdateStudentPayload>({});
+  const role = useAuthStore((s) => s.user?.role ?? "");
+  const [tab, setTab] = useState<DetailTab>("overview");
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["college-portal-student", id],
     queryFn: () => campusStudentsService.get(id!),
     enabled: !!id,
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: (payload: UpdateStudentPayload) => campusStudentsService.update(id!, payload),
-    onSuccess: () => {
-      toast.success("Student updated");
-      queryClient.invalidateQueries({ queryKey: ["college-portal-student", id] });
-      queryClient.invalidateQueries({ queryKey: ["college-portal-students"] });
-      queryClient.invalidateQueries({ queryKey: ["college-portal-students-analytics"] });
-      setIsEditing(false);
-    },
-    onError: () => toast.error("Failed to update student"),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: () => campusStudentsService.softDelete(id!),
-    onSuccess: () => {
-      toast.success("Student soft-deleted");
-      queryClient.invalidateQueries({ queryKey: ["college-portal-students"] });
-      queryClient.invalidateQueries({ queryKey: ["college-portal-students-analytics"] });
-      navigate("/app/college-portal/students");
-    },
-    onError: () => toast.error("Failed to delete student"),
   });
 
   if (isLoading) {
@@ -78,301 +102,270 @@ export default function CollegePortalStudentDetailPage() {
     );
   }
 
-  if (!data) {
+  if (isError || !data?.overview) {
     return (
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 text-center text-gray-500">
-        Student not found.
+      <div className="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-admin-accent"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <p className="text-center text-gray-500">Student not found or access denied.</p>
       </div>
     );
   }
 
-  const { overview, assessments, violations } = data;
-
-  const startEdit = () => {
-    setForm({
-      placement_status: overview.placement_status,
-      risk_level: overview.risk_level,
-      phone_number: overview.phone_number ?? "",
-      degree: overview.degree ?? "",
-      specialization: overview.specialization ?? "",
-      passing_year: overview.passing_year ?? undefined,
-      cgpa: overview.cgpa ?? undefined,
-    });
-    setIsEditing(true);
-  };
-
-  const save = () => updateMutation.mutate(form);
-
-  const avgAssessmentScore =
-    assessments.length > 0
-      ? Math.round(assessments.reduce((a, x) => a + Number(x.score || 0), 0) / assessments.length)
-      : null;
+  const s = data.overview;
+  const showEdit = canEditStudent(role);
+  const listHref = canManageStudents(role)
+    ? "/app/college-portal/students"
+    : role === "instructor"
+      ? "/app/faculty-dashboard"
+      : "/app/placement-cell-dashboard";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <button
-          onClick={() => navigate("/app/college-portal/students")}
-          className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-admin-accent transition-colors"
+          type="button"
+          onClick={() => navigate(listHref)}
+          className="flex items-center gap-2 text-sm font-medium text-gray-500 transition-colors hover:text-admin-accent"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Students
+          <ArrowLeft className="h-4 w-4" />{" "}
+          {canManageStudents(role) ? "Back to Student List" : "Back to Dashboard"}
         </button>
-        {isEditing ? (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" type="button" onClick={() => setIsEditing(false)}>
-              <X className="h-4 w-4" /> Cancel
-            </Button>
-            <Button size="sm" type="button" onClick={save} disabled={updateMutation.isPending}>
-              <Save className="h-4 w-4" /> {updateMutation.isPending ? "Saving…" : "Save Changes"}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              className="text-rose-600 hover:text-rose-700"
-              disabled={deleteMutation.isPending}
-              onClick={() => {
-                if (window.confirm("Soft-delete this student? They will be hidden from the roster.")) {
-                  deleteMutation.mutate();
-                }
-              }}
-            >
-              <Trash2 className="h-4 w-4" /> Delete
-            </Button>
-            <Button variant="outline" size="sm" type="button" onClick={startEdit}>
+        {showEdit && (
+          <Link to={`/app/college-portal/students/${s.user_id}/edit`}>
+            <Button variant="outline" size="sm" type="button">
               <Edit2 className="h-4 w-4" /> Edit Student
             </Button>
-          </div>
+          </Link>
         )}
       </div>
 
-      {/* Identity card */}
+      {/* Profile header */}
       <Card>
-        <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-admin-accent/10 text-lg font-semibold text-admin-accent">
-            {initials(overview.name)}
-          </div>
+        <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
+          <StudentPhoto name={s.name} photoUrl={s.photo_url} />
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-semibold text-gray-900">{overview.name}</h1>
-              <Badge variant={overview.is_active ? "success" : "muted"}>
-                {overview.is_active ? "Active" : "Suspended"}
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold text-gray-900">{s.name}</h1>
+              <Badge variant={s.is_active ? "success" : "muted"}>
+                {s.is_active ? "Active" : "Suspended"}
               </Badge>
             </div>
-            <p className="text-sm text-gray-500 mt-0.5">{overview.email}</p>
+            <p className="mt-0.5 truncate text-sm text-gray-500">{s.email}</p>
+            <p className="mt-1 text-xs text-gray-400">
+              {[s.roll_number, s.department, s.program].filter(Boolean).join(" · ") || "—"}
+            </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {isEditing ? (
-              <select
-                value={form.placement_status}
-                onChange={(e) => setForm((f) => ({ ...f, placement_status: e.target.value as PlacementStatus }))}
-                className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium"
-              >
-                {["Not Shortlisted", "Shortlisted", "Interviewed", "Offered", "Joined"].map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            ) : (
-              <Badge variant={placementVariant(overview.placement_status)}>{overview.placement_status}</Badge>
-            )}
-            {isEditing ? (
-              <select
-                value={form.risk_level}
-                onChange={(e) => setForm((f) => ({ ...f, risk_level: e.target.value as RiskLevel }))}
-                className="rounded-lg border border-gray-300 px-2.5 py-1 text-xs font-medium"
-              >
-                {["Low", "Medium", "High"].map((r) => (
-                  <option key={r} value={r}>{r} risk</option>
-                ))}
-              </select>
-            ) : (
-              <Badge variant={riskVariant(overview.risk_level)}>{overview.risk_level} risk</Badge>
-            )}
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={placementVariant(s.placement_status)}>{s.placement_status}</Badge>
+            <Badge variant={riskVariant(s.risk_level)}>{s.risk_level} risk</Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-3 gap-4">
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900">{overview.cgpa?.toFixed(2) ?? "—"}</p>
-          <p className="text-xs text-gray-500 mt-1">CGPA</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900">{avgAssessmentScore != null ? `${avgAssessmentScore}%` : "—"}</p>
-          <p className="text-xs text-gray-500 mt-1">Avg Assessment Score</p>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <p className="text-2xl font-bold text-gray-900">{overview.avg_integrity?.toFixed(0) ?? "—"}%</p>
-          <p className="text-xs text-gray-500 mt-1">Integrity Score</p>
-        </CardContent></Card>
+      {/* Tabs — ready for future expansion */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-1 overflow-x-auto" aria-label="Student detail tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                tab === t.id
+                  ? "border-admin-accent text-admin-accent"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
       </div>
 
-      {/* Academic details */}
+      {tab === "overview" && <OverviewTab student={s} />}
+      {tab === "academic" && <AcademicTab student={s} />}
+      {tab === "placement" && (
+        <PlacementTab student={s} studentId={s.user_id} canWrite={showEdit} />
+      )}
+      {tab === "documents" && (
+        <StudentDocumentsPanel studentId={s.user_id} canWrite={showEdit} />
+      )}
+    </div>
+  );
+}
+
+function StudentPhoto({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={name}
+        className="h-20 w-20 shrink-0 rounded-full border border-gray-200 object-cover"
+      />
+    );
+  }
+  return (
+    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-admin-accent/10 text-lg font-semibold text-admin-accent">
+      {initials(name)}
+    </div>
+  );
+}
+
+function OverviewTab({ student: s }: { student: StudentOverview }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
       <Card>
-        <CardHeader><CardTitle>Academic Details</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field icon={Building2} label="Department" value={overview.department} />
+        <CardHeader>
+          <CardTitle className="text-base">Basic Information</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <Field icon={User} label="Full Name" value={s.name} />
+          <Field icon={Hash} label="Roll Number" value={s.roll_number} />
+          <Field icon={Hash} label="Register Number" value={s.register_number} />
+          <Field icon={Mail} label="Email" value={s.email} />
+          <Field icon={Phone} label="Mobile" value={s.phone_number} />
+          <Field icon={User} label="Gender" value={formatGender(s.gender)} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">At a glance</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <Field icon={Building2} label="Department" value={s.department} />
+          <Field icon={GraduationCap} label="Program" value={s.program || s.degree} />
           <Field
-            icon={GraduationCap}
-            label="Degree"
-            value={isEditing ? (
-              <input
-                value={form.degree ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, degree: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
-              />
-            ) : overview.degree || "—"}
+            icon={Briefcase}
+            label="Placement Status"
+            value={<Badge variant={placementVariant(s.placement_status)}>{s.placement_status}</Badge>}
           />
           <Field
-            icon={Hash}
-            label="Specialization"
-            value={isEditing ? (
-              <input
-                value={form.specialization ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, specialization: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
-              />
-            ) : overview.specialization || "—"}
+            icon={Gauge}
+            label="Readiness Score"
+            value={
+              s.readiness_score != null ? s.readiness_score.toFixed(1) : "—"
+            }
           />
           <Field
-            icon={Calendar}
-            label="Academic Year"
-            value={isEditing ? (
-              <input
-                type="number"
-                value={form.passing_year ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, passing_year: Number(e.target.value) }))}
-                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
-                placeholder="End year e.g. 2006"
-              />
-            ) : formatCourseYears(overview.degree, overview.passing_year)}
+            icon={ShieldAlert}
+            label="Risk Level"
+            value={<Badge variant={riskVariant(s.risk_level)}>{s.risk_level}</Badge>}
           />
-          {isEditing && form.passing_year != null && (
-            <p className="col-span-full -mt-2 text-xs text-gray-500">
-              Shown as {formatCourseYears(form.degree ?? overview.degree, form.passing_year)}
-            </p>
-          )}
           <Field
             icon={GraduationCap}
             label="CGPA"
-            value={isEditing ? (
-              <input
-                type="number"
-                step="0.01"
-                value={form.cgpa ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, cgpa: Number(e.target.value) }))}
-                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
-              />
-            ) : overview.cgpa?.toFixed(2) || "—"}
+            value={s.cgpa != null ? s.cgpa.toFixed(2) : "—"}
           />
-          <Field
-            icon={Mail}
-            label="Phone"
-            value={isEditing ? (
-              <input
-                value={form.phone_number ?? ""}
-                onChange={(e) => setForm((f) => ({ ...f, phone_number: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm"
-              />
-            ) : overview.phone_number || "—"}
-          />
-        </CardContent>
-      </Card>
-
-      {isEditing && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 flex items-center justify-between">
-          <span className="text-sm text-gray-600">Account status</span>
-          <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <input
-              type="checkbox"
-              checked={form.is_active ?? overview.is_active}
-              onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
-              className="rounded border-gray-300"
-            />
-            Active
-          </label>
-        </div>
-      )}
-
-      {/* Assessments */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ClipboardList className="h-4 w-4" /> Assessments</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {assessments.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-gray-500">No assessments taken yet.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Exam</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Score</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {assessments.map((a) => (
-                  <TableRow key={a.drive_id}>
-                    <TableCell className="font-medium text-gray-900">{a.title}</TableCell>
-                    <TableCell className="text-gray-500">{new Date(a.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right font-semibold">{Number(a.score).toFixed(1)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Integrity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Integrity & Proctoring</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {violations.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-gray-500">No integrity violations recorded.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Violation</TableHead>
-                  <TableHead>When</TableHead>
-                  <TableHead className="text-right">Risk Score</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {violations.map((v) => (
-                  <TableRow key={v.id}>
-                    <TableCell className="flex items-center gap-2 font-medium text-gray-900">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> {v.violation_type}
-                    </TableCell>
-                    <TableCell className="text-gray-500">{new Date(v.timestamp).toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-semibold">{v.risk_score}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function Field({ icon: Icon, label, value }: { icon: typeof Mail; label: string; value: React.ReactNode }) {
+function AcademicTab({ student: s }: { student: StudentOverview }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Academic Information</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Field icon={Building2} label="Department" value={s.department} />
+        <Field icon={GraduationCap} label="Program" value={s.program || s.degree} />
+        <Field
+          icon={Calendar}
+          label="Academic Year"
+          value={
+            s.academic_year != null || s.passing_year != null
+              ? formatCourseYears(s.program || s.degree, s.academic_year ?? s.passing_year)
+              : "—"
+          }
+        />
+        <Field icon={Layers} label="Batch" value={s.batch} />
+        <Field icon={BookOpen} label="Semester" value={s.semester} />
+        <Field icon={Hash} label="Section" value={s.section} />
+        <Field
+          icon={GraduationCap}
+          label="CGPA"
+          value={s.cgpa != null ? s.cgpa.toFixed(2) : "—"}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlacementTab({
+  student: s,
+  studentId,
+  canWrite,
+}: {
+  student: StudentOverview;
+  studentId: string;
+  canWrite: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Placement Information</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-3">
+          <Field
+            icon={Briefcase}
+            label="Placement Status"
+            value={
+              <Badge variant={placementVariant(s.placement_status)}>{s.placement_status}</Badge>
+            }
+          />
+          <Field
+            icon={Gauge}
+            label="Readiness Score"
+            value={s.readiness_score != null ? s.readiness_score.toFixed(1) : "—"}
+          />
+          <Field
+            icon={ShieldAlert}
+            label="Risk Level"
+            value={<Badge variant={riskVariant(s.risk_level)}>{s.risk_level}</Badge>}
+          />
+          <Field
+            icon={Briefcase}
+            label="Placement Eligible"
+            value={
+              <Badge variant={s.placement_eligible ? "success" : "danger"}>
+                {s.placement_eligible ? "Eligible" : "Not Eligible"}
+              </Badge>
+            }
+          />
+        </CardContent>
+      </Card>
+      <StudentEligibilityPanel studentId={studentId} canWrite={canWrite} />
+    </div>
+  );
+}
+
+function Field({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Mail;
+  label: string;
+  value: React.ReactNode;
+}) {
+  const display = value == null || value === "" ? "—" : value;
   return (
     <div className="flex items-start gap-3 rounded-lg border border-gray-100 p-3">
-      <Icon className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
       <div className="min-w-0 flex-1">
-        <div className="text-[11px] text-gray-400 uppercase tracking-wide">{label}</div>
-        <div className="text-sm font-medium text-gray-900 mt-0.5">{value}</div>
+        <div className="text-[11px] uppercase tracking-wide text-gray-400">{label}</div>
+        <div className="mt-0.5 text-sm font-medium text-gray-900">{display}</div>
       </div>
     </div>
   );

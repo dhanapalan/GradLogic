@@ -3,7 +3,8 @@
  * Covers: /api/analytics, /api/admin, /api/audit-logs, /api/notifications,
  *         /api/gamification, /api/mentor, /api/mock-interviews,
  *         /api/development, /api/skills, /api/roles, /api/cheating,
- *         /api/billing, /api/qb-ai
+ *         /api/billing, /api/qb-ai, /api/ai-knowledge, /api/assessment-hub,
+ *         /api/question-collections, /api/platform/proctoring
  * TODO: Port each to a full NestJS controller in a follow-up.
  */
 import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
@@ -20,6 +21,19 @@ import roleRoutes from "../../../routes/role.routes.js";
 import cheatingRoutes from "../../../routes/cheating.routes.js";
 import billingRoutes from "../../../routes/billing.routes.js";
 import questionBankAIRoutes from "../../../routes/questionBankAI.routes.js";
+import aiKnowledgeEngineRoutes from "../../../routes/aiKnowledgeEngine.routes.js";
+import voiceTutorRoutes from "../../../routes/voiceTutor.routes.js";
+import adaptiveLearningRoutes from "../../../routes/adaptiveLearning.routes.js";
+import placementCoachRoutes from "../../../routes/placementCoach.routes.js";
+import aiSearchRoutes from "../../../routes/aiSearch.routes.js";
+import aiAnalyticsRoutes from "../../../routes/aiAnalytics.routes.js";
+import knowledgeGraphRoutes from "../../../routes/knowledgeGraph.routes.js";
+import contentImproverRoutes from "../../../routes/contentImprover.routes.js";
+import translatorRoutes from "../../../routes/translator.routes.js";
+import learningCompanionRoutes from "../../../routes/learningCompanion.routes.js";
+import assessmentHubRoutes from "../../../routes/assessmentHub.routes.js";
+import questionCollectionsRoutes from "../../../routes/questionCollections.routes.js";
+import platformProctoringRoutes from "../../../routes/platformProctoring.routes.js";
 import { applyLegacyRouter } from "../../utils/legacy-router.middleware.js";
 
 @Module({})
@@ -38,5 +52,18 @@ export class SharedLegacyModule implements NestModule {
     applyLegacyRouter(consumer, cheatingRoutes, "/api/cheating");
     applyLegacyRouter(consumer, billingRoutes, "/api/billing");
     applyLegacyRouter(consumer, questionBankAIRoutes, "/api/qb-ai");
+    applyLegacyRouter(consumer, aiKnowledgeEngineRoutes, "/api/ai-knowledge");
+    applyLegacyRouter(consumer, voiceTutorRoutes, "/api/voice-tutor");
+    applyLegacyRouter(consumer, adaptiveLearningRoutes, "/api/adaptive-learning");
+    applyLegacyRouter(consumer, placementCoachRoutes, "/api/placement-coach");
+    applyLegacyRouter(consumer, aiSearchRoutes, "/api/ai-search");
+    applyLegacyRouter(consumer, aiAnalyticsRoutes, "/api/ai-analytics");
+    applyLegacyRouter(consumer, knowledgeGraphRoutes, "/api/knowledge-graph");
+    applyLegacyRouter(consumer, contentImproverRoutes, "/api/content-improver");
+    applyLegacyRouter(consumer, translatorRoutes, "/api/translator");
+    applyLegacyRouter(consumer, learningCompanionRoutes, "/api/learning-companion");
+    applyLegacyRouter(consumer, assessmentHubRoutes, "/api/assessment-hub");
+    applyLegacyRouter(consumer, questionCollectionsRoutes, "/api/question-collections");
+    applyLegacyRouter(consumer, platformProctoringRoutes, "/api/platform/proctoring");
   }
 }

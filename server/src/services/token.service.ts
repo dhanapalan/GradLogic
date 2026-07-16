@@ -171,6 +171,60 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
   );
 }
 
+export interface ActiveSession {
+  id: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  created_at: string;
+  expires_at: string;
+  is_current: boolean;
+}
+
+/** List active (non-revoked, non-expired) refresh-token sessions for a user. */
+export async function listActiveSessions(
+  userId: string,
+  currentRefreshToken?: string | null
+): Promise<ActiveSession[]> {
+  const currentHash = currentRefreshToken ? sha256(currentRefreshToken) : null;
+  const rows = await query<{
+    id: string;
+    user_agent: string | null;
+    ip_address: string | null;
+    created_at: string;
+    expires_at: string;
+    token_hash: string;
+  }>(
+    `SELECT id, user_agent, ip_address, created_at::text, expires_at::text, token_hash
+     FROM refresh_tokens
+     WHERE user_id = $1
+       AND revoked_at IS NULL
+       AND expires_at > NOW()
+     ORDER BY created_at DESC
+     LIMIT 50`,
+    [userId]
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    user_agent: r.user_agent,
+    ip_address: r.ip_address,
+    created_at: r.created_at,
+    expires_at: r.expires_at,
+    is_current: Boolean(currentHash && r.token_hash === currentHash),
+  }));
+}
+
+/** Revoke a single session by id for the owning user. */
+export async function revokeSessionById(userId: string, sessionId: string): Promise<void> {
+  const row = await queryOne<{ id: string }>(
+    `UPDATE refresh_tokens
+     SET revoked_at = NOW()
+     WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+     RETURNING id`,
+    [sessionId, userId]
+  );
+  if (!row) throw new AppError("Session not found", 404);
+}
+
 // ── 2FA login challenge token ─────────────────────────────────────────────────
 // A short-lived, purpose-scoped JWT issued after a correct password when 2FA is
 // enabled. It carries only { userId, purpose } and CANNOT be used as an access

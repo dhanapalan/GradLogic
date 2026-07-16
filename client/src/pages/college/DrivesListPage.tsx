@@ -253,7 +253,7 @@ export default function DrivesListPage() {
                                         </td>
                                         <td className="px-6 py-5 text-right">
                                             <Link
-                                                to={`/app/college-portal/assessments/${drive.id}`}
+                                                to={`/app/college-portal/drives/${drive.id}`}
                                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-all border border-indigo-100 hover:border-indigo-200"
                                             >
                                                 View Details

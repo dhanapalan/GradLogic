@@ -93,6 +93,12 @@ class AnalyzeGapsRequest(BaseModel):
     topics: List[str] = Field(..., min_items=1, description="Topics to analyze")
 
 
+class EmbedRequest(BaseModel):
+    """Raw text embedding request"""
+
+    text: str = Field(..., min_length=1, max_length=8000, description="Text to embed")
+
+
 # ── Authentication ────────────────────────────────────────────────────
 
 def verify_api_key(x_api_key: str = Header(...)) -> str:
@@ -215,6 +221,23 @@ async def get_rag_context(request: SearchRequest):
         return result
     except Exception as e:
         logger.error(f"Error retrieving RAG context: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/embed")
+async def embed_text(request: EmbedRequest):
+    """
+    Raw text embedding — reuses the same sentence-transformers model already
+    loaded for document/RAG search (engine.vector_store.embeddings), so this
+    adds no new model download or memory cost. Used by the Node backend's
+    semantic search (Phase 10 AI Search) to embed both stored question text
+    and live search queries for cosine-similarity ranking.
+    """
+    try:
+        vector = engine.vector_store.embeddings.encode(request.text, convert_to_numpy=True).tolist()
+        return {"vector": vector, "model": config.embedding.model_name}
+    except Exception as e:
+        logger.error(f"Error embedding text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

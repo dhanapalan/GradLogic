@@ -7,6 +7,7 @@ import { ensureBucket } from "./config/storage.js";
 import { initSocketIO } from "./config/socket.js";
 import { ensureAuditTable } from "./services/audit.service.js";
 import { ensureNotificationTable } from "./services/notification.service.js";
+import { applyBootOverrides } from "./services/apiKeyStore.service.js";
 import { startDriveScheduler } from "./scheduler/driveScheduler.js";
 import { startExamTimerWorker, stopExamTimerWorker } from "./workers/examTimer.worker.js";
 // Bootstrap module event subscriptions (side-effect imports — order matters)
@@ -27,6 +28,9 @@ async function bootstrap(): Promise<void> {
 
     // 2b. Ensure Notifications table exists
     await ensureNotificationTable();
+
+    // 2c. Load any superadmin-configured API key overrides from the DB
+    await applyBootOverrides();
 
     // 3. Connect Redis
     await connectRedis();

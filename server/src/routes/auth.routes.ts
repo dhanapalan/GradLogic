@@ -7,9 +7,20 @@ import { passwordSchema, setupPasswordSchema } from "../validators/password.js";
 
 const router = Router();
 
-const loginSchema = z.object({
+const loginSchema = z
+  .object({
+    email: z.string().min(1).optional(),
+    student_id: z.string().min(1).optional(),
+    password: z.string().min(1, "Password is required"),
+  })
+  .refine((d) => Boolean(d.email || d.student_id), {
+    message: "Email or Student ID is required",
+    path: ["email"],
+  });
+
+const verifyOtpSchema = z.object({
   email: z.string().email("Invalid email"),
-  password: z.string().min(1, "Password is required"),
+  otp: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
 });
 
 const studentRegisterSchema = z.object({
@@ -104,9 +115,14 @@ router.post("/logout", validate(logoutSchema), authController.logout);
 router.post("/change-password", authenticate, validate(changePasswordSchema), authController.changePassword);
 
 /**
- * POST /api/auth/forgot-password — begin reset flow (emails a link)
+ * POST /api/auth/forgot-password — begin reset flow (emails a link / OTP)
  */
 router.post("/forgot-password", validate(forgotPasswordSchema), authController.forgotPassword);
+
+/**
+ * POST /api/auth/verify-otp — verify forgot-password OTP → reset token
+ */
+router.post("/verify-otp", validate(verifyOtpSchema), authController.verifyOtp);
 
 /**
  * POST /api/auth/reset-password — complete reset flow with token

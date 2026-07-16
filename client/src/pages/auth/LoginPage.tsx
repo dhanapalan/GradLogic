@@ -3,115 +3,111 @@ import { useNavigate, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
-import api from "../../lib/api";
-import { authActions } from "../../stores/authStore";
+import studentAuthService, { parseApiError } from "../../services/studentAuthService";
 import {
   getLandingPath,
   getWorkflowRedirectUrl,
 } from "../../components/ProtectedRoute";
 
 type LoginForm = {
-  email: string;
+  identifier: string;
   password: string;
+  rememberMe: boolean;
 };
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [msLoading, setMsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginForm>({
+    defaultValues: { rememberMe: false },
+  });
 
   const onSubmit = async (form: LoginForm) => {
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/login", form);
+      const result = await studentAuthService.login({
+        email: form.identifier.trim(),
+        password: form.password,
+        rememberMe: form.rememberMe,
+      });
 
-      // 2FA gate: password OK but a TOTP code is required to finish signing in.
-      if (data.data?.requires2FA) {
-        navigate("/auth/2fa", { state: { challengeToken: data.data.challengeToken } });
+      if (result.requires2FA) {
+        navigate("/auth/2fa", { state: { challengeToken: result.challengeToken } });
         return;
       }
 
-      const { accessToken, refreshToken, permissions, user } = data.data;
-      authActions.login(accessToken, user, refreshToken, permissions ?? []);
-
       setTimeout(() => {
-        const landingPath = getLandingPath(user);
-        const workflowRedirect = getWorkflowRedirectUrl(user, landingPath);
-        if (workflowRedirect) { window.location.replace(workflowRedirect); return; }
+        const landingPath = getLandingPath(result.user);
+        const workflowRedirect = getWorkflowRedirectUrl(result.user, landingPath);
+        if (workflowRedirect) {
+          window.location.replace(workflowRedirect);
+          return;
+        }
         navigate(landingPath);
       }, 100);
-    } catch (err: any) {
-      const apiError = err.response?.data?.error;
-      const fieldEmail = err.response?.data?.fieldErrors?.email;
+    } catch (err: unknown) {
+      const apiError = parseApiError(err);
       toast.error(
-        fieldEmail || apiError === "Validation failed"
-          ? "Validation failed"
-          : apiError || "Invalid email or password"
+        apiError.fieldErrors?.email ||
+          (apiError.message === "Validation failed" ? "Validation failed" : apiError.message) ||
+          "Invalid email or password"
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleMicrosoftLogin = async () => {
-    setMsLoading(true);
-    try {
-      const { data } = await api.get("/auth/microsoft/url");
-      if (data?.data?.url) {
-        if (data.data.state) sessionStorage.setItem("ms_oauth_state", data.data.state);
-        window.location.href = data.data.url;
-      }
-    } catch {
-      toast.error("Failed to initiate Microsoft login");
-      setMsLoading(false);
-    }
-  };
-
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-700">
-      {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-black tracking-tight text-slate-900">
-          Welcome back
-        </h2>
+        <h2 className="text-2xl font-black tracking-tight text-slate-900">Welcome back</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Students, companies and colleges — sign in below.
+          Sign in with your email or student ID.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        {/* Email */}
         <div>
-          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            Email Address
+          <label
+            htmlFor="identifier"
+            className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-600"
+          >
+            Email or Student ID
           </label>
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              type="email"
-              {...register("email", {
-                required: "Validation failed",
-                pattern: {
-                  value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                  message: "Validation failed",
-                },
+              id="identifier"
+              type="text"
+              {...register("identifier", {
+                required: "Email or Student ID is required",
+                minLength: { value: 2, message: "Enter a valid email or student ID" },
               })}
-              className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.email ? "border-rose-300 ring-1 ring-rose-300" : "border-slate-200"}`}
-              placeholder="you@company.com"
-              autoComplete="email"
+              className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.identifier ? "border-rose-300 ring-1 ring-rose-300" : "border-slate-200"}`}
+              placeholder="you@college.edu or STU12345"
+              autoComplete="username"
+              aria-invalid={Boolean(errors.identifier)}
+              aria-describedby={errors.identifier ? "identifier-error" : undefined}
             />
           </div>
-          {errors.email && (
-            <p className="mt-1.5 text-xs text-rose-500">{errors.email.message}</p>
+          {errors.identifier && (
+            <p id="identifier-error" className="mt-1.5 text-xs text-rose-500" role="alert">
+              {errors.identifier.message}
+            </p>
           )}
         </div>
 
-        {/* Password */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+          <div className="mb-1.5 flex items-center justify-between">
+            <label
+              htmlFor="password"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-600"
+            >
               Password
             </label>
             <Link
@@ -122,36 +118,48 @@ export default function LoginPage() {
             </Link>
           </div>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+              id="password"
               type={showPassword ? "text" : "password"}
               {...register("password", { required: "Password is required" })}
               className={`w-full rounded-xl border bg-slate-50 py-3 pl-10 pr-10 text-sm text-slate-900 transition-all placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.password ? "border-rose-300 ring-1 ring-rose-300" : "border-slate-200"}`}
               placeholder="Enter your password"
               autoComplete="current-password"
+              aria-invalid={Boolean(errors.password)}
             />
             <button
               type="button"
-              onClick={() => setShowPassword(v => !v)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-              tabIndex={-1}
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+              aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
           {errors.password && (
-            <p className="mt-1.5 text-xs text-rose-500">{errors.password.message}</p>
+            <p className="mt-1.5 text-xs text-rose-500" role="alert">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
-        {/* Submit */}
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            {...register("rememberMe")}
+          />
+          Remember me on this device
+        </label>
+
         <button
           type="submit"
           disabled={loading}
           className="group flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white shadow-md shadow-indigo-200 transition-all hover:bg-indigo-700 hover:shadow-indigo-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" aria-label="Signing in" />
           ) : (
             <>
               Sign In
@@ -159,49 +167,14 @@ export default function LoginPage() {
             </>
           )}
         </button>
-
-        {/* Microsoft SSO */}
-        {!window.location.hostname.startsWith("college.") &&
-          !window.location.hostname.startsWith("campus.") &&
-          !window.location.hostname.startsWith("student.") && (
-            <>
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-400">or</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleMicrosoftLogin}
-                disabled={loading || msLoading}
-                className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] disabled:opacity-60"
-              >
-                {msLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <svg className="h-4 w-4" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M10 0H0V10H10V0Z" fill="#F25022" />
-                      <path d="M21 0H11V10H21V0Z" fill="#7FBA00" />
-                      <path d="M10 11H0V21H10V11Z" fill="#00A4EF" />
-                      <path d="M21 11H11V21H21V11Z" fill="#FFB900" />
-                    </svg>
-                    Continue with Microsoft
-                  </>
-                )}
-              </button>
-            </>
-          )}
       </form>
 
-      {/* Register link */}
       <p className="mt-6 text-center text-sm text-slate-500">
         New to GradLogic?{" "}
-        <Link to="/auth/register" className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline">
+        <Link
+          to="/auth/register"
+          className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+        >
           Create a free account →
         </Link>
       </p>

@@ -16,7 +16,8 @@ export type AppRole =
   | "student"
   | "instructor"
   | "mentor"
-  | "company";
+  | "company"
+  | "placement_cell";
 
 export type AppWorkflow = "admin" | "college" | "student" | "neutral";
 
@@ -44,6 +45,7 @@ const COLLEGE_WORKFLOW_ROLES: AppRole[] = [
   "college_admin",
   "college",
   "college_staff",
+  "placement_cell",
 ];
 
 const STUDENT_WORKFLOW_ROLES: AppRole[] = ["student"];
@@ -141,9 +143,10 @@ export const ROLE_HOME: Record<AppRole, string> = {
   college: "/app/college-portal/dashboard",
   college_staff: "/app/college-portal/dashboard",
   student: "/app/student-portal",
-  instructor: "/app/lms/courses",
+  instructor: "/app/faculty-dashboard",
   mentor: "/app/mentor/students",
   company: "/app/company",
+  placement_cell: "/app/placement-cell-dashboard",
 };
 
 /** Get the correct landing path for a user. */

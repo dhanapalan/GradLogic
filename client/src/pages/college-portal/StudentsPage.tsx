@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Filter,
@@ -39,6 +39,7 @@ import campusStudentsService, {
 } from "../../services/campusStudentsService";
 import { cn } from "../../lib/utils";
 import { formatCourseYears } from "../../lib/courseYears";
+import StudentBulkUploadModal from "../../components/college-portal/StudentBulkUploadModal";
 
 const EMPTY_CREATE = {
   name: "",
@@ -131,6 +132,8 @@ function matchesPerformance(student: CampusStudent, band: string): boolean {
 
 export default function CollegePortalStudentsPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -138,6 +141,7 @@ export default function CollegePortalStudentsPage() {
   const [batch, setBatch] = useState("");
   const [performance, setPerformance] = useState("");
   const [placementFilter, setPlacementFilter] = useState("");
+  const [eligibilityFilter, setEligibilityFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -147,7 +151,17 @@ export default function CollegePortalStudentsPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showBulk, setShowBulk] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_CREATE);
-  const [bulkCsv, setBulkCsv] = useState("");
+
+  // Dashboard deep-link: ?filter=eligibility_pending
+  useEffect(() => {
+    const f = searchParams.get("filter");
+    if (f === "eligibility_pending") {
+      setEligibilityFilter("pending");
+      setStatusFilter("active");
+      setShowFilters(true);
+      setPage(1);
+    }
+  }, [searchParams]);
 
   const filters = {
     page,
@@ -155,6 +169,7 @@ export default function CollegePortalStudentsPage() {
     department,
     batch,
     placementFilter,
+    eligibilityFilter,
     riskFilter,
     statusFilter,
     performance,
@@ -170,6 +185,7 @@ export default function CollegePortalStudentsPage() {
         ...(department && { department }),
         ...(batch && { year: batch }),
         ...(placementFilter && { placementStatus: placementFilter }),
+        ...(eligibilityFilter && { placementEligible: eligibilityFilter }),
         ...(riskFilter && { riskLevel: riskFilter }),
         ...(statusFilter && { status: statusFilter }),
       }),
@@ -244,41 +260,6 @@ export default function CollegePortalStudentsPage() {
       toast.error(err?.response?.data?.error || err?.message || "Failed to create student"),
   });
 
-  const bulkImportMutation = useMutation({
-    mutationFn: async () => {
-      const lines = bulkCsv
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-      if (!lines.length) throw new Error("Paste at least one student row");
-      const start = lines[0].toLowerCase().includes("email") ? 1 : 0;
-      const students = lines.slice(start).map((line) => {
-        const [name, email, student_identifier, degree, passing_year, cgpa] = line
-          .split(",")
-          .map((p) => p.trim());
-        if (!name || !email) throw new Error(`Invalid row: ${line}`);
-        return {
-          name,
-          email,
-          student_identifier: student_identifier || undefined,
-          degree: degree || undefined,
-          passing_year: passing_year ? Number(passing_year) : undefined,
-          cgpa: cgpa ? Number(cgpa) : undefined,
-        };
-      });
-      return campusStudentsService.bulkImport(students);
-    },
-    onSuccess: (res: any) => {
-      const count = res?.data?.created_count ?? res?.created ?? 0;
-      toast.success(res?.message || `Imported ${count} students`);
-      setShowBulk(false);
-      setBulkCsv("");
-      invalidateStudents();
-    },
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.error || err?.message || "Bulk import failed"),
-  });
-
   const toggleAll = (checked: boolean) => {
     setSelected(checked ? new Set(students.map((s) => s.user_id)) : new Set());
   };
@@ -317,7 +298,7 @@ export default function CollegePortalStudentsPage() {
             <Upload className="h-4 w-4" />
             Bulk Upload
           </Button>
-          <Button type="button" onClick={() => setShowAdd(true)}>
+          <Button type="button" onClick={() => navigate("/app/college-portal/students/new")}>
             <UserPlus className="h-4 w-4" />
             Add Student
           </Button>
@@ -371,39 +352,11 @@ export default function CollegePortalStudentsPage() {
         </div>
       )}
 
-      {showBulk && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Bulk Upload</h2>
-              <button type="button" onClick={() => setShowBulk(false)} aria-label="Close">
-                <X className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
-            <p className="mb-2 text-sm text-gray-500">
-              CSV rows: name, email, roll, degree, passing_year, cgpa
-            </p>
-            <textarea
-              className="h-40 w-full rounded-lg border border-gray-200 p-3 text-sm"
-              placeholder={"Jane Doe,jane@college.edu,CS21,CSE,2026,8.2"}
-              value={bulkCsv}
-              onChange={(e) => setBulkCsv(e.target.value)}
-            />
-            <div className="mt-5 flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={() => setShowBulk(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={bulkImportMutation.isPending || !bulkCsv.trim()}
-                onClick={() => bulkImportMutation.mutate()}
-              >
-                {bulkImportMutation.isPending ? "Importing…" : "Import"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <StudentBulkUploadModal
+        open={showBulk}
+        onClose={() => setShowBulk(false)}
+        onImported={() => invalidateStudents()}
+      />
 
       {/* Analytics strip */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
@@ -477,7 +430,7 @@ export default function CollegePortalStudentsPage() {
             </div>
 
             {showFilters && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7">
                 <Select
                   value={department}
                   onChange={(e) => {
@@ -529,6 +482,18 @@ export default function CollegePortalStudentsPage() {
                   <option value="Interviewed">Interviewed</option>
                   <option value="Offered">Offered</option>
                   <option value="Joined">Joined</option>
+                </Select>
+                <Select
+                  value={eligibilityFilter}
+                  onChange={(e) => {
+                    setEligibilityFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="">All eligibility</option>
+                  <option value="true">Eligible</option>
+                  <option value="false">Not Eligible</option>
+                  <option value="pending">Pending verification</option>
                 </Select>
                 <Select
                   value={riskFilter}
@@ -622,6 +587,7 @@ export default function CollegePortalStudentsPage() {
                   <TableHead className="hidden md:table-cell">CGPA</TableHead>
                   <TableHead>Readiness</TableHead>
                   <TableHead className="hidden xl:table-cell">Performance</TableHead>
+                  <TableHead className="hidden lg:table-cell">Eligibility</TableHead>
                   <TableHead className="hidden lg:table-cell">Placement</TableHead>
                   <TableHead className="hidden lg:table-cell">Risk</TableHead>
                   <TableHead className="hidden xl:table-cell">Status</TableHead>
@@ -632,19 +598,22 @@ export default function CollegePortalStudentsPage() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={11}>
+                      <TableCell colSpan={12}>
                         <div className="h-10 animate-pulse rounded bg-gray-100" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : students.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="py-12 text-center text-gray-500">
+                    <TableCell colSpan={12} className="py-12 text-center text-gray-500">
                       No students match your filters.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  students.map((student) => (
+                  students.map((student) => {
+                    const eligible =
+                      student.placement_eligible ?? student.eligible_for_hiring ?? false;
+                    return (
                     <TableRow key={student.user_id}>
                       <TableCell>
                         <input
@@ -688,6 +657,11 @@ export default function CollegePortalStudentsPage() {
                         })()}
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
+                        <Badge variant={eligible ? "success" : "danger"}>
+                          {eligible ? "Eligible" : "Not Eligible"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <Badge variant={placementVariant(student.placement_status)}>
                           {student.placement_status}
                         </Badge>
@@ -712,7 +686,8 @@ export default function CollegePortalStudentsPage() {
                         </Link>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

@@ -1,5 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   CreditCard,
   CheckCircle2,
@@ -9,6 +11,7 @@ import {
   ArrowLeft,
   Wallet,
   Info,
+  Loader2,
 } from "lucide-react";
 import studentPaymentsService, {
   FeeStatus,
@@ -47,6 +50,9 @@ function StatusBadge({ status }: { status: FeeStatus }) {
 }
 
 export default function PaymentsPage() {
+  const queryClient = useQueryClient();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ["student-my-fees"],
     queryFn: () => studentPaymentsService.getMyFees(),
@@ -55,6 +61,36 @@ export default function PaymentsPage() {
 
   const current = data?.current;
   const history = data?.history ?? [];
+
+  const payMutation = useMutation({
+    mutationFn: async (feeId: string) => {
+      const order = await studentPaymentsService.createOrder(feeId);
+      // Simulate the checkout widget taking a moment to complete, then
+      // confirm with a mock payment id — replace with a real gateway's
+      // checkout callback once one is wired up.
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const mockPaymentId = `mock_pay_${Math.random().toString(16).slice(2, 10)}`;
+      return studentPaymentsService.verifyPayment(feeId, {
+        order_id: order.order_id,
+        payment_id: mockPaymentId,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Payment successful");
+      setCheckoutOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["student-my-fees"] });
+    },
+    onError: () => {
+      toast.error("Payment failed. Please try again.");
+      setCheckoutOpen(false);
+    },
+  });
+
+  const handlePayNow = () => {
+    if (!current?.id) return;
+    setCheckoutOpen(true);
+    payMutation.mutate(current.id);
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20 px-2">
@@ -116,9 +152,19 @@ export default function PaymentsPage() {
                 {current?.status === "paid"
                   ? <>Paid on {formatDate(current.paid_at)}{current.payment_method ? ` · ${current.payment_method}` : ""}</>
                   : current
-                    ? "Payment is collected by your college placement office."
+                    ? "Pay now, or your college placement office can record an offline payment on your behalf."
                     : "No fee record has been generated for you yet."}
               </p>
+              {current && current.status === "pending" && (
+                <button
+                  onClick={handlePayNow}
+                  disabled={payMutation.isPending}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-bold px-4 py-2.5 transition-colors"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pay Now — {formatINR(current.amount)}
+                </button>
+              )}
             </div>
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
@@ -133,13 +179,13 @@ export default function PaymentsPage() {
             </div>
           </div>
 
-          {/* Offline-collection notice */}
+          {/* Payment notice */}
           <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 px-5 py-4 flex items-start gap-3">
             <CreditCard className="h-5 w-5 text-indigo-500 shrink-0 mt-0.5" />
             <p className="text-xs font-semibold text-indigo-900 leading-relaxed">
               The annual placement-preparation fee ({formatINR(data?.fee_per_student ?? 500)} per academic year)
-              is collected by your college's placement office (cash, UPI, card, or bank transfer). This page reflects
-              what they have recorded — reach out to them to make or confirm a payment.
+              can be paid directly above. Your college placement office can also record cash, UPI, card, or bank
+              transfer payments collected offline — either way, this page reflects the latest status.
             </p>
           </div>
 
@@ -191,6 +237,28 @@ export default function PaymentsPage() {
             )}
           </div>
         </>
+      )}
+
+      {/* Mock checkout modal — replace with a real gateway's checkout widget */}
+      {checkoutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8 text-center">
+            {payMutation.isPending ? (
+              <>
+                <Loader2 className="h-10 w-10 text-indigo-500 mx-auto animate-spin" />
+                <p className="mt-4 text-sm font-bold text-slate-900">Processing payment...</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {formatINR(current?.amount ?? 0)} · do not close this window
+                </p>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
+                <p className="mt-4 text-sm font-bold text-slate-900">Payment complete</p>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
