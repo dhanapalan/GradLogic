@@ -12,6 +12,7 @@ router.use(authenticate);
 router.use(authorize("super_admin", "admin"));
 
 router.get("/", userController.listUsers);
+router.get("/companies", userController.listCompanies);
 router.post("/", userController.createUser);
 router.put("/:id", userController.updateUser);
 router.put("/:id/role", userController.updateUserRole);

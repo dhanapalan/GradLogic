@@ -117,12 +117,13 @@ export default function CodeEditor({
   const [fontSize, setFontSize] = useState(14);
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
-  // Fetch supported languages
+  // Phase-1 Coding Assessments: Python & Java only
   const { data: languages } = useQuery({
-    queryKey: ["supported-languages"],
+    queryKey: ["supported-languages", "phase1-coding"],
     queryFn: async () => {
       const { data } = await api.get("/exams/languages");
-      return data.data as SupportedLanguage[];
+      const all = (data.data || []) as SupportedLanguage[];
+      return all.filter((l) => l.id === "python" || l.id === "java");
     },
   });
 

@@ -36,7 +36,7 @@ function verifyOAuthState(state: string): boolean {
 
 /**
  * POST /api/auth/login
- * Body: { email, password }
+ * Body: { email | student_id, password }
  */
 export const login = async (
   req: Request,
@@ -44,8 +44,9 @@ export const login = async (
   next: NextFunction,
 ) => {
   try {
-    const { email, password } = req.body;
-    const result = await authService.loginUser(email, password, req.ip, {
+    const identifier = String(req.body?.email || req.body?.student_id || "").trim();
+    const password = String(req.body?.password || "");
+    const result = await authService.loginUser(identifier, password, req.ip, {
       userAgent: req.headers["user-agent"],
     });
     res.json({ success: true, data: result });
@@ -125,9 +126,27 @@ export const forgotPassword = async (
     const result = await authService.requestPasswordReset(email, req.ip);
     res.json({
       success: true,
-      message: "If an account exists for that email, a reset link has been sent.",
-      data: result.resetUrl ? { resetUrl: result.resetUrl } : undefined,
+      message: "If an account exists for that email, a reset code has been sent.",
+      data: Object.keys(result).length ? result : undefined,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/verify-otp
+ * Body: { email, otp } → { resetToken }
+ */
+export const verifyOtp = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp } = req.body;
+    const data = await authService.verifyPasswordResetOtp(email, otp, req.ip);
+    res.json({ success: true, data, message: "OTP verified" });
   } catch (err) {
     next(err);
   }

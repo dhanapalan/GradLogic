@@ -190,7 +190,7 @@ export default function AIGeneratorPage() {
         questions,
         college_ids: assignedColleges.size > 0 ? Array.from(assignedColleges) : undefined,
       });
-      toast.success(res.data?.message || "Questions imported");
+      toast.success(res.data?.message || "Submitted for review — check AI Review Center to publish");
       setGenerated([]);
       setAssignedColleges(new Set());
     } catch (error: any) {
@@ -464,9 +464,10 @@ export default function AIGeneratorPage() {
 
           {/* Assign + import */}
           <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-6">
-            <h3 className="font-semibold text-gray-900 mb-1">4. Assign & Publish</h3>
+            <h3 className="font-semibold text-gray-900 mb-1">4. Assign & Submit for Review</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Optionally earmark these questions for specific colleges. Leave empty to publish globally.
+              Optionally earmark these questions for specific colleges. Submitted questions go to
+              AI Review Center as pending — they won't appear in exams until approved there.
             </p>
             {colleges.length > 0 && (
               <div className="flex flex-wrap gap-3 mb-4">
@@ -496,8 +497,8 @@ export default function AIGeneratorPage() {
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
               {importing
-                ? "Publishing..."
-                : `Publish ${selectedCount} Question(s)${assignedColleges.size > 0 ? ` to ${assignedColleges.size} College(s)` : ""}`}
+                ? "Submitting..."
+                : `Submit ${selectedCount} Question(s) for Review${assignedColleges.size > 0 ? ` (${assignedColleges.size} College(s))` : ""}`}
             </button>
           </div>
         </>

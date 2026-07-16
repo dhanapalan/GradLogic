@@ -62,8 +62,25 @@ const BillingPage = lazy(() => import("./pages/college/BillingPage"));
 const CollegePortalDashboard = lazy(() => import("./pages/college-portal/DashboardPage"));
 const CollegePortalStudents = lazy(() => import("./pages/college-portal/StudentsPage"));
 const CollegePortalStudentDetail = lazy(() => import("./pages/college-portal/StudentDetailPage"));
+const CollegePortalStudentForm = lazy(() => import("./pages/college-portal/StudentFormPage"));
 const CollegePortalAnalytics = lazy(() => import("./pages/college-portal/AnalyticsPage"));
 const CollegePortalComingSoon = lazy(() => import("./pages/college-portal/ComingSoonPage"));
+const CollegePortalQuestionBank = lazy(() => import("./pages/college-portal/QuestionBankPage"));
+const CollegePortalAssessments = lazy(
+  () => import("./pages/college-portal/AssessmentManagementPage")
+);
+const CollegePortalCampaigns = lazy(
+  () => import("./pages/college-portal/AssessmentCampaignsPage")
+);
+const CollegePortalCampaignResults = lazy(
+  () => import("./pages/college-portal/AssessmentResultsPage")
+);
+const CollegePortalCampaignAnalytics = lazy(
+  () => import("./pages/college-portal/AssessmentAnalyticsPage")
+);
+const CollegePortalCampaignIntegrity = lazy(
+  () => import("./pages/college-portal/AssessmentIntegrityPage")
+);;
 const CollegeSkillsPage = lazy(() => import("./pages/college/CollegeSkillsPage"));
 const LmsModulePage = lazy(() => import("./pages/lms/LmsModulePage"));
 const StudentPaymentsPage = lazy(() => import("./pages/student/PaymentsPage"));
@@ -72,6 +89,27 @@ const StudentWorkflowPage = lazy(() => import("./pages/student/WorkflowPage"));
 const StudentPortalLayout = lazy(() => import("./layouts/StudentPortalLayout"));
 const StudentDashboardPage = lazy(() => import("./pages/student/portal/DashboardPage"));
 const StudentTestsPage = lazy(() => import("./pages/student/portal/TestsPage"));
+const StudentMyAssessmentsPage = lazy(
+  () => import("./pages/student/portal/MyAssessmentsPage")
+);
+const StudentAssessmentDetailPage = lazy(
+  () => import("./pages/student/portal/my-assessments/AssessmentDetailPage")
+);
+const StudentAssessmentInstructionsPage = lazy(
+  () => import("./pages/student/portal/AssessmentInstructionsPage")
+);
+const StudentAssessmentAttemptPage = lazy(
+  () => import("./pages/student/portal/AssessmentAttemptPage")
+);
+const StudentAssessmentSubmissionPage = lazy(
+  () => import("./pages/student/portal/AssessmentSubmissionPage")
+);
+const StudentAssessmentCompletionPage = lazy(
+  () => import("./pages/student/portal/AssessmentCompletionPage")
+);
+const StudentAssessmentResultPage = lazy(
+  () => import("./pages/student/portal/AssessmentResultPage")
+);
 const StudentNotificationsPage = lazy(() => import("./pages/student/portal/NotificationsPage"));
 const StudentLearnPage = lazy(() => import("./pages/student/portal/LearnPage"));
 const CampusListPage = lazy(() => import("./pages/hr/CampusListPage"));
@@ -117,12 +155,27 @@ const AIQuestionGeneratorPage = lazy(() => import("./pages/assessments/AIQuestio
 
 const ExamInstructionsPage = lazy(() => import("./pages/student/ExamInstructionsPage"));
 const ExamPlayerPage = lazy(() => import("./pages/student/ExamPlayerPage"));
+const ResultsAnalysisPage = lazy(() => import("./pages/student/ResultsAnalysisPage"));
+const StudentResultsAnalyticsPage = lazy(
+  () => import("./pages/student/portal/ResultsAnalyticsPage")
+);
+const StudentAttemptReportPage = lazy(
+  () => import("./pages/student/portal/results/AttemptReportPage")
+);
+const StudentSettingsPage = lazy(() => import("./pages/student/portal/StudentSettingsPage"));
 const MockExamPlayer = lazy(() => import("./pages/student/MockExamPlayer"));
 const StudentProfile = lazy(() => import("./pages/student/StudentProfile"));
+const StudentSessionsPage = lazy(() => import("./pages/student/SessionsPage"));
 const PracticePage = lazy(() => import("./pages/student/PracticePage"));
+const VoiceTutorPage = lazy(() => import("./pages/student/VoiceTutorPage"));
+const AdaptiveLearningPage = lazy(() => import("./pages/student/AdaptiveLearningPage"));
+const StudentAiCoachPage = lazy(() => import("./pages/student/portal/ai-coach/AiCoachPage"));
+const AiSearchPage = lazy(() => import("./pages/student/AiSearchPage"));
 const DevelopmentPage = lazy(() => import("./pages/student/DevelopmentPage"));
 const GamificationPage = lazy(() => import("./pages/student/GamificationPage"));
 const MentorDashboardPage = lazy(() => import("./pages/mentor/MentorDashboardPage"));
+const FacultyDashboardPage = lazy(() => import("./pages/faculty/FacultyDashboardPage"));
+const PlacementCellDashboardPage = lazy(() => import("./pages/placement-cell/PlacementCellDashboardPage"));
 const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 
 // ── Learning Portal ───────────────────────────────────────────────────────────
@@ -145,6 +198,25 @@ const MockInterviewFeedbackPage = lazy(() => import("./pages/student/MockIntervi
 const StudentLearningPage = lazy(() => import("./pages/lms/StudentLearningPage"));
 const CourseDetailPage = lazy(() =>
   import("./pages/lms/StudentLearningPage").then((m) => ({ default: m.CourseDetailPage }))
+);
+const MyLearningPage = lazy(() => import("./pages/student/portal/my-learning/MyLearningPage"));
+const MyLearningPathPage = lazy(() => import("./pages/student/portal/my-learning/PathDetailPage"));
+const MyLearningCoursePage = lazy(() => import("./pages/student/portal/my-learning/CourseDetailPage"));
+const MyLearningLessonPage = lazy(() => import("./pages/student/portal/my-learning/LessonPlayerPage"));
+const MyLearningProgressPage = lazy(() =>
+  import("./pages/student/portal/my-learning/SecondaryPages").then((m) => ({ default: m.ProgressPage }))
+);
+const MyLearningBookmarksPage = lazy(() =>
+  import("./pages/student/portal/my-learning/SecondaryPages").then((m) => ({ default: m.BookmarksPage }))
+);
+const MyLearningCalendarPage = lazy(() =>
+  import("./pages/student/portal/my-learning/SecondaryPages").then((m) => ({ default: m.CalendarPage }))
+);
+const MyLearningCertificatesPage = lazy(() =>
+  import("./pages/student/portal/my-learning/SecondaryPages").then((m) => ({ default: m.CertificatesPage }))
+);
+const MyLearningResourcesPage = lazy(() =>
+  import("./pages/student/portal/my-learning/SecondaryPages").then((m) => ({ default: m.ResourcesPage }))
 );
 const CourseBuilderPage = lazy(() => import("./pages/lms/CourseBuilderPage"));
 const CourseDetailBuilder = lazy(() =>
@@ -190,12 +262,170 @@ const SuperAdminPermissionMatrix = lazy(() => import("./pages/superadmin/roles/P
 // Audit Trail
 const SuperAdminAuditTrail = lazy(() => import("./pages/superadmin/audit/AuditTrailPage"));
 
-// Question Bank
+// Question Bank (legacy routes — kept working, no longer in the sidebar;
+// superseded by AI Learning Companion below)
 const SuperAdminQuestionBank = lazy(() => import("./pages/superadmin/question-bank/AllQuestionsPage"));
 const SuperAdminAIGenerator = lazy(() => import("./pages/superadmin/question-bank/AIGeneratorPage"));
 const SuperAdminCategories = lazy(() => import("./pages/superadmin/question-bank/CategoriesPage"));
 const SuperAdminReviewQueue = lazy(() => import("./pages/superadmin/question-bank/ReviewQueuePage"));
 const SuperAdminImportBooks = lazy(() => import("./pages/superadmin/question-bank/ImportBooksPage"));
+
+// AI Learning Companion (replaces Question Bank as the primary UI — same
+// backend, same database, new information architecture)
+const LearningCompanionDashboard = lazy(() => import("./pages/superadmin/learning-companion/DashboardPage"));
+const LearningCompanionCategories = lazy(() => import("./pages/superadmin/learning-companion/CategoriesPage"));
+const LearningCompanionSubjects = lazy(() => import("./pages/superadmin/learning-companion/SubjectsPage"));
+const LearningCompanionTopics = lazy(() => import("./pages/superadmin/learning-companion/TopicsPage"));
+const LearningCompanionSkills = lazy(() => import("./pages/superadmin/learning-companion/SkillsPage"));
+const LearningCompanionContentStudio = lazy(() => import("./pages/superadmin/learning-companion/ContentStudioPage"));
+const LearningCompanionReviewCenter = lazy(() => import("./pages/superadmin/learning-companion/ReviewCenterPage"));
+const LearningCompanionKnowledgeEngine = lazy(() => import("./pages/superadmin/learning-companion/KnowledgeEnginePage"));
+const LearningCompanionAnalytics = lazy(() => import("./pages/superadmin/learning-companion/AiAnalyticsPage"));
+const LearningCompanionGraph = lazy(() => import("./pages/superadmin/learning-companion/KnowledgeGraphPage"));
+const LearningCompanionImprove = lazy(() => import("./pages/superadmin/learning-companion/ImproveQuestionPage"));
+const KnowledgeLibraryLayout = lazy(() => import("./pages/superadmin/knowledge-library/KnowledgeLibraryLayout"));
+const KnowledgeLibraryDashboard = lazy(() => import("./pages/superadmin/knowledge-library/DashboardPage"));
+const KnowledgeLibraryAll = lazy(() => import("./pages/superadmin/knowledge-library/AllKnowledgePage"));
+const KnowledgeLibraryLessons = lazy(() => import("./pages/superadmin/knowledge-library/LessonsAssetPage"));
+const KnowledgeLibraryQuestions = lazy(() => import("./pages/superadmin/knowledge-library/QuestionsAssetPage"));
+const KnowledgeLibraryCreate = lazy(() => import("./pages/superadmin/knowledge-library/CreateKnowledgeAssetPage"));
+const KnowledgeLibraryFlashcards = lazy(() => import("./pages/superadmin/knowledge-library/FlashcardsAssetPage"));
+const KnowledgeLibraryCoding = lazy(() => import("./pages/superadmin/knowledge-library/CodingChallengesAssetPage"));
+const KnowledgeLibraryVoice = lazy(() => import("./pages/superadmin/knowledge-library/VoiceLessonsAssetPage"));
+const KnowledgeLibraryVideos = lazy(() => import("./pages/superadmin/knowledge-library/VideosAssetPage"));
+const KnowledgeLibraryCaseStudies = lazy(() =>
+  import("./pages/superadmin/knowledge-library/ContentAssetPages").then((m) => ({ default: m.CaseStudiesAssetPage }))
+);
+const KnowledgeLibraryInterview = lazy(() =>
+  import("./pages/superadmin/knowledge-library/ContentAssetPages").then((m) => ({ default: m.InterviewQuestionsAssetPage }))
+);
+const KnowledgeLibraryDocuments = lazy(() =>
+  import("./pages/superadmin/knowledge-library/ContentAssetPages").then((m) => ({ default: m.DocumentsAssetPage }))
+);
+const KnowledgeLibraryOrganization = lazy(() => import("./pages/superadmin/knowledge-library/OrganizationHubPage"));
+const KnowledgeLibraryCategoriesOrg = lazy(() => import("./pages/superadmin/knowledge-library/CategoriesOrgPage"));
+const KnowledgeLibrarySubjectsOrg = lazy(() => import("./pages/superadmin/knowledge-library/SubjectsOrgPage"));
+const KnowledgeLibraryTopicsOrg = lazy(() => import("./pages/superadmin/knowledge-library/TopicsOrgPage"));
+const KnowledgeLibrarySkillsOrg = lazy(() => import("./pages/superadmin/knowledge-library/SkillsOrgPage"));
+const KnowledgeLibraryTagsOrg = lazy(() => import("./pages/superadmin/knowledge-library/TagsOrgPage"));
+const KnowledgeLibraryCollections = lazy(() => import("./pages/superadmin/knowledge-library/CollectionsPage"));
+const KnowledgeLibraryTopicDetail = lazy(() => import("./pages/superadmin/knowledge-library/TopicDetailPage"));
+const KnowledgeLibraryAiHub = lazy(() => import("./pages/superadmin/knowledge-library/ai/AiHubPage"));
+const KnowledgeLibraryAiSearch = lazy(() => import("./pages/superadmin/knowledge-library/ai/AiSearchToolPage"));
+const KnowledgeLibraryAiMetadata = lazy(() => import("./pages/superadmin/knowledge-library/ai/AiMetadataToolPage"));
+const KnowledgeLibraryAiTranslate = lazy(() => import("./pages/superadmin/knowledge-library/ai/AiTranslateToolPage"));
+const KnowledgeLibraryAiVoice = lazy(() => import("./pages/superadmin/knowledge-library/ai/AiVoiceToolPage"));
+const KnowledgeLibraryAiEmbeddings = lazy(() => import("./pages/superadmin/knowledge-library/ai/AiEmbeddingsToolPage"));
+const KnowledgeLibraryAiDuplicates = lazy(() =>
+  import("./pages/superadmin/knowledge-library/ai/AiRelatedDupesPages").then((m) => ({ default: m.AiDuplicatesToolPage }))
+);
+const KnowledgeLibraryAiRelated = lazy(() =>
+  import("./pages/superadmin/knowledge-library/ai/AiRelatedDupesPages").then((m) => ({ default: m.AiRelatedToolPage }))
+);
+const KnowledgeLibraryEnterprise = lazy(() => import("./pages/superadmin/knowledge-library/enterprise/EnterpriseHubPage"));
+const KnowledgeLibraryEnterpriseVersions = lazy(() => import("./pages/superadmin/knowledge-library/enterprise/EnterpriseVersionsPage"));
+const KnowledgeLibraryEnterpriseArchive = lazy(() => import("./pages/superadmin/knowledge-library/enterprise/EnterpriseArchivePage"));
+const KnowledgeLibraryEnterpriseBulk = lazy(() => import("./pages/superadmin/knowledge-library/enterprise/EnterpriseBulkPage"));
+const KnowledgeLibraryEnterpriseImportExport = lazy(() => import("./pages/superadmin/knowledge-library/enterprise/EnterpriseImportExportPage"));
+const KnowledgeLibraryEnterpriseAnalytics = lazy(() => import("./pages/superadmin/knowledge-library/enterprise/EnterpriseAnalyticsPage"));
+const LegacyLibraryRedirect = lazy(() => import("./pages/superadmin/knowledge-library/LegacyLibraryRedirect"));
+const CompanyManagementPage = lazy(() => import("./pages/superadmin/companies/CompanyManagementPage"));
+const RecruitmentManagementPage = lazy(() => import("./pages/superadmin/recruitment/RecruitmentManagementPage"));
+const PlacementAnalyticsPage = lazy(() => import("./pages/superadmin/analytics/PlacementAnalyticsPage"));
+const OrgComingSoonRoute = lazy(() => import("./pages/superadmin/organization/OrgComingSoonRoute"));
+const FeatureComingSoonRoute = lazy(() => import("./pages/superadmin/FeatureComingSoonRoute"));
+const CoursesPage = lazy(() => import("./pages/superadmin/courses/CoursesPage"));
+const AdminCourseDetailPage = lazy(() => import("./pages/superadmin/courses/CourseDetailPage"));
+const CourseBuilderLayout = lazy(() => import("./pages/superadmin/course-builder/CourseBuilderLayout"));
+const CourseBuilderDashboard = lazy(() => import("./pages/superadmin/course-builder/DashboardPage"));
+const CourseBuilderList = lazy(() => import("./pages/superadmin/course-builder/CourseListPage"));
+const CourseBuilderNew = lazy(() => import("./pages/superadmin/course-builder/NewCourseWizardPage"));
+const CourseBuilderWorkspace = lazy(() => import("./pages/superadmin/course-builder/CourseWorkspacePage"));
+const CourseBuilderAiStub = lazy(() => import("./pages/superadmin/course-builder/AiCourseBuilderPage"));
+const CourseBuilderTemplatesStub = lazy(() => import("./pages/superadmin/course-builder/TemplatesPage"));
+const CourseBuilderReviewStub = lazy(() => import("./pages/superadmin/course-builder/ReviewPublishPage"));
+const CourseBuilderAnalytics = lazy(() => import("./pages/superadmin/course-builder/CourseBuilderAnalyticsPage"));
+const CourseCatalogLayout = lazy(() => import("./pages/superadmin/course-catalog/CourseCatalogLayout"));
+const CatalogDashboardPage = lazy(() => import("./pages/superadmin/course-catalog/CatalogDashboardPage"));
+const PlacementTracksPage = lazy(() =>
+  import("./pages/superadmin/course-catalog/PlacementTracksPage").then((m) => ({ default: m.PlacementTracksPage }))
+);
+const PlacementTrackDetailPage = lazy(() =>
+  import("./pages/superadmin/course-catalog/PlacementTracksPage").then((m) => ({ default: m.PlacementTrackDetailPage }))
+);
+const CatalogCoursesBrowsePage = lazy(() => import("./pages/superadmin/course-catalog/CatalogCoursesBrowsePage"));
+const CatalogCourseDetailPage = lazy(() => import("./pages/superadmin/course-catalog/CatalogCourseDetailPage"));
+const CatalogAnalyticsStubPage = lazy(() => import("./pages/superadmin/course-catalog/CatalogAnalyticsStubPage"));
+const LegacyCourseCatalogRedirect = lazy(() => import("./pages/superadmin/course-catalog/LegacyCourseCatalogRedirect"));
+const AssessmentHubDashboardPage = lazy(() => import("./pages/superadmin/assessment-hub/AssessmentHubDashboardPage"));
+const QuestionBankHubPage = lazy(() => import("./pages/superadmin/assessment-hub/QuestionBankHubPage"));
+const LearningJourneyLayout = lazy(() => import("./pages/superadmin/learning-journey/LearningJourneyLayout"));
+const JourneyDashboardPage = lazy(() => import("./pages/superadmin/learning-journey/JourneyDashboardPage"));
+const JourneyTemplatesListPage = lazy(() => import("./pages/superadmin/learning-journey/JourneyTemplatesListPage"));
+const StudentJourneysStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.StudentJourneysStub }))
+);
+const JourneyPlacementTracksStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.PlacementTracksStub }))
+);
+const JourneyAiRecommendationsStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.AiRecommendationsStub }))
+);
+const JourneyMilestonesStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.MilestonesStub }))
+);
+const JourneyProgressStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.ProgressMonitoringStub }))
+);
+const JourneyDailyPlanStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.DailyPlanStub }))
+);
+const JourneyWeeklyGoalsStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.WeeklyGoalsStub }))
+);
+const JourneyRevisionStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.RevisionPlannerStub }))
+);
+const JourneyAnalyticsStub = lazy(() =>
+  import("./pages/superadmin/learning-journey/JourneyStubs").then((m) => ({ default: m.JourneyAnalyticsStub }))
+);
+const QuestionCollectionsPage = lazy(() => import("./pages/superadmin/question-collections/QuestionCollectionsPage"));
+const QuestionCollectionDetailPage = lazy(() => import("./pages/superadmin/question-collections/QuestionCollectionDetailPage"));
+const LessonsLibraryPage = lazy(() => import("./pages/superadmin/features/LessonsLibraryPage"));
+const VoiceLessonsLibraryPage = lazy(() => import("./pages/superadmin/features/VoiceLessonsLibraryPage"));
+const FlashcardsLibraryPage = lazy(() => import("./pages/superadmin/features/FlashcardsLibraryPage"));
+const InterviewQuestionsPage = lazy(() => import("./pages/superadmin/features/InterviewQuestionsPage"));
+const CaseStudiesPage = lazy(() => import("./pages/superadmin/features/CaseStudiesPage"));
+const LearningResourcesPage = lazy(() => import("./pages/superadmin/features/LearningResourcesPage"));
+const ResourceLibraryPage = lazy(() => import("./pages/superadmin/features/ResourceLibraryPage"));
+const AssessmentTemplatesPage = lazy(() => import("./pages/superadmin/features/AssessmentTemplatesPage"));
+const TemplateFormPage = lazy(() => import("./pages/superadmin/features/templates/TemplateFormPage"));
+const TemplatePreviewPage = lazy(() => import("./pages/superadmin/features/templates/TemplatePreviewPage"));
+const CodingAssessmentsPage = lazy(() => import("./pages/superadmin/features/CodingAssessmentsPage"));
+const MockTestsPage = lazy(() => import("./pages/superadmin/features/MockTestsPage"));
+const PracticeSetsPage = lazy(() => import("./pages/superadmin/features/PracticeSetsPage"));
+const AssessmentResultsPage = lazy(() => import("./pages/superadmin/features/AssessmentResultsPage"));
+const ContentImproverLandingPage = lazy(() => import("./pages/superadmin/features/ContentImproverLandingPage"));
+const TranslationStudioPage = lazy(() => import("./pages/superadmin/features/TranslationStudioPage"));
+const EmbeddingManagerPage = lazy(() => import("./pages/superadmin/features/EmbeddingManagerPage"));
+const AiTutorVoicesPage = lazy(() => import("./pages/superadmin/features/AiTutorVoicesPage"));
+const VoiceLanguagesPage = lazy(() => import("./pages/superadmin/features/VoiceLanguagesPage"));
+const AudioLibraryPage = lazy(() => import("./pages/superadmin/features/AudioLibraryPage"));
+const VoiceTemplatesPage = lazy(() => import("./pages/superadmin/features/VoiceTemplatesPage"));
+const SkillsAnalyticsPage = lazy(() => import("./pages/superadmin/features/SkillsAnalyticsPage"));
+const AssessmentsAnalyticsPage = lazy(() => import("./pages/superadmin/features/AssessmentsAnalyticsPage"));
+const LicensePage = lazy(() => import("./pages/superadmin/features/LicensePage"));
+const BatchesPage = lazy(() => import("./pages/superadmin/features/BatchesPage"));
+const EnrollmentsPage = lazy(() => import("./pages/superadmin/features/EnrollmentsPage"));
+const CertificatesAdminPage = lazy(() => import("./pages/superadmin/features/CertificatesPage"));
+const AiAssistantPage = lazy(() => import("./pages/superadmin/features/AiAssistantPage"));
+const LearningAnalyticsPage = lazy(() => import("./pages/superadmin/features/LearningAnalyticsPage"));
+const StudentAnalyticsPage = lazy(() => import("./pages/superadmin/features/StudentAnalyticsPage"));
+const CourseAnalyticsPage = lazy(() => import("./pages/superadmin/features/CourseAnalyticsPage"));
+const VoiceAnalyticsPage = lazy(() => import("./pages/superadmin/features/VoiceAnalyticsPage"));
+const BrandingPage = lazy(() => import("./pages/superadmin/features/BrandingPage"));
+const IntegrationsPage = lazy(() => import("./pages/superadmin/features/IntegrationsPage"));
+
 
 // Workflows
 const SuperAdminWorkflows = lazy(() => import("./pages/superadmin/workflows/WorkflowsPage"));
@@ -351,12 +581,168 @@ export default function App() {
               {/* Audit Trail */}
               <Route path="audit-trail" element={<PermissionGuard permission="audit_view" redirect><SuperAdminAuditTrail /></PermissionGuard>} />
 
-              {/* Question Bank */}
-              <Route path="question-bank" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminQuestionBank /></PermissionGuard>} />
+              {/* Question Bank — Assessment Hub master repository hub + legacy tools */}
+              <Route path="question-bank" element={<PermissionGuard permission="assessments_view" redirect><QuestionBankHubPage /></PermissionGuard>} />
+              <Route path="question-bank/browse" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminQuestionBank /></PermissionGuard>} />
               <Route path="question-bank/ai-generator" element={<PermissionGuard permission="assessments_manage" redirect><SuperAdminAIGenerator /></PermissionGuard>} />
               <Route path="question-bank/categories" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminCategories /></PermissionGuard>} />
               <Route path="question-bank/review-queue" element={<PermissionGuard permission="assessments_view" redirect><SuperAdminReviewQueue /></PermissionGuard>} />
               <Route path="question-bank/import-books" element={<PermissionGuard permission="assessments_manage" redirect><SuperAdminImportBooks /></PermissionGuard>} />
+
+              {/* AI Learning Companion — replaces Question Bank as the primary UI.
+                  Same backend/database. Phase 2: AI Content Studio (below) replaces
+                  AI Generator + Import from Books as the sidebar entry point for
+                  content creation — those two routes stay live (direct links still
+                  work) but are no longer linked from the sidebar. Review Queue is
+                  unaffected and still reachable. */}
+              <Route path="learning-companion" element={<PermissionGuard permission="assessments_view" redirect><LearningCompanionDashboard /></PermissionGuard>} />
+              <Route path="learning-companion/library" element={<LegacyLibraryRedirect />} />
+              <Route path="knowledge-library" element={<PermissionGuard permission="assessments_view" redirect><KnowledgeLibraryLayout /></PermissionGuard>}>
+                <Route index element={<KnowledgeLibraryDashboard />} />
+                <Route path="all" element={<KnowledgeLibraryAll />} />
+                <Route path="assets/lessons" element={<KnowledgeLibraryLessons />} />
+                <Route path="assets/questions" element={<KnowledgeLibraryQuestions />} />
+                <Route path="assets/flashcards" element={<KnowledgeLibraryFlashcards />} />
+                <Route path="assets/coding" element={<KnowledgeLibraryCoding />} />
+                <Route path="assets/case-studies" element={<KnowledgeLibraryCaseStudies />} />
+                <Route path="assets/interview-questions" element={<KnowledgeLibraryInterview />} />
+                <Route path="assets/voice-lessons" element={<KnowledgeLibraryVoice />} />
+                <Route path="assets/videos" element={<KnowledgeLibraryVideos />} />
+                <Route path="assets/documents" element={<KnowledgeLibraryDocuments />} />
+                <Route path="organization" element={<KnowledgeLibraryOrganization />} />
+                <Route path="organization/categories" element={<KnowledgeLibraryCategoriesOrg />} />
+                <Route path="organization/subjects" element={<KnowledgeLibrarySubjectsOrg />} />
+                <Route path="organization/topics" element={<KnowledgeLibraryTopicsOrg />} />
+                <Route path="organization/skills" element={<KnowledgeLibrarySkillsOrg />} />
+                <Route path="organization/tags" element={<KnowledgeLibraryTagsOrg />} />
+                <Route path="collections" element={<KnowledgeLibraryCollections />} />
+                <Route path="topics/:topicId" element={<KnowledgeLibraryTopicDetail />} />
+                <Route path="ai" element={<KnowledgeLibraryAiHub />} />
+                <Route path="ai/search" element={<KnowledgeLibraryAiSearch />} />
+                <Route path="ai/metadata" element={<KnowledgeLibraryAiMetadata />} />
+                <Route path="ai/translate" element={<KnowledgeLibraryAiTranslate />} />
+                <Route path="ai/voice" element={<KnowledgeLibraryAiVoice />} />
+                <Route path="ai/embeddings" element={<KnowledgeLibraryAiEmbeddings />} />
+                <Route path="ai/duplicates" element={<KnowledgeLibraryAiDuplicates />} />
+                <Route path="ai/related" element={<KnowledgeLibraryAiRelated />} />
+                <Route path="enterprise" element={<KnowledgeLibraryEnterprise />} />
+                <Route path="enterprise/versions" element={<KnowledgeLibraryEnterpriseVersions />} />
+                <Route path="enterprise/archive" element={<KnowledgeLibraryEnterpriseArchive />} />
+                <Route path="enterprise/bulk" element={<KnowledgeLibraryEnterpriseBulk />} />
+                <Route path="enterprise/import-export" element={<KnowledgeLibraryEnterpriseImportExport />} />
+                <Route path="enterprise/analytics" element={<KnowledgeLibraryEnterpriseAnalytics />} />
+                <Route path="create" element={<KnowledgeLibraryCreate />} />
+              </Route>
+              <Route path="learning-companion/categories" element={<PermissionGuard permission="assessments_view" redirect><LearningCompanionCategories /></PermissionGuard>} />
+              <Route path="learning-companion/subjects" element={<PermissionGuard permission="assessments_view" redirect><LearningCompanionSubjects /></PermissionGuard>} />
+              <Route path="learning-companion/topics" element={<PermissionGuard permission="assessments_view" redirect><LearningCompanionTopics /></PermissionGuard>} />
+              <Route path="learning-companion/skills" element={<PermissionGuard permission="assessments_view" redirect><LearningCompanionSkills /></PermissionGuard>} />
+              <Route path="learning-companion/studio" element={<PermissionGuard permission="assessments_manage" redirect><LearningCompanionContentStudio /></PermissionGuard>} />
+              <Route path="learning-companion/review" element={<PermissionGuard permission="assessments_manage" redirect><LearningCompanionReviewCenter /></PermissionGuard>} />
+              <Route path="learning-companion/knowledge-engine" element={<PermissionGuard permission="assessments_manage" redirect><LearningCompanionKnowledgeEngine /></PermissionGuard>} />
+              <Route path="learning-companion/analytics" element={<PermissionGuard permission="analytics_view" redirect><LearningCompanionAnalytics /></PermissionGuard>} />
+              <Route path="learning-companion/graph" element={<PermissionGuard permission="analytics_view" redirect><LearningCompanionGraph /></PermissionGuard>} />
+              <Route path="learning-companion/improve/:questionId" element={<PermissionGuard permission="assessments_manage" redirect><LearningCompanionImprove /></PermissionGuard>} />
+              <Route path="companies" element={<PermissionGuard permission="colleges_manage" redirect><CompanyManagementPage /></PermissionGuard>} />
+              <Route path="recruitment" element={<PermissionGuard permission="colleges_manage" redirect><RecruitmentManagementPage /></PermissionGuard>} />
+              <Route path="placement-analytics" element={<PermissionGuard permission="analytics_view" redirect><PlacementAnalyticsPage /></PermissionGuard>} />
+              <Route path="organization/:entity" element={<PermissionGuard permission="colleges_manage" redirect><OrgComingSoonRoute /></PermissionGuard>} />
+              <Route path="coming-soon/:feature" element={<PermissionGuard permission="dashboard_view" redirect><FeatureComingSoonRoute /></PermissionGuard>} />
+
+              {/* Legacy type views → Knowledge Library Sprint 2 */}
+              <Route path="library/lessons" element={<Navigate to="/app/superadmin/knowledge-library/assets/lessons" replace />} />
+              <Route path="library/flashcards" element={<Navigate to="/app/superadmin/knowledge-library/assets/flashcards" replace />} />
+              <Route path="library/voice-lessons" element={<Navigate to="/app/superadmin/knowledge-library/assets/voice-lessons" replace />} />
+              <Route path="library/interview-questions" element={<Navigate to="/app/superadmin/knowledge-library/assets/interview-questions" replace />} />
+              <Route path="library/case-studies" element={<Navigate to="/app/superadmin/knowledge-library/assets/case-studies" replace />} />
+              <Route path="library/learning-resources" element={<Navigate to="/app/superadmin/knowledge-library/assets/documents" replace />} />
+              <Route path="journey-templates" element={<Navigate to="/app/superadmin/learning-journey/templates" replace />} />
+              <Route path="resource-library" element={<PermissionGuard permission="assessments_view" redirect><ResourceLibraryPage /></PermissionGuard>} />
+              <Route path="ai-assistant" element={<PermissionGuard permission="assessments_manage" redirect><AiAssistantPage /></PermissionGuard>} />
+              <Route path="ai-studio/content-improver" element={<PermissionGuard permission="assessments_manage" redirect><ContentImproverLandingPage /></PermissionGuard>} />
+              <Route path="ai-studio/translation" element={<PermissionGuard permission="assessments_manage" redirect><TranslationStudioPage /></PermissionGuard>} />
+              <Route path="ai-studio/embeddings" element={<PermissionGuard permission="assessments_manage" redirect><EmbeddingManagerPage /></PermissionGuard>} />
+              <Route path="voice-studio/tutor-voices" element={<PermissionGuard permission="settings_view" redirect><AiTutorVoicesPage /></PermissionGuard>} />
+              <Route path="voice-studio/languages" element={<PermissionGuard permission="settings_view" redirect><VoiceLanguagesPage /></PermissionGuard>} />
+              <Route path="voice-studio/audio-library" element={<PermissionGuard permission="assessments_view" redirect><AudioLibraryPage /></PermissionGuard>} />
+              <Route path="voice-studio/templates" element={<PermissionGuard permission="settings_view" redirect><VoiceTemplatesPage /></PermissionGuard>} />
+              <Route path="mock-tests" element={<PermissionGuard permission="assessments_manage" redirect><MockTestsPage /></PermissionGuard>} />
+              <Route path="practice-sets" element={<PermissionGuard permission="assessments_manage" redirect><PracticeSetsPage /></PermissionGuard>} />
+              <Route path="coding-assessments" element={<PermissionGuard permission="assessments_manage" redirect><CodingAssessmentsPage /></PermissionGuard>} />
+              <Route path="assessment-templates" element={<PermissionGuard permission="assessments_manage" redirect><AssessmentTemplatesPage /></PermissionGuard>} />
+              <Route path="assessment-templates/new" element={<PermissionGuard permission="assessments_manage" redirect><TemplateFormPage /></PermissionGuard>} />
+              <Route path="assessment-templates/:id/preview" element={<PermissionGuard permission="assessments_manage" redirect><TemplatePreviewPage /></PermissionGuard>} />
+              <Route path="assessment-templates/:id" element={<PermissionGuard permission="assessments_manage" redirect><TemplateFormPage /></PermissionGuard>} />
+              <Route path="assessment-results" element={<PermissionGuard permission="assessments_view" redirect><AssessmentResultsPage /></PermissionGuard>} />
+              <Route path="batches" element={<PermissionGuard permission="colleges_manage" redirect><BatchesPage /></PermissionGuard>} />
+              <Route path="enrollments" element={<PermissionGuard permission="colleges_manage" redirect><EnrollmentsPage /></PermissionGuard>} />
+              <Route path="certificates" element={<PermissionGuard permission="assessments_view" redirect><CertificatesAdminPage /></PermissionGuard>} />
+              <Route path="analytics/learning" element={<PermissionGuard permission="analytics_view" redirect><LearningAnalyticsPage /></PermissionGuard>} />
+              <Route path="analytics/students" element={<PermissionGuard permission="analytics_view" redirect><StudentAnalyticsPage /></PermissionGuard>} />
+              <Route path="analytics/courses" element={<PermissionGuard permission="analytics_view" redirect><CourseAnalyticsPage /></PermissionGuard>} />
+              <Route path="analytics/voice" element={<PermissionGuard permission="analytics_view" redirect><VoiceAnalyticsPage /></PermissionGuard>} />
+              <Route path="analytics/skills" element={<PermissionGuard permission="analytics_view" redirect><SkillsAnalyticsPage /></PermissionGuard>} />
+              <Route path="analytics/assessments" element={<PermissionGuard permission="analytics_view" redirect><AssessmentsAnalyticsPage /></PermissionGuard>} />
+              <Route path="branding" element={<PermissionGuard permission="settings_view" redirect><BrandingPage /></PermissionGuard>} />
+              <Route path="integrations" element={<PermissionGuard permission="settings_view" redirect><IntegrationsPage /></PermissionGuard>} />
+              <Route path="license" element={<PermissionGuard permission="billing_view" redirect><LicensePage /></PermissionGuard>} />
+
+              <Route path="course-builder" element={<PermissionGuard permission="assessments_manage" redirect><CourseBuilderLayout /></PermissionGuard>}>
+                <Route index element={<CourseBuilderDashboard />} />
+                <Route path="all" element={<CourseBuilderList />} />
+                <Route path="draft" element={<CourseBuilderList />} />
+                <Route path="published" element={<CourseBuilderList />} />
+                <Route path="archived" element={<CourseBuilderList />} />
+                <Route path="new" element={<CourseBuilderNew />} />
+                <Route path="ai" element={<CourseBuilderAiStub />} />
+                <Route path="templates" element={<CourseBuilderTemplatesStub />} />
+                <Route path="review" element={<CourseBuilderReviewStub />} />
+                <Route path="analytics" element={<CourseBuilderAnalytics />} />
+                <Route path=":courseId" element={<CourseBuilderWorkspace />} />
+              </Route>
+
+              <Route path="course-catalog" element={<PermissionGuard permission="assessments_manage" redirect><CourseCatalogLayout /></PermissionGuard>}>
+                <Route index element={<CatalogDashboardPage />} />
+                <Route path="tracks" element={<PlacementTracksPage />} />
+                <Route path="tracks/:slug" element={<PlacementTrackDetailPage />} />
+                <Route path="all" element={<CatalogCoursesBrowsePage />} />
+                <Route path="featured" element={<CatalogCoursesBrowsePage />} />
+                <Route path="recent" element={<CatalogCoursesBrowsePage />} />
+                <Route path="drafts" element={<CatalogCoursesBrowsePage />} />
+                <Route path="archived" element={<CatalogCoursesBrowsePage />} />
+                <Route path="analytics" element={<CatalogAnalyticsStubPage />} />
+                <Route path="courses/:courseId" element={<CatalogCourseDetailPage />} />
+              </Route>
+
+              <Route path="learning-journey" element={<PermissionGuard permission="assessments_manage" redirect><LearningJourneyLayout /></PermissionGuard>}>
+                <Route index element={<JourneyDashboardPage />} />
+                <Route path="templates" element={<JourneyTemplatesListPage />} />
+                <Route path="student-journeys" element={<StudentJourneysStub />} />
+                <Route path="placement-tracks" element={<JourneyPlacementTracksStub />} />
+                <Route path="ai-recommendations" element={<JourneyAiRecommendationsStub />} />
+                <Route path="milestones" element={<JourneyMilestonesStub />} />
+                <Route path="progress" element={<JourneyProgressStub />} />
+                <Route path="daily-plan" element={<JourneyDailyPlanStub />} />
+                <Route path="weekly-goals" element={<JourneyWeeklyGoalsStub />} />
+                <Route path="revision" element={<JourneyRevisionStub />} />
+                <Route path="analytics" element={<JourneyAnalyticsStub />} />
+              </Route>
+
+              <Route path="courses" element={<Navigate to="/app/superadmin/course-catalog/tracks" replace />} />
+              <Route path="courses/:courseId" element={<LegacyCourseCatalogRedirect />} />
+              <Route path="question-collections" element={<PermissionGuard permission="assessments_manage" redirect><QuestionCollectionsPage /></PermissionGuard>} />
+              <Route path="question-collections/:collectionId" element={<PermissionGuard permission="assessments_manage" redirect><QuestionCollectionDetailPage /></PermissionGuard>} />
+
+              <Route path="assessment-hub" element={<PermissionGuard permission="assessments_manage" redirect><AssessmentHubDashboardPage /></PermissionGuard>} />
+
+              {/* Assessment Builder — mirrors /app/drives/* so the superadmin sidebar shell
+                  never switches to DashboardLayout. Same components, base path is computed
+                  from location.pathname inside them. /app/drives/* stays untouched for
+                  hr/engineer/college_admin, who still use DashboardLayout. */}
+              <Route path="drives" element={<PermissionGuard permission="assessments_manage" redirect><DrivesDashboardPage /></PermissionGuard>} />
+              <Route path="drives/new" element={<PermissionGuard permission="assessments_manage" redirect><CreateDrivePage /></PermissionGuard>} />
+              <Route path="drives/:id" element={<PermissionGuard permission="assessments_manage" redirect><DriveDetailPage /></PermissionGuard>} />
+              <Route path="drives/:id/assign-campus" element={<PermissionGuard permission="assessments_manage" redirect><AssignCampusPage /></PermissionGuard>} />
 
               {/* Workflows */}
               <Route path="workflows" element={<PermissionGuard permission="workflows_view" redirect><SuperAdminWorkflows /></PermissionGuard>} />
@@ -383,7 +769,15 @@ export default function App() {
               path="/app/college-portal"
               element={
                 <ProtectedRoute>
-                  <RoleGuard allowed={["college_admin", "college", "college_staff"]}>
+                  <RoleGuard
+                    allowed={[
+                      "college_admin",
+                      "college",
+                      "college_staff",
+                      "instructor",
+                      "placement_cell",
+                    ]}
+                  >
                     <CollegeLayout />
                   </RoleGuard>
                 </ProtectedRoute>
@@ -392,16 +786,10 @@ export default function App() {
               <Route index element={<Navigate to="/app/college-portal/dashboard" replace />} />
               <Route path="dashboard" element={<CollegePortalDashboard />} />
               <Route path="students" element={<CollegePortalStudents />} />
+              <Route path="students/new" element={<CollegePortalStudentForm />} />
+              <Route path="students/:id/edit" element={<CollegePortalStudentForm />} />
               <Route path="students/:id" element={<CollegePortalStudentDetail />} />
-              <Route
-                path="question-bank"
-                element={
-                  <CollegePortalComingSoon
-                    title="Question Bank"
-                    description="Browse and assign questions scoped to your campus."
-                  />
-                }
-              />
+              <Route path="question-bank" element={<CollegePortalQuestionBank />} />
               <Route
                 path="workflows"
                 element={
@@ -411,8 +799,22 @@ export default function App() {
                   />
                 }
               />
-              <Route path="assessments" element={<CampusDrivesListPage />} />
-              <Route path="assessments/:id" element={<CampusDriveDetailPage />} />
+              <Route path="assessments" element={<CollegePortalAssessments />} />
+              <Route path="campaigns" element={<CollegePortalCampaigns />} />
+              <Route
+                path="campaigns/:campaignId/results"
+                element={<CollegePortalCampaignResults />}
+              />
+              <Route
+                path="campaigns/:campaignId/analytics"
+                element={<CollegePortalCampaignAnalytics />}
+              />
+              <Route
+                path="campaigns/:campaignId/integrity"
+                element={<CollegePortalCampaignIntegrity />}
+              />
+              <Route path="drives" element={<CampusDrivesListPage />} />
+              <Route path="drives/:id" element={<CampusDriveDetailPage />} />
               <Route path="analytics" element={<CollegePortalAnalytics />} />
               <Route path="integrity" element={<CampusIntegrityPage />} />
               <Route path="soft-skills" element={<CollegeSkillsPage />} />
@@ -442,14 +844,46 @@ export default function App() {
             >
               <Route index element={<StudentDashboardPage />} />
               <Route path="workflow" element={<StudentWorkflowPage />} />
+              <Route path="my-learning" element={<MyLearningPage />} />
+              <Route path="my-learning/paths/:pathId" element={<MyLearningPathPage />} />
+              <Route path="my-learning/courses/:courseId" element={<MyLearningCoursePage />} />
+              <Route path="my-learning/lessons/:lessonId" element={<MyLearningLessonPage />} />
+              <Route path="my-learning/progress" element={<MyLearningProgressPage />} />
+              <Route path="my-learning/bookmarks" element={<MyLearningBookmarksPage />} />
+              <Route path="my-learning/calendar" element={<MyLearningCalendarPage />} />
+              <Route path="my-learning/certificates" element={<MyLearningCertificatesPage />} />
+              <Route path="my-learning/resources" element={<MyLearningResourcesPage />} />
               <Route path="learn" element={<StudentLearnPage />} />
               <Route path="practice" element={<PracticePage />} />
+              <Route path="voice-tutor/:questionId" element={<VoiceTutorPage />} />
+              <Route path="adaptive-learning" element={<AdaptiveLearningPage />} />
+              <Route path="placement-coach" element={<StudentAiCoachPage />} />
+              <Route path="ai-search" element={<AiSearchPage />} />
+              <Route path="my-assessments" element={<StudentMyAssessmentsPage />} />
+              <Route path="my-assessments/:campaignId" element={<StudentAssessmentDetailPage />} />
+              <Route
+                path="my-assessments/:campaignId/instructions"
+                element={<StudentAssessmentInstructionsPage />}
+              />
+              <Route
+                path="my-assessments/:campaignId/complete"
+                element={<StudentAssessmentCompletionPage />}
+              />
+              <Route
+                path="my-assessments/:campaignId/result"
+                element={<StudentAssessmentResultPage />}
+              />
               <Route path="tests" element={<StudentTestsPage />} />
+              <Route path="results" element={<StudentResultsAnalyticsPage />} />
+              <Route path="results/report/:attemptId" element={<StudentAttemptReportPage />} />
+              <Route path="results/:driveId" element={<ResultsAnalysisPage />} />
               <Route path="question-bank" element={<StudentQuestionBankPage />} />
               <Route path="achievements" element={<GamificationPage />} />
               <Route path="payments" element={<StudentPaymentsPage />} />
               <Route path="notifications" element={<StudentNotificationsPage />} />
               <Route path="profile" element={<StudentProfile />} />
+              <Route path="settings" element={<StudentSettingsPage />} />
+              <Route path="sessions" element={<StudentSessionsPage />} />
               <Route path="lms/:moduleKey" element={<LmsModulePage portal="student" />} />
               <Route path="soft-skills" element={<SoftSkillsHubPage />} />
               <Route path="development" element={<DevelopmentPage />} />
@@ -461,12 +895,36 @@ export default function App() {
               <Route path="programs/:programId/modules/:moduleId" element={<ModulePlayerPage />} />
             </Route>
 
-            {/* ── Student onboarding (protected) ──────────────────────── */}
+            {/* ── Student onboarding (protected, student role) ────────── */}
             <Route
               path="/student-onboarding"
               element={
                 <ProtectedRoute>
-                  <StudentOnboardingWizard />
+                  <RoleGuard allowed={["student"]}>
+                    <StudentOnboardingWizard />
+                  </RoleGuard>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ── Module 06 Assessment Workspace (full-screen, no portal chrome) ── */}
+            <Route
+              path="/app/student-portal/my-assessments/:campaignId/attempt"
+              element={
+                <ProtectedRoute>
+                  <RoleGuard allowed={["student"]}>
+                    <StudentAssessmentAttemptPage />
+                  </RoleGuard>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/app/student-portal/my-assessments/:campaignId/submit"
+              element={
+                <ProtectedRoute>
+                  <RoleGuard allowed={["student"]}>
+                    <StudentAssessmentSubmissionPage />
+                  </RoleGuard>
                 </ProtectedRoute>
               }
             />
@@ -644,6 +1102,60 @@ export default function App() {
                 element={
                   <RoleGuard allowed={["mentor", "super_admin", "hr"]}>
                     <MentorDashboardPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="faculty-dashboard"
+                element={
+                  <RoleGuard allowed={["instructor", "super_admin", "hr"]}>
+                    <FacultyDashboardPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="placement-cell-dashboard"
+                element={
+                  <RoleGuard allowed={["placement_cell", "super_admin", "hr", "college_admin"]}>
+                    <PlacementCellDashboardPage />
+                  </RoleGuard>
+                }
+              />
+              {/* College Profile — view-only for Placement Cell / Faculty (no sidebar change) */}
+              <Route
+                path="college-profile"
+                element={
+                  <RoleGuard
+                    allowed={[
+                      "placement_cell",
+                      "instructor",
+                      "college_admin",
+                      "college",
+                      "college_staff",
+                      "super_admin",
+                      "hr",
+                    ]}
+                  >
+                    <CampusSettingsPage />
+                  </RoleGuard>
+                }
+              />
+              {/* Sprint 2.1 — Student Details for Placement / Faculty (list page unchanged) */}
+              <Route
+                path="college-student/:id"
+                element={
+                  <RoleGuard
+                    allowed={[
+                      "placement_cell",
+                      "instructor",
+                      "college_admin",
+                      "college",
+                      "college_staff",
+                      "super_admin",
+                      "hr",
+                    ]}
+                  >
+                    <CollegePortalStudentDetail />
                   </RoleGuard>
                 }
               />

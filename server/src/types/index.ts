@@ -17,7 +17,8 @@ export type UserRole =
   | "student"
   | "instructor"     // creates & manages courses, grades assignments
   | "mentor"         // views assigned students, conducts mock interviews
-  | "company";       // recruiting company; manages own drives + views results
+  | "company"        // recruiting company; manages own drives + views results
+  | "placement_cell"; // college placement staff — coordinates drives, tracks readiness
 
 export type ViolationType =
   | "face_not_detected"
@@ -75,7 +76,15 @@ export type AdminAuditAction =
   | "QUESTION_CREATED"
   | "QUESTION_UPDATED"
   | "QUESTION_DELETED"
+  | "ASSESSMENT_CREATED"
+  | "ASSESSMENT_UPDATED"
+  | "ASSESSMENT_DELETED"
+  | "ASSESSMENT_PUBLISHED"
+  | "ASSESSMENT_ARCHIVED"
   | "STUDENTS_BULK_ADDED"
+  | "STUDENT_DOCUMENT_UPLOADED"
+  | "STUDENT_DOCUMENT_DELETED"
+  | "STUDENT_ELIGIBILITY_CHANGED"
   | "USER_STATUS_CHANGED"
   | "USER_PASSWORD_RESET"
   | "CAMPUS_MOU_UPLOADED"
@@ -192,6 +201,11 @@ export interface QuestionBankRow {
   is_active: boolean;
   status: string;
   bloom_level: string | null;
+  hint: string | null;
+  learning_objectives: string[];
+  reference_links: string[];
+  search_embedding: number[] | null;
+  search_embedding_model: string | null;
   created_at: Date;
   updated_at: Date;
 }

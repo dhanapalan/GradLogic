@@ -15,6 +15,7 @@ import { eventBus } from "../shared/event-bus.js";
 interface DriveForStudent {
     drive_id: string;
     drive_name: string;
+    drive_type: string;
     rule_name: string;
     duration_minutes: number;
     total_questions: number;
@@ -47,12 +48,55 @@ interface SessionState {
     completed_at: Date | null;
     score: number | null;
     drive_name: string;
+    drive_type?: string;
     duration_minutes: number;
     total_questions: number;
     total_marks: number;
     negative_marking_enabled: boolean;
     negative_marking_value: number | null;
     overall_cutoff: number;
+    /** Per-section limits from Assessment Template hub_template_config (mock tests). */
+    section_timers?: Array<{ section_name: string; time_limit_minutes: number }>;
+}
+
+const SELF_SERVICE_STARTABLE = new Set([
+    "active",
+    "pool_ready",
+    "ready",
+    "live",
+    "approved",
+    "pool_approved",
+    "scheduled",
+]);
+
+function isDriveStartable(driveType: string | undefined, status: string | undefined): boolean {
+    const st = (status || "").toLowerCase();
+    if (
+        driveType === "mock_test" ||
+        driveType === "practice_test" ||
+        driveType === "coding_assessment"
+    ) {
+        return SELF_SERVICE_STARTABLE.has(st);
+    }
+    return st === "active" || st === "scheduled" || st === "live";
+}
+
+function parseSectionTimers(
+    hub: unknown,
+): Array<{ section_name: string; time_limit_minutes: number }> {
+    if (!hub) return [];
+    try {
+        const cfg = typeof hub === "string" ? JSON.parse(hub) : (hub as { sections?: unknown[] });
+        const sections = Array.isArray(cfg?.sections) ? cfg.sections : [];
+        return sections
+            .map((s: any) => ({
+                section_name: String(s?.section_name || s?.name || "Section"),
+                time_limit_minutes: Number(s?.time_limit_minutes),
+            }))
+            .filter((s) => Number.isFinite(s.time_limit_minutes) && s.time_limit_minutes > 0);
+    } catch {
+        return [];
+    }
 }
 
 interface QuestionForPlayer {
@@ -73,6 +117,7 @@ export async function getStudentDrives(studentId: string): Promise<DriveForStude
         `SELECT
             ad.id              AS drive_id,
             ad.name            AS drive_name,
+            ad.drive_type      AS drive_type,
             art.name           AS rule_name,
             art.duration_minutes,
             art.total_questions,
@@ -105,6 +150,82 @@ export async function getStudentDrives(studentId: string): Promise<DriveForStude
     );
 }
 
+// ── Self-Service Mock / Practice Tests ──────────────────────────────────────
+// Unlike hiring drives (recruiter-assigned), mock/practice tests are
+// self-service: a student can enroll themselves in any published one that's
+// available to their college (or unrestricted, same "no assignment = open
+// to everyone" rule used for courses) and hasn't already started.
+
+export interface SelfServiceDrive {
+    drive_id: string;
+    drive_name: string;
+    drive_type: string;
+    duration_minutes: number;
+    total_questions: number;
+    /** Phase-1 domain hints from template (Practice Sets → Arena deep-link). */
+    phase1_domain?: string | null;
+    bank_category?: string | null;
+    placement_domain?: string | null;
+}
+
+export async function getAvailableSelfServiceDrives(studentId: string): Promise<SelfServiceDrive[]> {
+    const student = await queryOne<{ college_id: string | null }>(
+        "SELECT college_id FROM users WHERE id = $1",
+        [studentId],
+    );
+
+    return query<SelfServiceDrive>(
+        `SELECT ad.id AS drive_id, ad.name AS drive_name, ad.drive_type,
+                art.duration_minutes, art.total_questions,
+                art.targeting_config->>'phase1_domain' AS phase1_domain,
+                art.targeting_config->>'bank_category' AS bank_category,
+                art.hub_template_config->>'placement_domain' AS placement_domain
+         FROM assessment_drives ad
+         JOIN assessment_rule_templates art ON art.id = ad.rule_id
+         WHERE ad.drive_type IN ('mock_test', 'practice_test', 'coding_assessment')
+           AND LOWER(ad.status) IN (
+             'active', 'pool_ready', 'ready', 'live', 'approved', 'pool_approved'
+           )
+           AND NOT EXISTS (SELECT 1 FROM drive_students ds WHERE ds.drive_id = ad.id AND ds.student_id = $1)
+           AND (
+             NOT EXISTS (SELECT 1 FROM drive_assignments da WHERE da.drive_id = ad.id)
+             OR EXISTS (SELECT 1 FROM drive_assignments da WHERE da.drive_id = ad.id AND da.college_id = $2)
+           )
+         ORDER BY ad.created_at DESC`,
+        [studentId, student?.college_id || null],
+    );
+}
+
+export async function enrollInSelfServiceDrive(driveId: string, studentId: string): Promise<void> {
+    const drive = await queryOne<{ drive_type: string; status: string }>(
+        "SELECT drive_type, status FROM assessment_drives WHERE id = $1",
+        [driveId],
+    );
+    if (!drive) throw new AppError("Drive not found", 404);
+    if (!["mock_test", "practice_test", "coding_assessment"].includes(drive.drive_type)) {
+        throw new AppError("Only mock/practice/coding assessments can be self-enrolled", 403);
+    }
+    const st = (drive.status || "").toLowerCase();
+    const enrollable = [
+        "active",
+        "pool_ready",
+        "ready",
+        "live",
+        "approved",
+        "pool_approved",
+    ];
+    if (!enrollable.includes(st)) {
+        throw new AppError("This test is not currently available", 400);
+    }
+
+    await query(
+        `INSERT INTO drive_students (drive_id, student_id, status, eligibility_status)
+         VALUES ($1, $2, 'assigned', 'eligible')
+         ON CONFLICT (drive_id, student_id) DO NOTHING`,
+        [driveId, studentId],
+    );
+}
+
 // ── Start / Resume Session ───────────────────────────────────────────────────
 
 export async function startSession(
@@ -114,9 +235,10 @@ export async function startSession(
 ): Promise<SessionState> {
     // 1. Get the drive_student record
     const ds = await queryOne<any>(
-        `SELECT ds.*, ad.name AS drive_name, ad.pool_id, ad.status AS drive_status,
+        `SELECT ds.*, ad.name AS drive_name, ad.drive_type, ad.pool_id, ad.status AS drive_status,
                 art.duration_minutes, art.total_questions, art.total_marks,
-                art.negative_marking_enabled, art.negative_marking_value, art.overall_cutoff
+                art.negative_marking_enabled, art.negative_marking_value, art.overall_cutoff,
+                art.hub_template_config
          FROM drive_students ds
          JOIN assessment_drives ad ON ad.id = ds.drive_id
          JOIN assessment_rule_templates art ON art.id = ad.rule_id
@@ -125,7 +247,45 @@ export async function startSession(
     );
 
     if (!ds) throw new AppError("You are not assigned to this drive", 403);
-    if (ds.status === "completed") throw new AppError("This exam has already been completed", 409);
+
+    const sectionTimers = parseSectionTimers(ds.hub_template_config);
+
+    // Practice Sets: allow reattempts when drive_type is practice_test and under attempt_limit
+    if (ds.status === "completed") {
+        const driveMeta = await queryOne<{ drive_type: string; attempt_limit: number }>(
+            `SELECT drive_type, attempt_limit FROM assessment_drives WHERE id = $1`,
+            [driveId],
+        );
+        const isPractice = driveMeta?.drive_type === "practice_test";
+        const limit = driveMeta?.attempt_limit ?? 1;
+        if (isPractice && limit > 1) {
+            await query(
+                `UPDATE drive_students SET
+                    status = 'assigned',
+                    paper_id = NULL,
+                    question_mapping = NULL,
+                    saved_answers = '{}'::jsonb,
+                    current_question_index = 0,
+                    time_remaining_seconds = NULL,
+                    server_deadline = NULL,
+                    started_at = NULL,
+                    completed_at = NULL,
+                    score = NULL,
+                    last_heartbeat = NULL
+                 WHERE id = $1`,
+                [ds.id],
+            );
+            ds.status = "assigned";
+            ds.question_mapping = null;
+            ds.saved_answers = {};
+            ds.current_question_index = 0;
+            ds.started_at = null;
+            ds.completed_at = null;
+            ds.score = null;
+        } else {
+            throw new AppError("This exam has already been completed", 409);
+        }
+    }
 
     // Eligibility Checks
     if (ds.eligibility_status === "ineligible") {
@@ -135,7 +295,7 @@ export async function startSession(
         throw new AppError("Your profile is incomplete. Please ensure your CGPA and Percentage are updated in your profile before starting the exam.", 403);
     }
 
-    if (ds.drive_status !== "active" && ds.drive_status !== "scheduled") {
+    if (!isDriveStartable(ds.drive_type, ds.drive_status)) {
         throw new AppError("This drive is not currently active", 400);
     }
 
@@ -179,12 +339,14 @@ export async function startSession(
             completed_at: null,
             score: null,
             drive_name: ds.drive_name,
+            drive_type: ds.drive_type,
             duration_minutes: ds.duration_minutes,
             total_questions: ds.total_questions,
             total_marks: ds.total_marks,
             negative_marking_enabled: ds.negative_marking_enabled,
             negative_marking_value: ds.negative_marking_value,
             overall_cutoff: ds.overall_cutoff,
+            section_timers: sectionTimers,
         };
     }
 
@@ -260,12 +422,14 @@ export async function startSession(
         completed_at: null,
         score: null,
         drive_name: ds.drive_name,
+        drive_type: ds.drive_type,
         duration_minutes: ds.duration_minutes,
         total_questions: questionMapping.length,
         total_marks: ds.total_marks,
         negative_marking_enabled: ds.negative_marking_enabled,
         negative_marking_value: ds.negative_marking_value,
         overall_cutoff: ds.overall_cutoff,
+        section_timers: sectionTimers,
     };
 }
 
@@ -276,9 +440,10 @@ export async function getSession(driveId: string, studentId: string): Promise<{
     questions: QuestionForPlayer[];
 }> {
     const ds = await queryOne<any>(
-        `SELECT ds.*, ad.name AS drive_name,
+        `SELECT ds.*, ad.name AS drive_name, ad.drive_type,
                 art.duration_minutes, art.total_questions, art.total_marks,
-                art.negative_marking_enabled, art.negative_marking_value, art.overall_cutoff
+                art.negative_marking_enabled, art.negative_marking_value, art.overall_cutoff,
+                art.hub_template_config
          FROM drive_students ds
          JOIN assessment_drives ad ON ad.id = ds.drive_id
          JOIN assessment_rule_templates art ON art.id = ad.rule_id
@@ -310,12 +475,14 @@ export async function getSession(driveId: string, studentId: string): Promise<{
         completed_at: ds.completed_at,
         score: ds.score,
         drive_name: ds.drive_name,
+        drive_type: ds.drive_type,
         duration_minutes: ds.duration_minutes,
         total_questions: ds.total_questions,
         total_marks: ds.total_marks,
         negative_marking_enabled: ds.negative_marking_enabled,
         negative_marking_value: ds.negative_marking_value,
         overall_cutoff: ds.overall_cutoff,
+        section_timers: parseSectionTimers(ds.hub_template_config),
     };
 
     // Get questions — DO NOT include correct_answer (student shouldn't see it)
@@ -389,7 +556,7 @@ export async function submitExam(
 ): Promise<SessionState> {
     // 1. Get session
     const ds = await queryOne<any>(
-        `SELECT ds.*, ad.name AS drive_name,
+        `SELECT ds.*, ad.name AS drive_name, ad.drive_type,
                 art.duration_minutes, art.total_questions, art.total_marks,
                 art.negative_marking_enabled, art.negative_marking_value, art.overall_cutoff
          FROM drive_students ds
@@ -509,6 +676,7 @@ export async function submitExam(
         completed_at: updated.completed_at,
         score: totalScore,
         drive_name: ds.drive_name,
+        drive_type: ds.drive_type,
         duration_minutes: ds.duration_minutes,
         total_questions: ds.total_questions,
         total_marks: ds.total_marks,

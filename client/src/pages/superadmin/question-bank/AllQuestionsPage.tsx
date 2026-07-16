@@ -1,24 +1,33 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { Search, Sparkles, Download, Upload } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  Search,
+  Sparkles,
+  Download,
+  Upload,
+  ArrowLeft,
+  History,
+  FolderPlus,
+  Wand2,
+  X,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
 import questionBankService, { Question } from "../../../services/questionBankService";
+import questionCollectionsService, {
+  type QuestionCollection,
+} from "../../../services/questionCollectionsService";
+import contentImproverService, {
+  type QuestionVersion,
+} from "../../../services/contentImproverService";
+import { PHASE1_BANK_CATEGORIES } from "../../../lib/phase1PlacementDomains";
 
-const CATEGORIES = [
-  "aptitude",
-  "reasoning",
-  "maths",
-  "data_structures",
-  "programming",
-  "python_coding",
-  "java_coding",
-  "data_science",
-];
-
+/** Placement Preparation Phase 1 only — no maths/DSA/general programming tracks. */
+const CATEGORIES = [...PHASE1_BANK_CATEGORIES];
 const TYPES = ["multiple_choice", "coding_challenge"];
 const DIFFICULTIES = ["easy", "medium", "hard"];
 const BLOOM_LEVELS = ["remember", "understand", "apply", "analyze", "evaluate", "create"];
+const STATUSES = ["pending", "published", "archived", "rejected"];
 
 const PAGE_SIZE = 25;
 
@@ -229,12 +238,14 @@ function parseImportCsv(text: string): ParsedImport {
 }
 
 export default function AllQuestionsPage() {
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(() => searchParams.get("category") || "");
   const [type, setType] = useState("");
   const [difficulty, setDifficulty] = useState("");
   const [bloomLevel, setBloomLevel] = useState("");
   const [source, setSource] = useState("");
+  const [status, setStatus] = useState(() => searchParams.get("status") || "");
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [total, setTotal] = useState(0);
@@ -257,6 +268,19 @@ export default function AllQuestionsPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Versions drawer
+  const [versionsFor, setVersionsFor] = useState<Question | null>(null);
+  const [versions, setVersions] = useState<QuestionVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionActing, setVersionActing] = useState(false);
+
+  // Add to collection modal
+  const [collectionPickerOpen, setCollectionPickerOpen] = useState(false);
+  const [collections, setCollections] = useState<QuestionCollection[]>([]);
+  const [collectionId, setCollectionId] = useState("");
+  const [collectionLoading, setCollectionLoading] = useState(false);
+  const [addingToCollection, setAddingToCollection] = useState(false);
+
   const load = () => {
     setLoading(true);
     questionBankService
@@ -267,6 +291,7 @@ export default function AllQuestionsPage() {
         difficulty: difficulty || undefined,
         bloomLevel: bloomLevel || undefined,
         source: (source as "ai-generated" | "manual") || undefined,
+        status: status || undefined,
         page,
         limit: PAGE_SIZE,
       })
@@ -287,13 +312,92 @@ export default function AllQuestionsPage() {
     const debounce = setTimeout(load, 300);
     return () => clearTimeout(debounce);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, type, difficulty, bloomLevel, source, page]);
+  }, [search, category, type, difficulty, bloomLevel, source, status, page]);
 
   // Reset to page 1 whenever a filter (not the page itself) changes.
   useEffect(() => {
     setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, category, type, difficulty, bloomLevel, source]);
+  }, [search, category, type, difficulty, bloomLevel, source, status]);
+
+  const openVersions = async (q: Question) => {
+    setVersionsFor(q);
+    setVersions([]);
+    setVersionsLoading(true);
+    try {
+      const list = await contentImproverService.getVersions(q.id);
+      setVersions(list || []);
+    } catch {
+      toast.error("Failed to load version history");
+      setVersions([]);
+    } finally {
+      setVersionsLoading(false);
+    }
+  };
+
+  const applyVersion = async (versionId: string) => {
+    setVersionActing(true);
+    try {
+      await contentImproverService.applyVersion(versionId);
+      toast.success("Version applied");
+      if (versionsFor) await openVersions(versionsFor);
+      load();
+    } catch {
+      toast.error("Failed to apply version");
+    } finally {
+      setVersionActing(false);
+    }
+  };
+
+  const rejectVersion = async (versionId: string) => {
+    setVersionActing(true);
+    try {
+      await contentImproverService.rejectVersion(versionId);
+      toast.success("Version rejected");
+      if (versionsFor) await openVersions(versionsFor);
+    } catch {
+      toast.error("Failed to reject version");
+    } finally {
+      setVersionActing(false);
+    }
+  };
+
+  const openCollectionPicker = async () => {
+    if (selected.size === 0) {
+      toast.error("Select at least one question");
+      return;
+    }
+    setCollectionPickerOpen(true);
+    setCollectionLoading(true);
+    try {
+      const list = await questionCollectionsService.list();
+      setCollections(list);
+      setCollectionId(list[0]?.id || "");
+    } catch {
+      toast.error("Failed to load collections");
+      setCollections([]);
+    } finally {
+      setCollectionLoading(false);
+    }
+  };
+
+  const confirmAddToCollection = async () => {
+    if (!collectionId || selected.size === 0) return;
+    setAddingToCollection(true);
+    try {
+      const res = await questionCollectionsService.addQuestions(
+        collectionId,
+        Array.from(selected)
+      );
+      toast.success(`Added ${res.added ?? selected.size} question(s) to collection`);
+      setCollectionPickerOpen(false);
+      setSelected(new Set());
+    } catch {
+      toast.error("Failed to add to collection");
+    } finally {
+      setAddingToCollection(false);
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -421,8 +525,17 @@ export default function AllQuestionsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
+          <Link
+            to="/app/superadmin/question-bank"
+            className="inline-flex items-center gap-1 text-xs text-admin-accent hover:underline mb-2"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Question Bank hub
+          </Link>
           <h2 className="text-2xl font-semibold tracking-tight text-gray-900">All Questions</h2>
-          <p className="text-gray-500 mt-1">Manage the master question repository ({total} total).</p>
+          <p className="text-gray-500 mt-1">
+            Assessment Hub master repository — browse, edit, and CSV import ({total} total).
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <input
@@ -512,7 +625,7 @@ export default function AllQuestionsPage() {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
           />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Subject</label>
             <select
@@ -569,6 +682,21 @@ export default function AllQuestionsPage() {
             </select>
           </div>
           <div>
+            <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-admin-accent"
+            >
+              <option value="">All Statuses</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {label(s)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="text-xs font-medium text-gray-500 uppercase block mb-1">Source</label>
             <select
               value={source}
@@ -608,6 +736,14 @@ export default function AllQuestionsPage() {
             >
               <Download className="w-4 h-4" />
               Export
+            </button>
+            <button
+              onClick={openCollectionPicker}
+              disabled={acting}
+              className="flex items-center gap-1 px-3 py-1.5 bg-white border border-indigo-300 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-50 disabled:opacity-50"
+            >
+              <FolderPlus className="w-4 h-4" />
+              Add to collection
             </button>
           </div>
         </div>
@@ -684,13 +820,29 @@ export default function AllQuestionsPage() {
                         />
                       </td>
                       <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <button
                             onClick={() => openEdit(question)}
                             className="text-sm text-admin-accent hover:underline font-medium"
                           >
                             Edit
                           </button>
+                          <button
+                            onClick={() => openVersions(question)}
+                            className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-navy-900 font-medium"
+                            title="Version history"
+                          >
+                            <History className="w-3.5 h-3.5" />
+                            Versions
+                          </button>
+                          <Link
+                            to={`/app/superadmin/learning-companion/improve/${question.id}`}
+                            className="inline-flex items-center gap-1 text-sm text-violet-700 hover:underline font-medium"
+                            title="AI Content Improver"
+                          >
+                            <Wand2 className="w-3.5 h-3.5" />
+                            Improve
+                          </Link>
                           {question.is_active !== false && question.status !== "archived" && (
                             <button
                               onClick={() => handleDeactivateQuestion(question.id)}
@@ -828,6 +980,159 @@ export default function AllQuestionsPage() {
                 className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
               >
                 {savingEdit ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Version history drawer */}
+      {versionsFor && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+          <div className="w-full max-w-md h-full bg-white shadow-xl flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-gray-900">Version history</h3>
+                <p className="text-xs text-gray-500 truncate mt-0.5">
+                  {versionsFor.question_text}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setVersionsFor(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+              <Link
+                to={`/app/superadmin/learning-companion/improve/${versionsFor.id}`}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-700 hover:underline"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
+                Open AI Content Improver
+              </Link>
+              {versionsLoading ? (
+                <p className="text-sm text-gray-500 py-8 text-center">Loading versions…</p>
+              ) : versions.length === 0 ? (
+                <p className="text-sm text-gray-500 py-8 text-center">
+                  No proposed versions yet. Use Improve to generate one.
+                </p>
+              ) : (
+                versions.map((v) => (
+                  <div
+                    key={v.id}
+                    className="rounded-lg border border-gray-200 p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-gray-800 capitalize">
+                        {v.improvement_type.replace(/_/g, " ")}
+                      </span>
+                      <StatusBadge
+                        status={
+                          v.status === "applied"
+                            ? "active"
+                            : v.status === "rejected"
+                              ? "inactive"
+                              : "pending"
+                        }
+                        label={label(v.status)}
+                        size="sm"
+                      />
+                    </div>
+                    {v.change_summary ? (
+                      <p className="text-xs text-gray-600">{v.change_summary}</p>
+                    ) : null}
+                    {v.question_text ? (
+                      <p className="text-xs text-gray-800 line-clamp-3">{v.question_text}</p>
+                    ) : null}
+                    <p className="text-[10px] text-gray-400">
+                      {new Date(v.created_at).toLocaleString()}
+                    </p>
+                    {v.status === "proposed" ? (
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          disabled={versionActing}
+                          onClick={() => applyVersion(v.id)}
+                          className="px-2.5 py-1 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                        >
+                          Apply
+                        </button>
+                        <button
+                          type="button"
+                          disabled={versionActing}
+                          onClick={() => rejectVersion(v.id)}
+                          className="px-2.5 py-1 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add to collection */}
+      {collectionPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">Add to collection</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Add {selected.size} selected question{selected.size === 1 ? "" : "s"} to an existing
+              Question Collection.
+            </p>
+            {collectionLoading ? (
+              <p className="text-sm text-gray-500 py-4">Loading collections…</p>
+            ) : collections.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">No collections yet.</p>
+                <Link
+                  to="/app/superadmin/question-collections"
+                  className="text-sm font-medium text-admin-accent hover:underline"
+                >
+                  Open Question Collections
+                </Link>
+              </div>
+            ) : (
+              <label className="block text-sm text-gray-700 mb-4">
+                Collection
+                <select
+                  value={collectionId}
+                  onChange={(e) => setCollectionId(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"
+                >
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                      {c.category ? ` (${label(c.category)})` : ""} — {c.question_count} items
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <div className="flex justify-end gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setCollectionPickerOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmAddToCollection}
+                disabled={
+                  addingToCollection || !collectionId || collections.length === 0
+                }
+                className="px-4 py-2 bg-navy-900 text-white rounded-lg text-sm font-medium hover:bg-navy-800 disabled:opacity-50"
+              >
+                {addingToCollection ? "Adding…" : "Add"}
               </button>
             </div>
           </div>

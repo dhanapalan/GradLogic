@@ -363,7 +363,7 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const isCollegeRole = ["college_admin", "college_staff", "college", "student"].includes(role);
+    const isCollegeRole = ["college_admin", "college_staff", "college", "student", "instructor"].includes(role);
     const finalCollegeId = isCollegeRole && college_id ? college_id : null;
 
     const result = await query(

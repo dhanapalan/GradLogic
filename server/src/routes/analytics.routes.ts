@@ -12,11 +12,28 @@ import {
   resolveCallerCollegeId,
 } from "../middleware/collegeIsolation.js";
 import { AppError } from "../middleware/errorHandler.js";
+import * as studentDashboard from "../services/studentDashboard.service.js";
+import * as resultsAnalytics from "../controllers/studentResultsAnalytics.controller.js";
 
 const router = Router();
 router.use(authenticate);
 
-const ADMIN_ROLES = ["super_admin", "hr", "cxo", "college_admin"] as const;
+const ADMIN_ROLES = ["super_admin", "hr", "cxo", "college_admin", "placement_cell"] as const;
+
+/**
+ * Module 07 — Learning Intelligence analytics (student).
+ * Static paths registered before admin parameterized routes.
+ */
+router.get("/performance", authorize("student"), resultsAnalytics.getPerformance);
+router.get("/skills", authorize("student"), resultsAnalytics.getSkills);
+router.get("/topics", authorize("student"), resultsAnalytics.getTopics);
+router.get("/subtopics", authorize("student"), resultsAnalytics.getSubtopics);
+router.get("/difficulty", authorize("student"), resultsAnalytics.getDifficulty);
+router.get("/bloom", authorize("student"), resultsAnalytics.getBloom);
+router.get("/learning-outcomes", authorize("student"), resultsAnalytics.getLearningOutcomes);
+router.get("/trends", authorize("student"), resultsAnalytics.getTrends);
+router.get("/recommendations", authorize("student"), resultsAnalytics.getRecommendations);
+router.get("/strengths", authorize("student"), resultsAnalytics.getStrengths);
 
 // =============================================================================
 // EXISTING: Dashboard overview (kept for backward compat)
@@ -97,14 +114,17 @@ router.get(
  * GET /api/analytics/drives
  * List all drives with aggregated stats for the analytics table view
  */
-router.get("/drives", authorize(...ADMIN_ROLES, "college", "college_staff"), async (req, res, next) => {
+router.get("/drives", authorize(...ADMIN_ROLES, "college", "college_staff", "placement_cell"), async (req, res, next) => {
   try {
-    const { college_id } = req.query as Record<string, string>;
+    const { college_id, drive_type } = req.query as Record<string, string>;
     const collegeId = await effectiveCollegeId(req, college_id);
 
     const params: any[] = [];
     const collegeFilter = collegeId
       ? (params.push(collegeId), `AND COALESCE(u.college_id, sd.college_id) = $${params.length}`)
+      : "";
+    const driveTypeFilter = drive_type
+      ? (params.push(drive_type), `AND ad.drive_type = $${params.length}`)
       : "";
 
     // College-scoped roles must always filter — never return cross-tenant drive analytics
@@ -117,22 +137,29 @@ router.get("/drives", authorize(...ADMIN_ROLES, "college", "college_staff"), asy
         ad.id,
         ad.name,
         ad.status,
-        ad.scheduled_at,
-        ad.cutoff_score,
+        ad.drive_type,
+        ad.scheduled_start AS scheduled_at,
+        art.overall_cutoff AS cutoff_score,
+        comp.name AS company_name,
         COUNT(ds.student_id)::int                                              AS total_students,
         COUNT(ds.student_id) FILTER (WHERE ds.status = 'submitted')::int       AS submitted_count,
         ROUND(AVG(ds.score) FILTER (WHERE ds.status = 'submitted'), 1)         AS avg_score,
         ROUND(
-          100.0 * COUNT(*) FILTER (WHERE ds.score >= COALESCE(ad.cutoff_score, 0) AND ds.status = 'submitted')
+          100.0 * COUNT(*) FILTER (WHERE ds.score >= COALESCE(art.overall_cutoff, 0) AND ds.status = 'submitted')
           / NULLIF(COUNT(*) FILTER (WHERE ds.status = 'submitted'), 0), 1
-        )                                                                       AS pass_rate
+        )                                                                       AS pass_rate,
+        COUNT(ds.student_id) FILTER (WHERE ds.pipeline_stage = 'pending')::int     AS pipeline_pending,
+        COUNT(ds.student_id) FILTER (WHERE ds.pipeline_stage = 'shortlisted')::int AS pipeline_shortlisted,
+        COUNT(ds.student_id) FILTER (WHERE ds.pipeline_stage = 'offered')::int     AS pipeline_offered
       FROM assessment_drives ad
+      LEFT JOIN assessment_rule_templates art ON art.id = ad.rule_id
+      LEFT JOIN companies comp ON comp.user_id = ad.created_by
       LEFT JOIN drive_students ds ON ds.drive_id = ad.id
       LEFT JOIN users u ON u.id = ds.student_id
       LEFT JOIN student_details sd ON sd.user_id = u.id
-      WHERE 1=1 ${collegeFilter}
-      GROUP BY ad.id, ad.name, ad.status, ad.scheduled_at, ad.cutoff_score
-      ORDER BY ad.scheduled_at DESC
+      WHERE 1=1 ${collegeFilter} ${driveTypeFilter}
+      GROUP BY ad.id, ad.name, ad.status, ad.drive_type, ad.scheduled_start, art.overall_cutoff, comp.name
+      ORDER BY ad.scheduled_start DESC
       LIMIT 50
     `, params);
 
@@ -152,7 +179,7 @@ router.get("/drives/:driveId", authorize(...ADMIN_ROLES), async (req, res, next)
     const [overview, distribution, categoryAvg, topStudents] = await Promise.all([
       queryOne(`
         SELECT
-          ad.name, ad.cutoff_score, ad.scheduled_at,
+          ad.name, art.overall_cutoff AS cutoff_score, ad.scheduled_start AS scheduled_at,
           COUNT(ds.student_id)::int                                              AS total_students,
           COUNT(ds.student_id) FILTER (WHERE ds.status = 'submitted')::int       AS submitted_count,
           ROUND(AVG(ds.score) FILTER (WHERE ds.status = 'submitted'), 1)         AS avg_score,
@@ -160,13 +187,14 @@ router.get("/drives/:driveId", authorize(...ADMIN_ROLES), async (req, res, next)
           ROUND(MAX(ds.score) FILTER (WHERE ds.status = 'submitted'), 1)         AS max_score,
           ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ds.score) FILTER (WHERE ds.status = 'submitted'), 1) AS median_score,
           ROUND(
-            100.0 * COUNT(*) FILTER (WHERE ds.score >= COALESCE(ad.cutoff_score, 0) AND ds.status = 'submitted')
+            100.0 * COUNT(*) FILTER (WHERE ds.score >= COALESCE(art.overall_cutoff, 0) AND ds.status = 'submitted')
             / NULLIF(COUNT(*) FILTER (WHERE ds.status = 'submitted'), 0), 1
           ) AS pass_rate
         FROM assessment_drives ad
+        LEFT JOIN assessment_rule_templates art ON art.id = ad.rule_id
         LEFT JOIN drive_students ds ON ds.drive_id = ad.id
         WHERE ad.id = $1
-        GROUP BY ad.id, ad.name, ad.cutoff_score, ad.scheduled_at
+        GROUP BY ad.id, ad.name, art.overall_cutoff, ad.scheduled_start
       `, [driveId]),
 
       query(`
@@ -244,7 +272,7 @@ router.get("/cohort", authorize(...ADMIN_ROLES), async (req, res, next) => {
       groupExpr = "COALESCE(sd.passing_year::text, 'Unknown')";
       labelExpr = "COALESCE(sd.passing_year::text, 'Unknown') AS label";
     } else {
-      groupExpr = "c.id::text";
+      groupExpr = "c.id, c.name";
       labelExpr = "COALESCE(c.name, 'Unknown') AS label";
     }
 
@@ -256,7 +284,7 @@ router.get("/cohort", authorize(...ADMIN_ROLES), async (req, res, next) => {
         ROUND(AVG(ps.score_percent) FILTER (WHERE ps.status = 'completed'), 1) AS avg_practice_score,
         COALESCE(ROUND(AVG(sx.total_xp)), 0)::int     AS avg_xp,
         ROUND(
-          100.0 * COUNT(*) FILTER (WHERE ds.score >= COALESCE(ad.cutoff_score, 0) AND ds.status = 'submitted')
+          100.0 * COUNT(*) FILTER (WHERE ds.score >= COALESCE(art.overall_cutoff, 0) AND ds.status = 'submitted')
           / NULLIF(COUNT(*) FILTER (WHERE ds.status = 'submitted'), 0), 1
         ) AS pass_rate
       FROM users u
@@ -264,6 +292,7 @@ router.get("/cohort", authorize(...ADMIN_ROLES), async (req, res, next) => {
       LEFT JOIN colleges c ON c.id = COALESCE(u.college_id, sd.college_id)
       LEFT JOIN drive_students ds ON ds.student_id = u.id
       LEFT JOIN assessment_drives ad ON ad.id = ds.drive_id
+      LEFT JOIN assessment_rule_templates art ON art.id = ad.rule_id
       LEFT JOIN practice_sessions ps ON ps.student_id = u.id
       LEFT JOIN student_xp sx ON sx.student_id = u.id
       WHERE u.role = 'student'
@@ -328,11 +357,28 @@ router.get("/skill-heatmap", authorize(...ADMIN_ROLES), async (req, res, next) =
 
 /**
  * GET /api/analytics/readiness
- * Compute + cache a readiness score for every student in a college
+ * - Student: own placement readiness composite (Module 02 dashboard)
+ * - Admin roles: college-wide readiness table (unchanged)
  */
-router.get("/readiness", authorize(...ADMIN_ROLES), async (req, res, next) => {
+router.get("/readiness", async (req, res, next) => {
   try {
-    const { college_id, limit = "50", offset = "0" } = req.query as Record<string, string>;
+    const role = String(req.user?.role || "").toLowerCase();
+    if (role === "student") {
+      // Module 07 enriched readiness (still includes Module 02 score/level/stages).
+      return resultsAnalytics.getReadiness(req, res, next);
+    }
+    if (!(ADMIN_ROLES as readonly string[]).includes(role) && role !== "admin") {
+      throw new AppError("Forbidden", 403);
+    }
+
+    const { college_id: requestedCollegeId, limit = "50", offset = "0" } = req.query as Record<string, string>;
+
+    // College-scoped roles (college_admin, placement_cell, ...) can never see
+    // another college's students — their own college_id always wins over
+    // whatever the client requested. Platform roles (super_admin/hr/cxo) can
+    // still filter by any college_id, or see all colleges by omitting it.
+    const callerCollegeId = await resolveCallerCollegeId(req);
+    const college_id = callerCollegeId ?? requestedCollegeId;
 
     const readinessParams: any[] = [];
     const collegeFilter = college_id
@@ -405,6 +451,16 @@ router.get("/readiness/:studentId", authorize(...ADMIN_ROLES, "mentor"), async (
   try {
     const { studentId } = req.params;
 
+    const callerCollegeId = await resolveCallerCollegeId(req);
+    if (callerCollegeId) {
+      const belongsToCollege = await queryOne<{ id: string }>(
+        `SELECT u.id FROM users u LEFT JOIN student_details sd ON sd.user_id = u.id
+         WHERE u.id = $1 AND COALESCE(u.college_id, sd.college_id) = $2`,
+        [studentId, callerCollegeId],
+      );
+      if (!belongsToCollege) throw new AppError("Student not found", 404);
+    }
+
     const [profile, driveHistory, practiceHistory, skillBreakdown] = await Promise.all([
       queryOne(`
         SELECT u.name, sd.degree, sd.passing_year, COALESCE(c.name, 'N/A') AS college_name,
@@ -419,11 +475,16 @@ router.get("/readiness/:studentId", authorize(...ADMIN_ROLES, "mentor"), async (
       `, [studentId]),
 
       query(`
-        SELECT ad.name AS drive_name, ds.score, ds.rank, ds.status, ad.scheduled_at
-        FROM drive_students ds
-        JOIN assessment_drives ad ON ad.id = ds.drive_id
-        WHERE ds.student_id = $1
-        ORDER BY ad.scheduled_at DESC
+        SELECT drive_name, score, status, scheduled_at, rnk AS rank FROM (
+          SELECT ad.id AS drive_id, ad.name AS drive_name, ds.student_id, ds.score, ds.status,
+                 ad.scheduled_start AS scheduled_at,
+                 RANK() OVER (PARTITION BY ds.drive_id ORDER BY ds.score DESC) AS rnk
+          FROM drive_students ds
+          JOIN assessment_drives ad ON ad.id = ds.drive_id
+          WHERE ds.status = 'submitted'
+        ) ranked
+        WHERE student_id = $1
+        ORDER BY scheduled_at DESC
         LIMIT 10
       `, [studentId]),
 

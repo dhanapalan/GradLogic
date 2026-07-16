@@ -116,6 +116,27 @@ router.post(
     ctrl.publish,
 );
 
+// GET /api/drives/:id/collections
+router.get(
+    "/:id/collections",
+    authorize("super_admin", "hr", "engineer"),
+    ctrl.listCollections,
+);
+
+// POST /api/drives/:id/collections — attach + seed from Question Collections
+router.post(
+    "/:id/collections",
+    authorize("super_admin", "hr"),
+    ctrl.attachCollections,
+);
+
+// POST /api/drives/:id/seed-from-collections
+router.post(
+    "/:id/seed-from-collections",
+    authorize("super_admin", "hr"),
+    ctrl.seedFromCollections,
+);
+
 // GET  /api/drives/:id/students
 router.get(
     "/:id/students",

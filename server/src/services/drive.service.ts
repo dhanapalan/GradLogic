@@ -45,6 +45,7 @@ export interface DriveRow {
 export interface CreateDriveInput {
     name: string;
     rule_id: string;
+    drive_type?: "hiring" | "practice_test" | "mock_test" | "coding_assessment";
     duration_minutes?: number;
     scheduled_start?: Date;
     scheduled_end?: Date;
@@ -61,14 +62,20 @@ export interface CreateDriveInput {
     created_by?: string;
     status?: string;
     auto_generate_pool?: boolean;
+    /** Question Collections to seed the pool from (Assessment Hub pipeline). */
+    collection_ids?: string[];
+    /** Optional section mapping — defaults to one section per collection. */
+    sections?: Array<{ collection_id: string; section_name?: string }>;
 }
 
 // ── List Drives ──────────────────────────────────────────────────────────────
 
-export async function listDrives(filters?: { status?: string; rule_id?: string }) {
+export async function listDrives(filters?: { status?: string; rule_id?: string; drive_type?: string }) {
     let sql = `
     SELECT d.*,
            art.name as rule_name,
+           art.targeting_config,
+           art.hub_template_config,
            arv.version_number as rule_version_number
     FROM assessment_drives d
     LEFT JOIN assessment_rule_templates art ON art.id = d.rule_id
@@ -84,6 +91,10 @@ export async function listDrives(filters?: { status?: string; rule_id?: string }
     if (filters?.rule_id) {
         conditions.push(`d.rule_id = $${params.length + 1}`);
         params.push(filters.rule_id);
+    }
+    if (filters?.drive_type) {
+        conditions.push(`d.drive_type = $${params.length + 1}`);
+        params.push(filters.drive_type);
     }
 
     if (conditions.length > 0) {
@@ -146,8 +157,8 @@ export async function createDrive(input: CreateDriveInput) {
        (name, rule_id, rule_version_id, rule_snapshot, scheduled_start, scheduled_end,
         auto_publish, allow_mock, attempt_limit, duration_minutes,
         shuffle_questions, auto_submit, proctoring_mode, tab_switch_limit, face_detection_required,
-        max_applicants, created_by, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        max_applicants, created_by, status, drive_type)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING *`,
         [
             input.name,
@@ -157,7 +168,7 @@ export async function createDrive(input: CreateDriveInput) {
             input.scheduled_start || null,
             input.scheduled_end || null,
             input.auto_publish || false,
-            input.allow_mock || false,
+            input.allow_mock || input.drive_type === "mock_test" || false,
             input.attempt_limit || 1,
             input.duration_minutes ?? (snapshotData.duration_minutes || null),
             input.shuffle_questions ?? false,
@@ -167,19 +178,424 @@ export async function createDrive(input: CreateDriveInput) {
             input.face_detection_required ?? (snapshotData.proctoring_config?.face_detection_mandatory ?? false),
             input.max_applicants || 500,
             input.created_by || null,
-            input.status || 'DRAFT'
+            input.status || 'DRAFT',
+            input.drive_type || 'hiring',
         ],
     );
 
-    // 5. Auto-trigger pool generation if requested (default: yes)
+    // 5. Attach Question Collections (Assessment Hub) when provided
+    const collectionIds = (input.collection_ids || []).filter(Boolean);
+    if (drive && collectionIds.length > 0) {
+        const sections = ((input as any).sections || []) as Array<{
+            collection_id: string;
+            section_name?: string;
+        }>;
+        // Default: each collection is one section named after the collection
+        const sectionPayload =
+            sections.length > 0
+                ? sections
+                : collectionIds.map((id) => ({ collection_id: id }));
+        await attachDriveCollections(drive.id, collectionIds, sectionPayload);
+        try {
+            await seedPoolFromCollections(drive.id);
+        } catch (err) {
+            logger.error("Collection pool seed failed", {
+                driveId: drive.id,
+                error: (err as Error).message,
+            });
+            throw err instanceof AppError
+                ? err
+                : new AppError((err as Error).message || "Collection pool seed failed", 500);
+        }
+        return (await getDriveById(drive.id)) || drive;
+    }
+
     if (drive && input.auto_generate_pool !== false) {
-        // Fire-and-forget: generate pool in background
+        // Fire-and-forget: AI / mock pool generation when no collections attached
         generateDrive(drive.id).catch((err) =>
-            logger.error('Auto pool generation failed', { driveId: drive.id, error: (err as Error).message })
+            logger.error("Auto pool generation failed", {
+                driveId: drive.id,
+                error: (err as Error).message,
+            })
         );
     }
 
     return drive;
+}
+
+/** Link Assessment Builder drives to reusable Question Collections. */
+export async function attachDriveCollections(
+    driveId: string,
+    collectionIds: string[],
+    sections?: Array<{ collection_id: string; section_name?: string | null }>
+) {
+    const sectionById = new Map(
+        (sections || []).map((s) => [s.collection_id, s.section_name || null])
+    );
+    for (const collectionId of collectionIds) {
+        const sectionName = sectionById.get(collectionId) ?? null;
+        await query(
+            `INSERT INTO drive_source_collections (drive_id, collection_id, section_name)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (drive_id, collection_id) DO UPDATE
+             SET section_name = COALESCE(EXCLUDED.section_name, drive_source_collections.section_name)`,
+            [driveId, collectionId, sectionName]
+        ).catch(async () => {
+            // Older DBs without section_name column
+            await query(
+                `INSERT INTO drive_source_collections (drive_id, collection_id)
+                 VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+                [driveId, collectionId]
+            );
+        });
+    }
+}
+
+export async function listDriveCollections(driveId: string) {
+    return query(
+        `SELECT c.id, c.name, c.category, c.description,
+            dsc.section_name,
+            (SELECT COUNT(*)::int FROM question_collection_items i WHERE i.collection_id = c.id) AS question_count
+         FROM drive_source_collections dsc
+         JOIN question_collections c ON c.id = dsc.collection_id
+         WHERE dsc.drive_id = $1
+         ORDER BY COALESCE(dsc.section_name, c.name)`,
+        [driveId]
+    ).catch(() =>
+        query(
+            `SELECT c.id, c.name, c.category, c.description,
+                NULL::text AS section_name,
+                (SELECT COUNT(*)::int FROM question_collection_items i WHERE i.collection_id = c.id) AS question_count
+             FROM drive_source_collections dsc
+             JOIN question_collections c ON c.id = dsc.collection_id
+             WHERE dsc.drive_id = $1
+             ORDER BY c.name`,
+            [driveId]
+        )
+    );
+}
+
+function normalizeDifficulty(raw: string | null | undefined): "easy" | "medium" | "hard" {
+    const d = String(raw || "medium").toLowerCase();
+    if (d === "easy" || d === "beginner") return "easy";
+    if (d === "hard" || d === "advanced") return "hard";
+    return "medium";
+}
+
+function parseDifficultyMix(raw: unknown): { easy: number; medium: number; hard: number } {
+    const defaults = { easy: 30, medium: 50, hard: 20 };
+    if (!raw || typeof raw !== "object") return defaults;
+    const o = raw as Record<string, unknown>;
+    const easy = Number(o.easy ?? o.Easy ?? defaults.easy);
+    const medium = Number(o.medium ?? o.Medium ?? defaults.medium);
+    const hard = Number(o.hard ?? o.Hard ?? defaults.hard);
+    const sum = easy + medium + hard;
+    if (sum <= 0) return defaults;
+    return {
+        easy: Math.round((easy / sum) * 100),
+        medium: Math.round((medium / sum) * 100),
+        hard: Math.max(0, 100 - Math.round((easy / sum) * 100) - Math.round((medium / sum) * 100)),
+    };
+}
+
+function sampleByDifficultyMix<T extends { difficulty_level: string | null }>(
+    items: T[],
+    total: number,
+    mix: { easy: number; medium: number; hard: number }
+): T[] {
+    const buckets: Record<"easy" | "medium" | "hard", T[]> = {
+        easy: [],
+        medium: [],
+        hard: [],
+    };
+    for (const q of items) {
+        buckets[normalizeDifficulty(q.difficulty_level)].push(q);
+    }
+    for (const key of Object.keys(buckets) as Array<"easy" | "medium" | "hard">) {
+        buckets[key] = [...buckets[key]].sort(() => Math.random() - 0.5);
+    }
+
+    const target = {
+        easy: Math.round((mix.easy / 100) * total),
+        medium: Math.round((mix.medium / 100) * total),
+        hard: 0,
+    };
+    target.hard = Math.max(0, total - target.easy - target.medium);
+
+    const pick = (key: "easy" | "medium" | "hard", n: number) =>
+        buckets[key].splice(0, Math.min(n, buckets[key].length));
+
+    let selected = [
+        ...pick("easy", target.easy),
+        ...pick("medium", target.medium),
+        ...pick("hard", target.hard),
+    ];
+
+    // Top up from leftovers if a bucket was short
+    const leftover = [...buckets.easy, ...buckets.medium, ...buckets.hard].sort(
+        () => Math.random() - 0.5
+    );
+    while (selected.length < total && leftover.length > 0) {
+        selected.push(leftover.shift()!);
+    }
+
+    if (selected.length > total) selected = selected.slice(0, total);
+    return selected;
+}
+
+/**
+ * Seed drive pool from attached Question Collections (bank rows — no duplicate content).
+ * Applies template difficulty mix + optional shuffle. Marks generation completed for approve.
+ */
+export async function seedPoolFromCollections(driveId: string) {
+    const linked = await query<{
+        collection_id: string;
+        section_name: string | null;
+        collection_name: string;
+    }>(
+        `SELECT dsc.collection_id,
+                dsc.section_name,
+                c.name AS collection_name
+         FROM drive_source_collections dsc
+         JOIN question_collections c ON c.id = dsc.collection_id
+         WHERE dsc.drive_id = $1`,
+        [driveId]
+    ).catch(() =>
+        query<{ collection_id: string; section_name: string | null; collection_name: string }>(
+            `SELECT dsc.collection_id, NULL::text AS section_name, c.name AS collection_name
+             FROM drive_source_collections dsc
+             JOIN question_collections c ON c.id = dsc.collection_id
+             WHERE dsc.drive_id = $1`,
+            [driveId]
+        )
+    );
+
+    if (linked.length === 0) {
+        throw new AppError("No question collections attached to this drive", 400);
+    }
+
+    const pool = await queryOne<{ id: string }>(
+        `INSERT INTO drive_question_pool (drive_id, total_generated, generation_status, status)
+         VALUES ($1, 0, 'generating', 'pending')
+         ON CONFLICT (drive_id) DO UPDATE
+         SET generation_status = 'generating', status = 'pending', total_generated = 0,
+             is_locked = FALSE
+         RETURNING id`,
+        [driveId]
+    );
+    if (!pool) throw new AppError("Failed to create question pool", 500);
+
+    await query(`DELETE FROM drive_pool_questions WHERE pool_id = $1`, [pool.id]);
+
+    const questions = await query<{
+        id: string;
+        question_text: string;
+        difficulty_level: string | null;
+        category: string | null;
+        options: unknown;
+        correct_answer: string | null;
+        marks: number | null;
+        type: string | null;
+        collection_id: string;
+        collection_name: string;
+        section_name: string | null;
+    }>(
+        `SELECT DISTINCT ON (q.id)
+            q.id, q.question_text, q.difficulty_level, q.category, q.options,
+            q.correct_answer, q.marks, q.type,
+            i.collection_id, c.name AS collection_name, dsc.section_name
+         FROM question_collection_items i
+         JOIN question_bank q ON q.id = i.question_id
+         JOIN question_collections c ON c.id = i.collection_id
+         LEFT JOIN drive_source_collections dsc
+           ON dsc.collection_id = i.collection_id AND dsc.drive_id = $2
+         WHERE i.collection_id = ANY($1::uuid[])
+           AND q.deleted_at IS NULL
+           AND COALESCE(q.is_active, true) = true
+         ORDER BY q.id, i.sort_order`,
+        [linked.map((l) => l.collection_id), driveId]
+    ).catch(() =>
+        query(
+            `SELECT DISTINCT ON (q.id)
+                q.id, q.question_text, q.difficulty_level, q.category, q.options,
+                q.correct_answer, q.marks, q.type,
+                i.collection_id, c.name AS collection_name, NULL::text AS section_name
+             FROM question_collection_items i
+             JOIN question_bank q ON q.id = i.question_id
+             JOIN question_collections c ON c.id = i.collection_id
+             WHERE i.collection_id = ANY($1::uuid[])
+               AND q.deleted_at IS NULL
+               AND COALESCE(q.is_active, true) = true
+             ORDER BY q.id, i.sort_order`,
+            [linked.map((l) => l.collection_id)]
+        )
+    );
+
+    if (questions.length === 0) {
+        throw new AppError(
+            "Attached collections have no questions — fill collections from Question Bank first",
+            400
+        );
+    }
+
+    const drive = await getDriveById(driveId);
+    const snapshot =
+        typeof (drive as any)?.rule_snapshot === "string"
+            ? JSON.parse((drive as any).rule_snapshot)
+            : (drive as any)?.rule_snapshot || {};
+    const mix = parseDifficultyMix(snapshot.difficulty_distribution);
+    const totalTarget = Math.max(
+        1,
+        Number(snapshot.total_questions) || Math.min(questions.length, 30)
+    );
+
+    let ordered = sampleByDifficultyMix(questions, totalTarget, mix);
+    if ((drive as any)?.shuffle_questions) {
+        ordered = [...ordered].sort(() => Math.random() - 0.5);
+    }
+
+    const actualMix = { easy: 0, medium: 0, hard: 0 };
+    const sectionCounts: Record<string, number> = {};
+
+    let inserted = 0;
+    for (const q of ordered) {
+        const diffKey = normalizeDifficulty(q.difficulty_level);
+        actualMix[diffKey]++;
+        const section =
+            q.section_name ||
+            linked.find((l) => l.collection_id === q.collection_id)?.section_name ||
+            q.collection_name ||
+            q.category ||
+            "General";
+        sectionCounts[section] = (sectionCounts[section] || 0) + 1;
+
+        const difficultyLabel =
+            diffKey === "easy" ? "Easy" : diffKey === "hard" ? "Hard" : "Medium";
+
+        await query(
+            `INSERT INTO drive_pool_questions
+                (drive_id, pool_id, question_text, difficulty, skill, options, correct_answer, marks, ai_metadata)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+                driveId,
+                pool.id,
+                q.question_text,
+                difficultyLabel,
+                section,
+                q.options ? JSON.stringify(q.options) : null,
+                q.correct_answer,
+                q.marks ?? 1,
+                JSON.stringify({
+                    source: "question_collection",
+                    bank_id: q.id,
+                    type: q.type,
+                    collection_id: q.collection_id,
+                    section,
+                }),
+            ]
+        );
+        inserted++;
+    }
+
+    const targetCounts = {
+        easy: Math.round((mix.easy / 100) * inserted),
+        medium: Math.round((mix.medium / 100) * inserted),
+        hard: 0,
+    };
+    targetCounts.hard = Math.max(0, inserted - targetCounts.easy - targetCounts.medium);
+
+    const difficulty_distribution: Record<
+        string,
+        { target_pct: number; actual_count: number; actual_pct: number }
+    > = {};
+    for (const key of ["easy", "medium", "hard"] as const) {
+        difficulty_distribution[key] = {
+            target_pct: mix[key],
+            actual_count: actualMix[key],
+            actual_pct: inserted ? Math.round((actualMix[key] / inserted) * 100) : 0,
+        };
+    }
+
+    const skill_distribution: Record<
+        string,
+        { target_pct: number; actual_count: number; actual_pct: number }
+    > = {};
+    for (const [section, count] of Object.entries(sectionCounts)) {
+        skill_distribution[section] = {
+            target_pct: inserted ? Math.round((count / inserted) * 100) : 0,
+            actual_count: count,
+            actual_pct: inserted ? Math.round((count / inserted) * 100) : 0,
+        };
+    }
+
+    await query(
+        `UPDATE drive_question_pool
+         SET total_generated = $1,
+             generation_status = 'completed',
+             status = 'pending',
+             difficulty_distribution = $2::jsonb,
+             skill_distribution = $3::jsonb,
+             validation_score = 100
+         WHERE id = $4`,
+        [
+            inserted,
+            JSON.stringify(difficulty_distribution),
+            JSON.stringify(skill_distribution),
+            pool.id,
+        ]
+    ).catch(async () => {
+        await query(
+            `UPDATE drive_question_pool
+             SET total_generated = $1, generation_status = 'completed', status = 'pending'
+             WHERE id = $2`,
+            [inserted, pool.id]
+        );
+    });
+
+    try {
+        await query(
+            `UPDATE assessment_drives SET status = 'POOL_READY', updated_at = NOW() WHERE id = $1`,
+            [driveId]
+        );
+    } catch {
+        await query(
+            `UPDATE assessment_drives SET status = 'DRAFT', updated_at = NOW() WHERE id = $1`,
+            [driveId]
+        );
+    }
+
+    try {
+        await query(`UPDATE assessment_drives SET pool_id = $1 WHERE id = $2`, [pool.id, driveId]);
+    } catch {
+        /* column optional */
+    }
+
+    // Persist assemble metadata when column exists
+    try {
+        await query(
+            `UPDATE assessment_drives
+             SET assembler_config = COALESCE(assembler_config, '{}'::jsonb) || $1::jsonb,
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [
+                JSON.stringify({
+                    source: "question_collections",
+                    difficulty_mix: mix,
+                    sections: linked.map((l) => ({
+                        collection_id: l.collection_id,
+                        section_name: l.section_name || l.collection_name,
+                    })),
+                    total_seeded: inserted,
+                    seeded_at: new Date().toISOString(),
+                }),
+                driveId,
+            ]
+        );
+    } catch {
+        /* optional column */
+    }
+
+    return { pool_id: pool.id, inserted, difficulty_mix: mix, sections: sectionCounts };
 }
 
 // ── Update Drive ─────────────────────────────────────────────────────────────
@@ -197,7 +613,7 @@ export async function updateDrive(id: string, input: Partial<CreateDriveInput> &
         const drive = await getDriveById(id);
         if (!drive) throw new AppError("Drive not found", 404);
         const st = (drive as any).status?.toUpperCase();
-        if (!['DRAFT', 'POOL_APPROVED', 'APPROVED'].includes(st)) {
+        if (!['DRAFT', 'POOL_READY', 'PENDING_APPROVAL', 'POOL_APPROVED', 'APPROVED'].includes(st)) {
             throw new AppError(`Execution config is locked — drive status is ${(drive as any).status}`, 403);
         }
     }
@@ -637,9 +1053,23 @@ export async function approveDrivePool(driveId: string, userId: string) {
     if (pool.is_locked) throw new AppError("Pool is already locked and approved", 409);
     if (pool.status === 'approved') throw new AppError("Pool has already been approved", 409);
 
-    // Guard: pool must be fully generated
-    if (pool.generation_status !== 'completed') {
+    // Guard: pool must be fully generated (collections seed uses 'completed';
+    // also accept legacy 'ready' when questions already exist)
+    if (pool.generation_status !== "completed" && pool.generation_status !== "ready") {
         throw new AppError("Cannot approve pool — generation is not complete", 400);
+    }
+    if (pool.generation_status === "ready") {
+        const n = await queryOne<{ cnt: number }>(
+            `SELECT count(*)::int as cnt FROM drive_pool_questions WHERE pool_id = $1`,
+            [pool.id]
+        );
+        if (!n || n.cnt === 0) {
+            throw new AppError("Cannot approve pool — generation is not complete", 400);
+        }
+        await query(
+            `UPDATE drive_question_pool SET generation_status = 'completed' WHERE id = $1`,
+            [pool.id]
+        );
     }
 
     // Guard: there must be at least one non-duplicate question

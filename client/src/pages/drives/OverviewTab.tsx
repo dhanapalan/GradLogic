@@ -35,7 +35,7 @@ function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: b
 
 export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot: any }) {
     const queryClient = useQueryClient();
-    const isConfigEditable = ["draft", "pool_approved", "approved"].includes(drive.status?.toLowerCase()) || drive.status?.toLowerCase() === "ready";
+    const isConfigEditable = ["draft", "pool_ready", "pending_approval", "pool_approved", "approved"].includes(drive.status?.toLowerCase()) || drive.status?.toLowerCase() === "ready";
     const [showReadyWarning, setShowReadyWarning] = useState(false);
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -103,6 +103,42 @@ export default function OverviewTab({ drive, snapshot }: { drive: any; snapshot:
 
     return (
         <div className="space-y-6">
+            {(() => {
+                const cfg =
+                    typeof drive.assembler_config === "string"
+                        ? (() => {
+                              try {
+                                  return JSON.parse(drive.assembler_config);
+                              } catch {
+                                  return null;
+                              }
+                          })()
+                        : drive.assembler_config;
+                if (!cfg || cfg.source !== "question_collections") return null;
+                const sections = Array.isArray(cfg.sections) ? cfg.sections : [];
+                const mix = cfg.difficulty_mix || {};
+                return (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                        <p className="font-semibold text-slate-800">Assembled from Question Collections</p>
+                        <p className="mt-1 text-xs text-slate-500">
+                            {cfg.total_seeded != null ? `${cfg.total_seeded} questions · ` : ""}
+                            Difficulty mix Easy {mix.easy ?? "—"}% / Medium {mix.medium ?? "—"}% / Hard{" "}
+                            {mix.hard ?? "—"}%
+                            {drive.shuffle_questions ? " · Shuffle on" : ""}
+                        </p>
+                        {sections.length > 0 && (
+                            <p className="mt-1 text-xs text-slate-500">
+                                Sections:{" "}
+                                {sections
+                                    .map((s: { section_name?: string }) => s.section_name)
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                            </p>
+                        )}
+                    </div>
+                );
+            })()}
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold text-slate-800">Drive Overview</h2>

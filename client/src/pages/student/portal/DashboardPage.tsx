@@ -1,218 +1,241 @@
-import { useQuery } from "@tanstack/react-query";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Bell } from "lucide-react";
+import studentDashboardService from "../../../services/studentDashboardService";
+import { WidgetSkeleton } from "./dashboard/WidgetShell";
 import {
-  Zap,
-  CheckCircle2,
-  TrendingUp,
-  Target,
-  BookOpenCheck,
-  Dumbbell,
-  ClipboardCheck,
-  Library,
-  ArrowRight,
-  Play,
-  Sparkles,
-} from "lucide-react";
-import { useAuthStore } from "../../../stores/authStore";
-import api from "../../../lib/api";
-import DailyTargetCard from "../DailyTargetCard";
-import CurrentStageCard from "../CurrentStageCard";
-import ReadinessCard from "../ReadinessCard";
-import StreakHeatmapCard from "../StreakHeatmapCard";
-import WeeklyGoalCard from "../WeeklyGoalCard";
-import { useGamificationSummary } from "../../../hooks/useGamificationSummary";
+  AssignedLearningWidget,
+  NotificationsWidget,
+  QuickActionsWidget,
+  ReadinessWidget,
+  RecentResultsWidget,
+  RefreshButton,
+  UpcomingAssessmentsWidget,
+  WelcomeCard,
+} from "./dashboard/widgets";
 
-const BASE = "/app/student-portal";
+const BelowFoldWidgets = lazy(() => import("./dashboard/BelowFoldWidgets"));
 
-interface Drive {
-  drive_id: string;
-  drive_name: string;
-  duration_minutes: number;
-  total_questions: number;
-  scheduled_start: string | null;
-  session_status: string;
-  score: number | null;
+const WIDGET_VIS_KEY = "student-dashboard-widgets";
+
+const ALL_WIDGETS = [
+  "welcome",
+  "readiness",
+  "upcoming_assessments",
+  "recent_results",
+  "assigned_learning",
+  "skill_progress",
+  "ai_recommendations",
+  "campus_drives",
+  "notifications",
+  "achievements",
+  "calendar",
+  "quick_actions",
+] as const;
+
+type WidgetId = (typeof ALL_WIDGETS)[number];
+
+function loadVisibility(): Record<WidgetId, boolean> {
+  try {
+    const raw = localStorage.getItem(WIDGET_VIS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Record<WidgetId, boolean>>;
+      return Object.fromEntries(ALL_WIDGETS.map((id) => [id, parsed[id] !== false])) as Record<
+        WidgetId,
+        boolean
+      >;
+    }
+  } catch {
+    /* ignore */
+  }
+  return Object.fromEntries(ALL_WIDGETS.map((id) => [id, true])) as Record<WidgetId, boolean>;
 }
 
 export default function StudentDashboardPage() {
-  const user = useAuthStore((s) => s.user);
-  const { profile: gamification, myRank, totalParticipants } = useGamificationSummary();
+  const qc = useQueryClient();
+  const [visibility, setVisibility] = useState(loadVisibility);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStart = useRef<number | null>(null);
+  const [pulling, setPulling] = useState(false);
 
-  const { data: drives = [], isLoading } = useQuery({
-    queryKey: ["student-drives"],
-    queryFn: async () => (await api.get("/exam-sessions/my-drives")).data.data as Drive[],
-    enabled: !!user?.id,
-    staleTime: 30_000,
+  const shellQ = useQuery({
+    queryKey: ["student-dash-shell"],
+    queryFn: () => studentDashboardService.getShell(),
+    staleTime: 60_000,
   });
 
-  const activeDrives = drives.filter((d) =>
-    ["assigned", "registered", "in_progress"].includes(d.session_status)
-  );
-  const completedDrives = drives.filter((d) => d.session_status === "completed");
-  const avgScore =
-    completedDrives.length > 0
-      ? Math.round(
-          completedDrives.reduce((a, d) => a + (Number(d.score) || 0), 0) / completedDrives.length
-        )
-      : 0;
+  const stickyNotesQ = useQuery({
+    queryKey: ["student-dash-notifications"],
+    queryFn: () => studentDashboardService.getNotifications(5),
+    staleTime: 20_000,
+    refetchInterval: 45_000,
+  });
 
-  const kpis = [
-    { label: "Active Exams", value: activeDrives.length, icon: Zap, tint: "bg-indigo-50 text-indigo-500 border-indigo-100" },
-    { label: "Completed", value: completedDrives.length, icon: CheckCircle2, tint: "bg-emerald-50 text-emerald-500 border-emerald-100" },
-    { label: "Avg Score", value: completedDrives.length ? `${avgScore}` : "—", icon: TrendingUp, tint: "bg-amber-50 text-amber-500 border-amber-100" },
-    { label: "Streak Goal", value: <DailyTargetInline />, icon: Target, tint: "bg-violet-50 text-violet-500 border-violet-100", raw: true },
-  ];
+  const unread = (stickyNotesQ.data ?? []).filter((n) => !n.is_read);
 
-  const quickLinks = [
-    { name: "Learn", href: `${BASE}/learn`, icon: BookOpenCheck, desc: "Concept tracks & programs" },
-    { name: "Practice", href: `${BASE}/practice`, icon: Dumbbell, desc: "Topic-wise practice sets" },
-    { name: "Tests & Mocks", href: `${BASE}/tests`, icon: ClipboardCheck, desc: "Drives & full-length mocks" },
-    { name: "Question Bank", href: `${BASE}/question-bank`, icon: Library, desc: "Browse by topic" },
-  ];
+  const refreshAll = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["student-dash-shell"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-readiness"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-upcoming"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-results"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-learning"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-skills"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-recs"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-drives"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-notifications"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-achievements"] }),
+        qc.invalidateQueries({ queryKey: ["student-dash-calendar"] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [qc]);
+
+  useEffect(() => {
+    const onStart = (e: TouchEvent) => {
+      if (window.scrollY <= 0) pullStart.current = e.touches[0]?.clientY ?? null;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (pullStart.current == null) return;
+      const dy = (e.touches[0]?.clientY ?? 0) - pullStart.current;
+      setPulling(dy > 70);
+    };
+    const onEnd = () => {
+      if (pulling) void refreshAll();
+      pullStart.current = null;
+      setPulling(false);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: true });
+    window.addEventListener("touchend", onEnd);
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+    };
+  }, [pulling, refreshAll]);
+
+  const toggleWidget = (id: WidgetId) => {
+    setVisibility((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      localStorage.setItem(WIDGET_VIS_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const show = (id: WidgetId) => visibility[id] !== false;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
-      {/* Greeting */}
-      <div className="flex items-center justify-between bg-white rounded-2xl px-6 py-4 border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-            <span className="text-lg font-black">{user?.name?.[0]?.toUpperCase() ?? "S"}</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight leading-tight">
-              Welcome, <span className="text-indigo-600">{user?.name?.split(" ")[0]}</span>
-            </h1>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">
-              {gamification?.streak.current_streak
-                ? `You're on a ${gamification.streak.current_streak}-day streak. Keep the momentum going!`
-                : activeDrives.length > 0
-                  ? `${activeDrives.length} active exam${activeDrives.length !== 1 ? "s" : ""} · ${completedDrives.length} completed`
-                  : `No active exams · ${completedDrives.length} completed`}
-            </p>
-          </div>
-        </div>
-        {myRank != null && totalParticipants != null && (
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-100 px-3 py-1.5 text-xs font-bold text-amber-600">
-            <Sparkles className="h-3.5 w-3.5" /> Rank #{myRank} of {totalParticipants}
-          </span>
-        )}
-      </div>
+    <div className="mx-auto max-w-7xl space-y-5 animate-in fade-in duration-500">
+      {pulling && (
+        <p className="text-center text-xs font-bold text-indigo-600" role="status">
+          Release to refresh…
+        </p>
+      )}
 
-      {/* Readiness + streak + weekly goal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ReadinessCard />
-        <StreakHeatmapCard />
-        <WeeklyGoalCard />
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {kpis.map((k) => (
-          <div key={k.label} className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-            <div className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border ${k.tint}`}>
-              <k.icon className="h-4.5 w-4.5" />
+      {unread.length > 0 && (
+        <div
+          className="sticky top-0 z-20 rounded-2xl border border-indigo-100 bg-indigo-50/95 px-4 py-3 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-indigo-50/80"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <Bell className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600" aria-hidden />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-wider text-indigo-700">
+                {unread.length} unread notification{unread.length === 1 ? "" : "s"}
+              </p>
+              <p className="mt-0.5 truncate text-sm font-medium text-slate-800">{unread[0].title}</p>
             </div>
-            {k.raw ? (
-              <div className="mt-3">{k.value}</div>
-            ) : (
-              <p className="mt-3 text-2xl font-black text-slate-900 leading-none">{k.value}</p>
-            )}
-            {!k.raw && (
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">{k.label}</p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Daily target + current workflow stage */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <DailyTargetCard />
-        <CurrentStageCard />
-      </div>
-
-      {/* Upcoming exams + quick links */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-50 flex items-center justify-between">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Upcoming Exams</h3>
-            <Link to={`${BASE}/tests`} className="text-xs font-bold text-indigo-500 hover:text-indigo-700 flex items-center gap-1">
-              View all <ArrowRight className="h-3 w-3" />
+            <Link
+              to="/app/student-portal/notifications"
+              className="shrink-0 text-xs font-bold text-indigo-700 hover:underline"
+            >
+              View all
             </Link>
           </div>
-          <div className="divide-y divide-slate-50">
-            {isLoading ? (
-              <div className="p-6"><div className="h-16 animate-pulse rounded-xl bg-slate-50" /></div>
-            ) : activeDrives.length > 0 ? (
-              activeDrives.slice(0, 4).map((d) => (
-                <Link
-                  key={d.drive_id}
-                  to={`${BASE}/tests`}
-                  className="flex items-center justify-between px-6 py-4 hover:bg-slate-50/60 transition-colors group"
-                >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 border border-indigo-100 group-hover:bg-indigo-500 group-hover:text-white transition-all">
-                      <BookOpenCheck className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{d.drive_name}</p>
-                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                        {d.duration_minutes}min · {d.total_questions} questions
-                      </p>
-                    </div>
-                  </div>
-                  <Play className="h-4 w-4 text-slate-300 group-hover:text-indigo-500" />
-                </Link>
-              ))
-            ) : (
-              <div className="p-10 text-center">
-                <CheckCircle2 className="h-8 w-8 text-slate-200 mx-auto mb-3" />
-                <p className="text-sm font-bold text-slate-400">No upcoming exams</p>
-                <p className="text-xs text-slate-300 mt-1">You're all caught up!</p>
-              </div>
-            )}
-          </div>
         </div>
+      )}
 
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">Jump back in</h3>
-          <div className="space-y-2">
-            {quickLinks.map((q) => (
-              <Link
-                key={q.href}
-                to={q.href}
-                className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:border-indigo-100 hover:bg-indigo-50/40"
-              >
-                <span className="flex items-center gap-2.5">
-                  <q.icon className="h-4 w-4 text-indigo-500" />
-                  <span>
-                    {q.name}
-                    <span className="block text-[11px] font-medium text-slate-400">{q.desc}</span>
-                  </span>
-                </span>
-                <ArrowRight className="h-4 w-4 text-slate-300" />
-              </Link>
-            ))}
-          </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">Dashboard</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Today&apos;s journey — continue learning, practice, assess, and improve with AI.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <details className="relative">
+            <summary className="cursor-pointer list-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+              Customize widgets
+            </summary>
+            <div
+              className="absolute right-0 z-30 mt-2 max-h-72 w-56 overflow-y-auto rounded-xl border border-slate-100 bg-white p-2 shadow-lg"
+              role="group"
+              aria-label="Toggle dashboard widgets"
+            >
+              {ALL_WIDGETS.map((id) => (
+                <label
+                  key={id}
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs capitalize text-slate-700 hover:bg-slate-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={show(id)}
+                    onChange={() => toggleWidget(id)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  {id.replace(/_/g, " ")}
+                </label>
+              ))}
+            </div>
+          </details>
+          <RefreshButton onRefresh={() => void refreshAll()} refreshing={refreshing} />
         </div>
       </div>
-    </div>
-  );
-}
 
-/** Compact daily-target value used inside the KPI tile. */
-function DailyTargetInline() {
-  const { data } = useQuery({
-    queryKey: ["student-daily-target"],
-    queryFn: async () => (await api.get("/practice/daily-target")).data.data,
-    staleTime: 30_000,
-  });
-  if (!data) return <p className="text-2xl font-black text-slate-900 leading-none">—</p>;
-  return (
-    <>
-      <p className="text-2xl font-black text-slate-900 leading-none">
-        {data.completed_today}/{data.target}
-      </p>
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Daily Target</p>
-    </>
+      {show("welcome") && (
+        <WelcomeCard
+          shell={shellQ.data}
+          loading={shellQ.isLoading}
+          error={shellQ.isError}
+          onRetry={() => void shellQ.refetch()}
+        />
+      )}
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {show("readiness") && (
+          <div className="lg:col-span-2">
+            <ReadinessWidget />
+          </div>
+        )}
+        {show("quick_actions") && <QuickActionsWidget />}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {show("upcoming_assessments") && <UpcomingAssessmentsWidget />}
+        {show("recent_results") && <RecentResultsWidget />}
+        {show("assigned_learning") && <AssignedLearningWidget />}
+        {show("notifications") && <NotificationsWidget />}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Suspense
+          fallback={
+            <>
+              <WidgetSkeleton />
+              <WidgetSkeleton />
+              <WidgetSkeleton />
+            </>
+          }
+        >
+          <BelowFoldWidgets visibility={visibility} />
+        </Suspense>
+      </div>
+    </div>
   );
 }

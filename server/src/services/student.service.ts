@@ -21,7 +21,7 @@ interface BulkStudentInput {
 
 type StudentGender = "male" | "female" | "non_binary" | "prefer_not_to_say";
 
-interface UpdateStudentInput {
+export interface UpdateStudentInput {
   // Existing compatibility fields
   name?: string;
   email?: string;

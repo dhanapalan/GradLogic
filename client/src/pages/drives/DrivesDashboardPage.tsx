@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router";
 import {
     Plus,
     Search,
@@ -47,13 +47,19 @@ const statusConfig: Record<string, { label: string; color: string; icon: typeof 
 export default function DrivesDashboardPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    // Same components render under /app/drives (DashboardLayout, hr/engineer/college_admin)
+    // and /app/superadmin/drives (SuperAdminLayout) — keep internal links on whichever shell we're in.
+    const BASE = location.pathname.startsWith("/app/superadmin") ? "/app/superadmin/drives" : "/app/drives";
+    const isAssessmentHub = location.pathname.startsWith("/app/superadmin");
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
 
     const fromRule = searchParams.get("from_rule");
+    const fromCollection = searchParams.get("collection_id");
 
     const { data: drives = [], isLoading, refetch } = useQuery<Drive[]>({
-        queryKey: ["drives", statusFilter],
+        queryKey: ["drives", statusFilter, fromRule],
         queryFn: async () => {
             const params = new URLSearchParams();
             if (statusFilter !== "all") params.set("status", statusFilter);
@@ -97,25 +103,110 @@ export default function DrivesDashboardPage() {
     const scheduledCount = drives.filter((d: Drive) => d.status?.toLowerCase() === "scheduled").length;
     const completedCount = drives.filter((d: Drive) => ["completed", "published"].includes(d.status?.toLowerCase() || "")).length;
 
-    return (
-        <div className="min-h-screen bg-[#F8FAFC] p-8">
-            {/* Header */}
-            <div className="mb-8 flex items-center justify-between">
-                <div>
-                    <div className="flex items-center gap-3 mb-1">
-                        <RocketIcon className="h-8 w-8 text-indigo-500" />
-                        <h1 className="text-3xl font-black text-slate-900">Assessment Drives</h1>
-                    </div>
-                    <p className="text-sm text-slate-500 ml-11">Manage execution instances of assessment rules</p>
-                </div>
-                <button
-                    onClick={() => navigate(fromRule ? `/app/drives/new?rule_id=${fromRule}` : "/app/drives/new")}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-600 transition-all"
-                >
-                    <Plus className="h-4 w-4" /> New Drive
-                </button>
-            </div>
+    const newHref = (() => {
+        const p = new URLSearchParams();
+        if (fromRule) p.set("rule_id", fromRule);
+        if (fromCollection) p.set("collection_id", fromCollection);
+        const qs = p.toString();
+        return qs ? `${BASE}/new?${qs}` : `${BASE}/new`;
+    })();
 
+    const WORKFLOW = [
+        { name: "Assessment", live: true },
+        { name: "Sections", live: true },
+        { name: "Collections", live: true },
+        { name: "Randomization", live: true },
+        { name: "Rules", live: true },
+        { name: "Preview", live: true },
+        { name: "Publish", live: true },
+    ];
+
+    return (
+        <div className={isAssessmentHub ? "min-h-full bg-slate-50/80" : "min-h-screen bg-[#F8FAFC] p-8"}>
+            {isAssessmentHub ? (
+                <div className="border-b border-gray-200/80 bg-white">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-5 pb-5">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            Assessment Hub · Centerpiece
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 flex items-center gap-2">
+                                    <RocketIcon className="h-6 w-6 text-navy-900" />
+                                    Assessment Builder
+                                </h1>
+                                <p className="mt-1 text-sm text-gray-500 max-w-2xl">
+                                    Build assessments from rules and Question Collections — then randomize, preview the pool, and publish.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => navigate(newHref)}
+                                className="inline-flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-medium text-white"
+                            >
+                                <Plus className="h-4 w-4" /> New assessment
+                            </button>
+                        </div>
+                        <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1">
+                            {WORKFLOW.map((step, i) => (
+                                <div key={step.name} className="flex items-center gap-1.5 shrink-0">
+                                    <span
+                                        className={`rounded-md border px-2 py-1.5 text-[11px] font-medium whitespace-nowrap ${
+                                            step.live
+                                                ? "bg-slate-50 border-gray-100 text-gray-700"
+                                                : "bg-white border-dashed border-gray-200 text-gray-400"
+                                        }`}
+                                    >
+                                        {step.name}
+                                        {!step.live ? " (later)" : ""}
+                                    </span>
+                                    {i < WORKFLOW.length - 1 ? (
+                                        <span className="text-gray-300 text-xs" aria-hidden>→</span>
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                            <Link to="/app/superadmin/question-collections" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-600 hover:border-navy-900/30">
+                                Question Collections
+                            </Link>
+                            <Link to="/app/superadmin/assessment-templates" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-600 hover:border-navy-900/30">
+                                Assessment Templates
+                            </Link>
+                            <Link to="/app/assessment-rules" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-600 hover:border-navy-900/30">
+                                Rules
+                            </Link>
+                            <Link to="/app/superadmin/practice-sets" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-600 hover:border-navy-900/30">
+                                Practice
+                            </Link>
+                            <Link to="/app/superadmin/mock-tests" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-600 hover:border-navy-900/30">
+                                Mock
+                            </Link>
+                            <Link to="/app/superadmin/coding-assessments" className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-gray-600 hover:border-navy-900/30">
+                                Coding
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="mb-8 flex items-center justify-between">
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <RocketIcon className="h-8 w-8 text-indigo-500" />
+                            <h1 className="text-3xl font-black text-slate-900">Assessment Drives</h1>
+                        </div>
+                        <p className="text-sm text-slate-500 ml-11">Manage execution instances of assessment rules</p>
+                    </div>
+                    <button
+                        onClick={() => navigate(newHref)}
+                        className="flex items-center gap-2 rounded-xl bg-indigo-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-600 transition-all"
+                    >
+                        <Plus className="h-4 w-4" /> New Drive
+                    </button>
+                </div>
+            )}
+
+            <div className={isAssessmentHub ? "max-w-7xl mx-auto px-4 sm:px-6 py-6" : ""}>
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
                 {[
@@ -200,7 +291,7 @@ export default function DrivesDashboardPage() {
                                     return (
                                         <tr key={drive.id} className="border-b border-slate-50 hover:bg-indigo-50/30 transition-colors">
                                             <td className="px-6 py-4">
-                                                <Link to={`/app/drives/${drive.id}`} className="font-bold text-sm text-slate-900 hover:text-indigo-600 transition-colors">
+                                                <Link to={`${BASE}/${drive.id}`} className="font-bold text-sm text-slate-900 hover:text-indigo-600 transition-colors">
                                                     {drive.name}
                                                 </Link>
                                             </td>
@@ -218,7 +309,7 @@ export default function DrivesDashboardPage() {
                                             <td className="px-6 py-4 text-center text-sm font-bold text-slate-700">{drive.total_students}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    <Link to={`/app/drives/${drive.id}`} className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="View">
+                                                    <Link to={`${BASE}/${drive.id}`} className="p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="View">
                                                         <Eye className="h-4 w-4" />
                                                     </Link>
                                                     {currentStatus === "draft" && (
@@ -242,6 +333,7 @@ export default function DrivesDashboardPage() {
                 )}
             </div>
 
+            </div>
         </div>
     );
 }

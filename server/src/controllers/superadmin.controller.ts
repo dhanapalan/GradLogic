@@ -4,6 +4,7 @@ import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
 import { env } from "../config/env.js";
 import { assignDefaultModulesToCollege } from "../services/platformModules.service.js";
+import * as apiKeyStore from "../services/apiKeyStore.service.js";
 
 // ────────────────────────────────────────────────────────────────────
 // METRICS ENDPOINTS
@@ -2031,6 +2032,13 @@ export const getAIServices = async (
         ? String(modelRow.value.value).replace(/^"|"$/g, "")
         : null;
 
+    const [voiceMeta, resumeMeta, driveMeta, codeMeta] = await Promise.all([
+      apiKeyStore.getMeta("voice_interview"),
+      apiKeyStore.getMeta("resume_extraction"),
+      apiKeyStore.getMeta("drive_generation"),
+      apiKeyStore.getMeta("code_execution"),
+    ]);
+
     const services = [
       {
         key: "question_bank",
@@ -2043,6 +2051,9 @@ export const getAIServices = async (
         last4: null,
         reachable: engineOnline,
         testable: true,
+        editable: false,
+        source: "environment" as const,
+        updated_at: null,
         components: engineHealth?.components || null,
         used_by: ["AI Question Generator", "Question bank RAG search", "Document ingestion"],
         note: "Key is held by the Python engine; status is read from its health check.",
@@ -2058,6 +2069,9 @@ export const getAIServices = async (
         last4: mask(env.VAPI_API_KEY),
         reachable: null,
         testable: !!env.VAPI_API_KEY,
+        editable: true,
+        source: voiceMeta.source,
+        updated_at: voiceMeta.updated_at,
         components: null,
         used_by: ["Student voice mock interviews", "Live interview transcripts"],
         note: env.VAPI_PUBLIC_KEY ? "Public key is also set." : "Public key is not set.",
@@ -2073,6 +2087,9 @@ export const getAIServices = async (
         last4: mask(env.ANTHROPIC_API_KEY),
         reachable: null,
         testable: !!env.ANTHROPIC_API_KEY,
+        editable: true,
+        source: resumeMeta.source,
+        updated_at: resumeMeta.updated_at,
         components: null,
         used_by: ["Resume parsing", "Learning plan generation", "Interview feedback scoring"],
         note: null,
@@ -2088,6 +2105,9 @@ export const getAIServices = async (
         last4: mask(env.OPENAI_API_KEY),
         reachable: null,
         testable: !!env.OPENAI_API_KEY,
+        editable: true,
+        source: driveMeta.source,
+        updated_at: driveMeta.updated_at,
         components: null,
         used_by: ["Assessment drive question generation (fallback)"],
         note: "Optional — a built-in mock generator is used when unset.",
@@ -2103,6 +2123,9 @@ export const getAIServices = async (
         last4: mask(env.JUDGE0_API_KEY),
         reachable: judge0Online,
         testable: true,
+        editable: true,
+        source: codeMeta.source,
+        updated_at: codeMeta.updated_at,
         components: null,
         used_by: ["Coding-challenge evaluation", "Code sandbox execution"],
         note: "Self-hosted Judge0 needs no key.",
@@ -2174,6 +2197,52 @@ export const testAIService = async (
     if (err?.name === "TimeoutError") return finish(false, "Timed out after 5s");
     if (err?.cause?.code === "ECONNREFUSED") return finish(false, "Connection refused — service offline");
     return next(err);
+  }
+};
+
+// POST /api/superadmin/ai-services/:key — store an encrypted DB override for
+// a service's API key, applied immediately in-process. The plaintext value
+// is never returned in any response.
+export const setApiKey = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) => {
+  try {
+    const key = String(req.params.key);
+    const { value } = req.body as { value?: string };
+
+    if (!(key in apiKeyStore.MANAGED_SERVICE_KEYS)) {
+      throw new AppError(`Service '${key}' does not support DB-managed keys`, 400);
+    }
+    if (!value || typeof value !== "string") {
+      throw new AppError("value is required", 400);
+    }
+
+    const actorId = (req as any).user?.userId || "system";
+    await apiKeyStore.setKey(key as apiKeyStore.ManagedServiceKey, value.trim(), actorId);
+    res.json({ success: true, data: { key, message: "Key saved and applied" } });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /api/superadmin/ai-services/:key — remove the DB override, reverting
+// to the process-env value (fully in effect after the next restart).
+export const revokeApiKey = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction
+) => {
+  try {
+    const key = String(req.params.key);
+    if (!(key in apiKeyStore.MANAGED_SERVICE_KEYS)) {
+      throw new AppError(`Service '${key}' does not support DB-managed keys`, 400);
+    }
+    await apiKeyStore.revokeKey(key as apiKeyStore.ManagedServiceKey);
+    res.json({ success: true, data: { key, message: "Key override removed" } });
+  } catch (error) {
+    next(error);
   }
 };
 

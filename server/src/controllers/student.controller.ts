@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import * as studentService from "../services/student.service.js";
+import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
 
 /**
@@ -191,6 +192,118 @@ export const deleteStudent = async (
     const { id } = req.params;
     const result = await studentService.deleteStudent(id as string);
     res.json({ success: true, message: "Student deleted successfully" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/students/me
+ */
+export const getMeProfile = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { getStudentMe } = await import("../services/studentPortalProfile.service.js");
+    const data = await getStudentMe(req.user!.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * PUT /api/students/profile
+ */
+export const updateMyProfile = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { updateStudentProfile } = await import("../services/studentPortalProfile.service.js");
+    const files = req.files as
+      | { profile_photo?: Express.Multer.File[]; resume?: Express.Multer.File[] }
+      | undefined;
+    const data = await updateStudentProfile(req.user!.userId, req.body, {
+      profilePhoto: files?.profile_photo?.[0],
+      resumeFile: files?.resume?.[0],
+    });
+    res.json({ success: true, data, message: "Profile updated" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/students/photo
+ */
+export const uploadPhoto = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { uploadStudentPhoto } = await import("../services/studentPortalProfile.service.js");
+    const file = req.file;
+    if (!file) throw new AppError("Photo file is required", 400);
+    const data = await uploadStudentPhoto(req.user!.userId, file);
+    res.json({ success: true, data, message: "Photo uploaded" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/students/resume
+ */
+export const uploadResume = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { uploadStudentResume } = await import("../services/studentPortalProfile.service.js");
+    const file = req.file;
+    if (!file) throw new AppError("Resume file is required", 400);
+    const data = await uploadStudentResume(req.user!.userId, file);
+    res.json({ success: true, data, message: "Resume uploaded" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/students/profile-completion
+ */
+export const profileCompletion = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { getProfileCompletion } = await import("../services/studentPortalProfile.service.js");
+    const data = await getProfileCompletion(req.user!.userId);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/students/accept-policy
+ */
+export const acceptPolicy = async (
+  req: Request,
+  res: Response<ApiResponse>,
+  next: NextFunction,
+) => {
+  try {
+    const { acceptPolicy: accept } = await import("../services/studentPortalProfile.service.js");
+    const data = await accept(req.user!.userId, req.ip);
+    res.json({ success: true, data, message: "Policy accepted" });
   } catch (err) {
     next(err);
   }

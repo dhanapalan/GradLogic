@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import {
   ClipboardCheck,
   Clock,
@@ -10,15 +10,20 @@ import {
   RotateCcw,
   Trophy,
   Gamepad2,
+  Target,
+  Sparkles,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { useAuthStore } from "../../../stores/authStore";
 import api from "../../../lib/api";
+import { practiceTopicLabel } from "../../../services/studentPracticeService";
 
 const BASE = "/app/student-portal";
 
 interface Drive {
   drive_id: string;
   drive_name: string;
+  drive_type?: string;
   rule_name?: string;
   duration_minutes: number;
   total_questions: number;
@@ -30,17 +35,25 @@ interface Drive {
   completed_at?: string | null;
 }
 
-const MOCKS = [
-  { id: "mock-1", name: "General Aptitude Mock", duration: 30, questions: 20, difficulty: "Medium", desc: "Logical reasoning & quantitative skills" },
-  { id: "mock-2", name: "Technical Foundation Practice", duration: 45, questions: 30, difficulty: "Hard", desc: "Core CS fundamentals & problem solving" },
-];
+interface SelfServiceDrive {
+  drive_id: string;
+  drive_name: string;
+  drive_type: string;
+  duration_minutes: number;
+  total_questions: number;
+  phase1_domain?: string | null;
+  bank_category?: string | null;
+  placement_domain?: string | null;
+}
 
 type Tab = "upcoming" | "past" | "mocks";
 
 export default function TestsPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("upcoming");
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
 
   const { data: drives = [], isLoading } = useQuery({
     queryKey: ["student-drives"],
@@ -49,10 +62,38 @@ export default function TestsPage() {
     staleTime: 30_000,
   });
 
+  const { data: availableMocks = [], isLoading: loadingMocks } = useQuery({
+    queryKey: ["student-available-mocks"],
+    queryFn: async () => (await api.get("/exam-sessions/available-mocks")).data.data as SelfServiceDrive[],
+    enabled: !!user?.id && tab === "mocks",
+  });
+
+  const enrollMutation = useMutation({
+    mutationFn: async (driveId: string) => {
+      setEnrollingId(driveId);
+      await api.post(`/exam-sessions/${driveId}/enroll`);
+      return driveId;
+    },
+    onSuccess: (driveId) => {
+      queryClient.invalidateQueries({ queryKey: ["student-drives"] });
+      queryClient.invalidateQueries({ queryKey: ["student-available-mocks"] });
+      navigate(`${BASE}/exam/${driveId}/instructions`);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || "Failed to start test");
+    },
+    onSettled: () => setEnrollingId(null),
+  });
+
   const upcoming = drives.filter((d) =>
-    ["assigned", "registered", "in_progress"].includes(d.session_status)
+    ["assigned", "registered", "in_progress"].includes(d.session_status) && d.drive_type !== "mock_test" && d.drive_type !== "practice_test"
   );
   const past = drives.filter((d) => d.session_status === "completed");
+  const mockPast = past.filter((d) => d.drive_type === "mock_test");
+  const availableMockOnly = availableMocks.filter((m) => m.drive_type === "mock_test");
+  const inProgressMocks = drives.filter(
+    (d) => d.drive_type === "mock_test" && d.session_status === "in_progress"
+  );
 
   const avgPct =
     past.length > 0
@@ -62,7 +103,7 @@ export default function TestsPage() {
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "upcoming", label: "Upcoming & Live", count: upcoming.length },
     { key: "past", label: "Past Attempts", count: past.length },
-    { key: "mocks", label: "Mock Tests", count: MOCKS.length },
+    { key: "mocks", label: "Mock Tests", count: availableMockOnly.length + inProgressMocks.length },
   ];
 
   return (
@@ -73,7 +114,9 @@ export default function TestsPage() {
           <ClipboardCheck className="h-4 w-4" /> Tests &amp; Mocks
         </div>
         <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">Tests &amp; Mocks</h1>
-        <p className="text-sm text-slate-500 mt-1">Scheduled drives, full-length mocks and past attempts.</p>
+        <p className="text-sm text-slate-500 mt-1">
+          Full-length placement mocks with timer &amp; auto-submit — scores feed Placement Readiness.
+        </p>
       </div>
 
       {/* Summary strip */}
@@ -161,57 +204,152 @@ export default function TestsPage() {
         past.length === 0 ? (
           <Empty icon={Trophy} title="No attempts yet" sub="Your completed exams will appear here." />
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Exam</th>
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Date</th>
-                  <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Score</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {past.map((d) => (
-                  <tr key={d.drive_id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-5 py-3.5 text-sm font-bold text-slate-900">{d.drive_name}</td>
-                    <td className="px-5 py-3.5 text-center text-xs font-medium text-slate-500">
-                      {d.completed_at ? new Date(d.completed_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Recently"}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <span className="text-base font-black text-indigo-600">{d.score ?? "—"}</span>
-                      <span className="text-xs text-slate-400 ml-0.5">/ {d.total_marks || 100}</span>
-                    </td>
+          <div className="space-y-4">
+            {mockPast.length > 0 && (
+              <div className="rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-violet-900">
+                  <Sparkles className="h-4 w-4 inline mr-1.5 text-violet-600" />
+                  {mockPast.length} mock attempt{mockPast.length === 1 ? "" : "s"} feed your Placement Score.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate(`${BASE}/placement-coach`)}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700 hover:underline"
+                >
+                  <Target className="h-3.5 w-3.5" />
+                  Placement Coach &amp; AI tips
+                </button>
+              </div>
+            )}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Exam</th>
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Type</th>
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Date</th>
+                    <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Score</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {past.map((d) => (
+                    <tr
+                      key={d.drive_id}
+                      className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`${BASE}/results/${d.drive_id}`)}
+                    >
+                      <td className="px-5 py-3.5 text-sm font-bold text-slate-900">{d.drive_name}</td>
+                      <td className="px-5 py-3.5 text-center">
+                        <span
+                          className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                            d.drive_type === "mock_test"
+                              ? "bg-violet-50 text-violet-600"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
+                          {d.drive_type === "mock_test" ? "Mock" : d.drive_type === "practice_test" ? "Practice" : "Exam"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-center text-xs font-medium text-slate-500">
+                        {d.completed_at ? new Date(d.completed_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Recently"}
+                      </td>
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="text-base font-black text-indigo-600">{d.score ?? "—"}</span>
+                        <span className="text-xs text-slate-400 ml-0.5">/ {d.total_marks || 100}</span>
+                        <span className="block text-[10px] font-semibold text-indigo-500 mt-0.5">
+                          View analysis →
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )
+      ) : loadingMocks ? (
+        <div className="space-y-3">
+          {[1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-50 border border-slate-100" />)}
+        </div>
+      ) : availableMockOnly.length === 0 && inProgressMocks.length === 0 ? (
+        <Empty
+          icon={Gamepad2}
+          title="No mock tests available"
+          sub="Full-length Phase-1 placement mocks appear here when published from Assessment Templates."
+        />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {MOCKS.map((m) => (
-            <div key={m.id} className="group bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-lg hover:border-violet-100 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-10 w-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-500 border border-violet-100 group-hover:bg-violet-500 group-hover:text-white transition-all">
-                  <Gamepad2 className="h-4 w-4" />
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500">
+            Timed campus placement simulations · auto-submit · resume if interrupted · results update Placement Score.
+          </p>
+          {inProgressMocks.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Resume</h3>
+              {inProgressMocks.map((d) => (
+                <div
+                  key={d.drive_id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-100 bg-amber-50/40 p-4"
+                >
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{d.drive_name}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {d.duration_minutes} min · {d.total_questions} questions · in progress
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`${BASE}/exam/${d.drive_id}/instructions`)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-black text-white"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> Resume mock
+                  </button>
                 </div>
-                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${m.difficulty === "Hard" ? "bg-rose-50 text-rose-500 border border-rose-100" : "bg-emerald-50 text-emerald-500 border border-emerald-100"}`}>
-                  {m.difficulty}
-                </span>
-              </div>
-              <h4 className="text-sm font-black text-slate-900 mb-1">{m.name}</h4>
-              <p className="text-xs text-slate-400 font-medium mb-5">{m.desc}</p>
-              <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400">
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {m.duration}m</span>
-                  <span className="flex items-center gap-1"><FileText className="h-3 w-3" /> {m.questions} Qs</span>
-                </div>
-                <Link to={`${BASE}/mock/${m.id}`} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-violet-600 transition-all active:scale-95">
-                  <Play className="h-3 w-3" /> Start
-                </Link>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {availableMockOnly.map((m) => {
+              const topic = practiceTopicLabel(
+                m.bank_category || m.placement_domain || m.phase1_domain || ""
+              );
+              return (
+                <div
+                  key={m.drive_id}
+                  className="group bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-lg hover:border-violet-100 transition-all"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-10 w-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-500 border border-violet-100 group-hover:bg-violet-500 group-hover:text-white transition-all">
+                      <Gamepad2 className="h-4 w-4" />
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-violet-50 text-violet-500 border border-violet-100">
+                      Mock
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-black text-slate-900 mb-1">{m.drive_name}</h4>
+                  <p className="text-[11px] text-slate-400 font-medium">{topic}</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-slate-50 mt-5">
+                    <div className="flex items-center gap-4 text-[11px] font-bold text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> {m.duration_minutes}m timer
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" /> {m.total_questions} Qs
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => enrollMutation.mutate(m.drive_id)}
+                      disabled={enrollingId === m.drive_id}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-violet-600 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      <Play className="h-3 w-3" />{" "}
+                      {enrollingId === m.drive_id ? "Starting…" : "Start"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

@@ -43,6 +43,10 @@ export interface CreateQuestionInput {
   created_by?: string | null;
   status?: string;
   bloom_level?: string | null;
+  /** Knowledge Object fields — additive columns on this same row (see migration 34). */
+  hint?: string | null;
+  learning_objectives?: string[];
+  reference_links?: string[];
 }
 
 // ── QUERIES ──────────────────────────────────────────────────────────────────
@@ -135,8 +139,8 @@ export async function createQuestion(input: CreateQuestionInput) {
     `INSERT INTO question_bank
        (category, type, difficulty_level, question_text, options, correct_answer,
         test_cases, starter_code, time_limit_ms, memory_limit_kb, marks, tags,
-        explanation, created_by, bloom_level, status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+        explanation, created_by, bloom_level, status, hint, learning_objectives, reference_links)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      RETURNING *`,
     [
       input.category,
@@ -155,6 +159,9 @@ export async function createQuestion(input: CreateQuestionInput) {
       input.created_by ?? null,
       input.bloom_level ?? null,
       input.status ?? "published",
+      input.hint ?? null,
+      input.learning_objectives ?? [],
+      input.reference_links ?? [],
     ],
   );
 
@@ -223,6 +230,9 @@ export async function updateQuestion(id: string, input: Partial<CreateQuestionIn
     created_by: (v) => v,
     status: (v) => v,
     bloom_level: (v) => v,
+    hint: (v) => v,
+    learning_objectives: (v) => v,
+    reference_links: (v) => v,
   };
 
   for (const [key, transform] of Object.entries(fieldMap)) {
@@ -312,7 +322,8 @@ export async function getRandomQuestions(
 ) {
   return query<QuestionBankRow>(
     `SELECT * FROM question_bank
-     WHERE category = $1 AND type = $2 AND difficulty_level = $3 AND is_active = TRUE
+     WHERE category = $1 AND type = $2 AND difficulty_level = $3
+       AND is_active = TRUE AND status = 'published'
      ORDER BY RANDOM()
      LIMIT $4`,
     [category, type, difficulty, count],
@@ -416,7 +427,7 @@ export async function curateBlueprint(
       // Still report in breakdown
       const [countRow] = await query<{ available: number }>(
         `SELECT COUNT(*)::int AS available FROM question_bank
-         WHERE category = $1 AND is_active = TRUE`,
+         WHERE category = $1 AND is_active = TRUE AND status = 'published'`,
         [entry.category],
       );
       breakdown.push({
@@ -431,7 +442,7 @@ export async function curateBlueprint(
     // Count available
     const [countRow] = await query<{ available: number }>(
       `SELECT COUNT(*)::int AS available FROM question_bank
-       WHERE category = $1 AND is_active = TRUE`,
+       WHERE category = $1 AND is_active = TRUE AND status = 'published'`,
       [entry.category],
     );
     const available = countRow?.available ?? 0;
@@ -439,7 +450,7 @@ export async function curateBlueprint(
     // Fetch random questions
     const rows = await query<QuestionBankRow>(
       `SELECT * FROM question_bank
-       WHERE category = $1 AND is_active = TRUE
+       WHERE category = $1 AND is_active = TRUE AND status = 'published'
        ORDER BY RANDOM()
        LIMIT $2`,
       [entry.category, entry.count],

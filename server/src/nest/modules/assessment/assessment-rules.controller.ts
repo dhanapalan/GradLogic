@@ -13,6 +13,12 @@ export class AssessmentRulesController {
     return ExpressAdapter.invoke(ctrl.list, { query });
   }
 
+  @Post("seed-phase1")
+  @Roles("super_admin", "hr")
+  seedPhase1(@CurrentUser() user: AuthPayload) {
+    return ExpressAdapter.invoke(ctrl.seedPhase1, { user });
+  }
+
   @Get(":id")
   getById(@Param("id") id: string) {
     return ExpressAdapter.invoke(ctrl.getById, { params: { id } });

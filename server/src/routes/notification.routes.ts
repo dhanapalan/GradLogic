@@ -1,11 +1,19 @@
 import { Router } from "express";
 import * as notificationController from "../controllers/notification.controller.js";
-import { authenticate } from "../middleware/auth.js";
+import * as assessmentsCtrl from "../controllers/studentAssessmentsHub.controller.js";
+import { authenticate, authorize } from "../middleware/auth.js";
 
 const router = Router();
 
 // All notification routes require authentication
 router.use(authenticate);
+
+// Module 05 — assessment-scoped notifications (before /:id)
+router.get(
+  "/assessments",
+  authorize("student"),
+  assessmentsCtrl.getAssessmentNotifications
+);
 
 // Get user notifications
 router.get("/", notificationController.getUserNotifications);

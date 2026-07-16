@@ -12,7 +12,8 @@
     "start": "node dist/main.js",
     "start:legacy": "node dist/index.js",
     "lint": "tsc --noEmit",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit",
+    "test:unit": "tsx --test src/__tests__/studentAssessmentWorkspace.rules.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
@@ -49,6 +50,7 @@
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.0.5",
     "winston": "^3.17.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {

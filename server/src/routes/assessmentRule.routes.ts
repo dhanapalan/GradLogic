@@ -14,6 +14,13 @@ router.get(
     ctrl.list,
 );
 
+// POST /api/assessment-rules/seed-phase1 — Placement Preparation templates
+router.post(
+    "/seed-phase1",
+    authorize("super_admin", "hr"),
+    ctrl.seedPhase1,
+);
+
 // GET  /api/assessment-rules/:id
 router.get(
     "/:id",

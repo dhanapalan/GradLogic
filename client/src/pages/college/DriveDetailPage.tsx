@@ -66,7 +66,7 @@ export default function DriveDetailPage() {
         <div className="p-8 max-w-7xl mx-auto space-y-6">
             {/* Breadcrumb & Navigation */}
             <div className="flex items-center gap-2 mb-2">
-                <Link to="/app/college-portal/assessments" className="text-slate-400 hover:text-indigo-600 transition-colors">
+                <Link to="/app/college-portal/drives" className="text-slate-400 hover:text-indigo-600 transition-colors">
                     <ArrowLeft className="h-5 w-5" />
                 </Link>
                 <span className="text-sm font-bold text-slate-300">/</span>

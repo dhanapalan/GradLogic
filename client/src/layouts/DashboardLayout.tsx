@@ -57,6 +57,8 @@ const navigation: NavSection[] = [
       { name: "Dashboard", href: "/app/company", icon: BuildingOffice2Icon, roles: ["company"] },
       { name: "My Students", href: "/app/mentor", icon: UserGroupIcon, roles: ["mentor"] },
       { name: "Engineer Panel", href: "/app/engineer-panel", icon: WrenchScrewdriverIcon, roles: ["engineer"] },
+      { name: "Faculty Dashboard", href: "/app/faculty-dashboard", icon: AcademicCapIcon, roles: ["instructor"] },
+      { name: "Placement Cell", href: "/app/placement-cell-dashboard", icon: TrophyIcon, roles: ["placement_cell"] },
     ],
   },
 
@@ -195,6 +197,7 @@ const ROLE_LABELS: Record<string, string> = {
   student: "Student",
   instructor: "Instructor",
   mentor: "Mentor",
+  placement_cell: "Placement Cell",
 };
 
 export default function DashboardLayout() {

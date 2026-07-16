@@ -134,6 +134,16 @@ export default function AllStudentsPage() {
       nextParams.delete("action");
       setSearchParams(nextParams, { replace: true });
     }
+
+    if (searchParams.get("action") === "import") {
+      setImportOpen(true);
+      setCreateOpen(false);
+      if (selectedCollegeId) setImportCollegeId(selectedCollegeId);
+
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("action");
+      setSearchParams(nextParams, { replace: true });
+    }
   }, [searchParams, setSearchParams]);
 
   const activeColleges = colleges.filter((c) => {
