@@ -15,7 +15,7 @@ const getCollegeId = (req: Request): string => {
 
 async function dashCtx(req: Request) {
     return campusDash.buildContext(
-        req.user!.id,
+        req.user!.userId,
         req.user?.college_id,
         req.user?.role
     );

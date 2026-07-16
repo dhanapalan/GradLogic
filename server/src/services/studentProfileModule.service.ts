@@ -927,14 +927,16 @@ export async function getSectionCompletion(userId: string) {
     {
       id: "personal",
       label: "Personal Information",
-      complete: !["first_name", "last_name", "dob", "phone_number"].some((f) => base.missing.includes(f)),
+      complete: !base.missing.some((f) =>
+        ["first_name", "last_name", "dob", "phone_number"].includes(f)
+      ),
       href: "personal",
     },
     {
       id: "academic",
       label: "Academic Information",
-      complete: !["degree", "specialization", "passing_year", "academic_score", "student_identifier"].some((f) =>
-        base.missing.includes(f)
+      complete: !base.missing.some((f) =>
+        ["degree", "specialization", "passing_year", "academic_score", "student_identifier"].includes(f)
       ),
       href: "academic",
     },

@@ -93,7 +93,10 @@ function parseSectionTimers(
                 section_name: String(s?.section_name || s?.name || "Section"),
                 time_limit_minutes: Number(s?.time_limit_minutes),
             }))
-            .filter((s) => Number.isFinite(s.time_limit_minutes) && s.time_limit_minutes > 0);
+            .filter(
+              (s: { time_limit_minutes: number }) =>
+                Number.isFinite(s.time_limit_minutes) && s.time_limit_minutes > 0
+            );
     } catch {
         return [];
     }

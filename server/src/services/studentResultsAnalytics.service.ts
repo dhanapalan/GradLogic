@@ -560,7 +560,7 @@ export async function getSkillAnalysis(studentId: string, attemptId?: string) {
   const skills =
     fromResults.length > 0
       ? fromResults
-      : dash.top_skills.concat(dash.weak_skills).map((s) => ({
+      : [...dash.top_skills, ...dash.weak_skills].map((s) => ({
           skill_name: s.name,
           score: s.proficiency,
           percentage: s.proficiency,
