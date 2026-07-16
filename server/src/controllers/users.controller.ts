@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { query } from "../config/database.js";
+import {
+  ensureUserRoleEnum,
+  isValidUserRoleFilter,
+} from "../utils/ensureUserRoleEnum.js";
 
 /**
  * List all users with filtering, search, and pagination
@@ -8,6 +12,8 @@ import { query } from "../config/database.js";
  */
 export const listUsers = async (req: Request, res: Response) => {
   try {
+    await ensureUserRoleEnum();
+
     const {
       page = 1,
       limit = 50,
@@ -34,10 +40,17 @@ export const listUsers = async (req: Request, res: Response) => {
       params.push(`%${search}%`);
     }
 
-    // Role filter
+    // Role filter — must cast text params to user_role (Postgres enum ≠ text)
     if (role && role !== "all") {
-      whereClause += ` AND u.role = $${params.length + 1}`;
-      params.push(role);
+      const roleStr = String(role);
+      if (!isValidUserRoleFilter(roleStr)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid role filter: ${roleStr}`,
+        });
+      }
+      whereClause += ` AND u.role = $${params.length + 1}::user_role`;
+      params.push(roleStr);
     }
 
     // Status filter
@@ -342,12 +355,20 @@ export const activateUser = async (req: Request, res: Response) => {
  */
 export const createUser = async (req: Request, res: Response) => {
   try {
+    await ensureUserRoleEnum();
     const { full_name, email, password, role, phone, college_id } = req.body;
 
     if (!full_name || !email || !password || !role) {
       return res.status(400).json({
         success: false,
         message: "full_name, email, password, and role are required",
+      });
+    }
+
+    if (!isValidUserRoleFilter(String(role))) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role: ${role}`,
       });
     }
 

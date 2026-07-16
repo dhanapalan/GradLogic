@@ -4,14 +4,14 @@ import { HighlightsSection } from "./home/HighlightsSection";
 import { ReadinessSection } from "./home/ReadinessSection";
 import { WhySection } from "./home/WhySection";
 import { WorkflowSection } from "./home/WorkflowSection";
-import { StatsSection } from "./home/StatsSection";
-import { TestimonialsSection } from "./home/TestimonialsSection";
-import { TrustedBySection } from "./home/TrustedBySection";
 import { HomeFooter } from "./home/HomeFooter";
 
 /**
  * GradLogic public marketing home — Vite/React (SSR would require Next.js migration).
  * Sections are code-split friendly and motion-aware (prefers-reduced-motion).
+ *
+ * Social-proof blocks (stats, testimonials, trusted-by logos) are omitted until
+ * real customer metrics are available for a brand-new launch.
  */
 export default function LandingPage() {
   useEffect(() => {
@@ -29,9 +29,6 @@ export default function LandingPage() {
       <ReadinessSection />
       <WhySection />
       <WorkflowSection />
-      <StatsSection />
-      <TestimonialsSection />
-      <TrustedBySection />
       <HomeFooter />
     </div>
   );
