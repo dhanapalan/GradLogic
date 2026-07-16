@@ -151,10 +151,18 @@ export async function generateKnowledgeGraph(): Promise<KnowledgeGraph> {
     nodes.push({ id, type: "learning_path", label: p.title });
   }
   if (paths.length > 0) {
-    const pathCourses = await query<{ learning_path_id: string; course_id: string }>(`SELECT learning_path_id, course_id FROM learning_path_courses`);
+    const pathCourses = await query<{ path_id: string; course_id: string }>(
+      `SELECT path_id, course_id FROM learning_path_courses`
+    );
     for (const pc of pathCourses) {
       const courseNodeId = courseIds.get(pc.course_id);
-      if (courseNodeId) edges.push({ from: `learning_path:${pc.learning_path_id}`, to: courseNodeId, type: "used_in" });
+      if (courseNodeId) {
+        edges.push({
+          from: `learning_path:${pc.path_id}`,
+          to: courseNodeId,
+          type: "used_in",
+        });
+      }
     }
   } else {
     notes.push("No rows in learning_paths yet — this table exists but nothing has been authored into it (Adaptive Learning's Study Plan is computed separately, not stored here).");

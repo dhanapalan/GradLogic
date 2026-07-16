@@ -5,6 +5,10 @@ import { AppError } from "../middleware/errorHandler.js";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { writeAuditLog } from "../services/audit.service.js";
+import {
+  ensureUserRoleEnum,
+  isValidUserRoleFilter,
+} from "../utils/ensureUserRoleEnum.js";
 
 /**
  * List all system users with optional role filtering
@@ -15,6 +19,7 @@ export const listUsers = async (
     next: NextFunction
 ) => {
     try {
+        await ensureUserRoleEnum();
         const { role, search } = req.query;
         let sql = `
             SELECT 
@@ -28,8 +33,12 @@ export const listUsers = async (
         const params: any[] = [];
 
         if (role) {
-            params.push(role);
-            sql += ` AND u.role = $${params.length}`;
+            const roleStr = String(role);
+            if (!isValidUserRoleFilter(roleStr)) {
+                throw new AppError(`Invalid role filter: ${roleStr}`, 400);
+            }
+            params.push(roleStr);
+            sql += ` AND u.role = $${params.length}::user_role`;
         }
 
         if (search) {

@@ -72,7 +72,7 @@ export default function StudentsTab({ drive }: { drive: any }) {
     const { data: campuses = [] } = useQuery({
         queryKey: ["colleges-list"],
         queryFn: async () => {
-            const res = await api.get("/colleges");
+            const res = await api.get("/campuses");
             return res.data.data || [];
         },
         enabled: addMode === "campus",

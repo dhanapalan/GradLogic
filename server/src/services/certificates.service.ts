@@ -42,11 +42,49 @@ function kindLabel(t: string): string {
   return KIND_LABEL[t as CertType] || t.replace(/_/g, " ");
 }
 
+let certSchemaReady = false;
+
+/** Apply docker/init-db/53-certificates-types.sql columns if missing (prod may lag). */
+export async function ensureCertificatesSchema(): Promise<void> {
+  if (certSchemaReady) return;
+  await query(`
+    ALTER TABLE certificates
+      ADD COLUMN IF NOT EXISTS title TEXT,
+      ADD COLUMN IF NOT EXISTS cert_type TEXT NOT NULL DEFAULT 'course_completion',
+      ADD COLUMN IF NOT EXISTS drive_id UUID REFERENCES assessment_drives(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS journey_id UUID
+  `);
+  await query(`UPDATE certificates SET cert_type = 'course_completion' WHERE cert_type IS NULL`);
+  await query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'certificates_cert_type_check'
+      ) THEN
+        ALTER TABLE certificates
+          ADD CONSTRAINT certificates_cert_type_check
+          CHECK (cert_type IN (
+            'practice_completion',
+            'course_completion',
+            'placement_track_completion'
+          ));
+      END IF;
+    END $$
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_certificates_type ON certificates(cert_type)`);
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_certificates_drive ON certificates(drive_id)
+    WHERE drive_id IS NOT NULL
+  `);
+  certSchemaReady = true;
+}
+
 export async function listCertificates(filters?: {
   search?: string;
   certType?: string;
   limit?: number;
 }): Promise<CertificateRecord[]> {
+  await ensureCertificatesSchema();
   const limit = Math.min(filters?.limit ?? 200, 500);
   const params: unknown[] = [];
   const where = ["1=1"];
@@ -83,6 +121,7 @@ export async function listCertificates(filters?: {
 }
 
 export async function getCertificate(id: string): Promise<CertificateRecord | null> {
+  await ensureCertificatesSchema();
   return queryOne(
     `SELECT cert.*,
             COALESCE(u.full_name, u.name) AS student_name,
@@ -199,6 +238,7 @@ export async function generateCertificate(input: {
   title?: string;
   force?: boolean;
 }): Promise<CertificateRecord> {
+  await ensureCertificatesSchema();
   const student = await resolveStudent(input.student_id);
   let title = input.title?.trim() || "";
   let courseId: string | null = null;

@@ -1,84 +1,90 @@
-import { Outlet } from "react-router-dom";
-import { CheckCircle2, Mic, Users } from "lucide-react";
+import { Outlet, Link } from "react-router-dom";
+import { Bot, ShieldCheck, TrendingUp } from "lucide-react";
 import Logo from "../components/Logo";
+import { ThemeToggle } from "../components/marketing/ThemeToggle";
 
 export default function AuthLayout() {
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
-      <style>{`
-        ::-webkit-scrollbar { display: none; }
-        html, body { overflow: hidden; height: 100%; position: fixed; width: 100%; }
-        #root { height: 100%; overflow: hidden; }
-      `}</style>
-
-      {/* Dynamic Background Elements */}
+    <div className="relative min-h-[100dvh] w-full overflow-hidden bg-slate-50 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-[10%] -top-[10%] h-[500px] w-[500px] rounded-full bg-gradient-to-br from-indigo-200/40 to-cyan-100/30 blur-[100px]" />
-        <div className="absolute -right-[5%] bottom-[10%] h-[400px] w-[400px] rounded-full bg-gradient-to-tr from-blue-200/30 to-purple-100/20 blur-[80px]" />
+        <div className="absolute -left-[10%] -top-[10%] h-[420px] w-[420px] rounded-full bg-gradient-to-br from-primary-200/40 to-emerald-100/30 blur-[100px] dark:from-primary-600/20 dark:to-emerald-500/10" />
+        <div className="absolute -right-[5%] bottom-[10%] h-[360px] w-[360px] rounded-full bg-gradient-to-tr from-violet-200/30 to-primary-100/20 blur-[80px] dark:from-violet-600/15 dark:to-primary-500/10" />
       </div>
 
-      <div className="relative z-10 flex h-full items-center justify-center p-4 sm:p-6">
-        <div className="grid h-full max-h-[720px] w-full max-w-6xl overflow-hidden rounded-3xl bg-white/70 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] backdrop-blur-2xl lg:grid-cols-2">
+      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <ThemeToggle compact />
+      </div>
 
-          {/* Left Panel: Brand & Features */}
-          <section className="relative hidden flex-col justify-between overflow-hidden bg-slate-900 p-8 text-white lg:flex xl:p-10">
-            <div className="absolute inset-0 opacity-20">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#4f46e5_0%,transparent_50%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,#06b6d4_0%,transparent_50%)]" />
+      <div className="relative z-10 flex min-h-[100dvh] items-center justify-center p-4 sm:p-6">
+        <div className="grid w-full max-w-6xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white/80 shadow-2xl shadow-slate-900/10 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80 lg:grid-cols-2 lg:max-h-[min(860px,92dvh)]">
+          <section className="relative hidden flex-col justify-between overflow-hidden bg-slate-950 p-8 text-white lg:flex xl:p-10">
+            <div className="absolute inset-0 opacity-30">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,#2563EB_0%,transparent_50%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,#10B981_0%,transparent_50%)]" />
             </div>
 
             <div className="relative z-10">
-              <div className="flex items-center gap-2">
+              <Link to="/" className="inline-flex items-center gap-2">
                 <Logo size={40} />
-                <span className="text-xl font-bold tracking-tight">Grad<span className="text-indigo-400">Logic</span></span>
-              </div>
+                <span className="text-xl font-bold tracking-tight">
+                  Grad<span className="text-primary-400">Logic</span>
+                </span>
+              </Link>
 
-              <div className="mt-8">
-                <h1 className="text-3xl font-extrabold tracking-tight xl:text-4xl leading-tight">
-                  Build skills. Run drives.{" "}
-                  <span className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-                    Confirm placements.
-                  </span>
-                </h1>
-                <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-300">
-                  One intelligent platform connecting colleges, companies and students — from AI mock interviews and skill development to confirmed campus placements.
-                </p>
-              </div>
+              <h1 className="mt-8 font-display text-3xl font-extrabold leading-tight tracking-tight xl:text-4xl">
+                AI assistant. Learning. Placement.{" "}
+                <span className="bg-gradient-to-r from-primary-400 to-emerald-400 bg-clip-text text-transparent">
+                  Success.
+                </span>
+              </h1>
+              <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-300">
+                Enterprise-grade access for students, faculty, colleges, recruiters, and platform
+                admins — secured with MFA-ready authentication.
+              </p>
             </div>
 
-            <div className="relative z-10 mt-6 grid gap-4">
+            <div className="relative z-10 mt-8 grid gap-4">
               {[
-                { icon: <Mic className="h-5 w-5 text-indigo-400" />,        title: "Voice AI Mock Interviews", desc: "Practice with a live AI interviewer and get instant feedback." },
-                { icon: <CheckCircle2 className="h-5 w-5 text-indigo-400" />, title: "Assessment Drives",       desc: "Multi-college drives, AI question generation, live results." },
-                { icon: <Users className="h-5 w-5 text-indigo-400" />,       title: "Learning & Certificates", desc: "Courses, skill programs, and printable certificates on completion." },
-              ].map((feature, i) => (
-                <div key={i} className="flex gap-4 group">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 border border-white/10 transition-colors group-hover:bg-white/10">
-                    {feature.icon}
+                {
+                  icon: <Bot className="h-5 w-5 text-primary-400" />,
+                  title: "AI Learning & Coaching",
+                  desc: "Tutor, career coach, and interview practice in one place.",
+                },
+                {
+                  icon: <TrendingUp className="h-5 w-5 text-emerald-400" />,
+                  title: "Placement Readiness",
+                  desc: "Live scores across learning, assessments, and interviews.",
+                },
+                {
+                  icon: <ShieldCheck className="h-5 w-5 text-violet-400" />,
+                  title: "Trusted Assessments",
+                  desc: "Proctoring, integrity reports, and campus hiring workflows.",
+                },
+              ].map((f) => (
+                <div key={f.title} className="flex gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5">
+                    {f.icon}
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-white">{feature.title}</h3>
-                    <p className="mt-0.5 text-xs text-slate-400 leading-relaxed">{feature.desc}</p>
+                    <h3 className="text-sm font-semibold">{f.title}</h3>
+                    <p className="mt-0.5 text-xs leading-relaxed text-slate-400">{f.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="relative z-10 mt-6 pt-6 border-t border-white/10">
-              <p className="text-xs text-white/50">
-                © 2026 GradLogic Technologies. All rights reserved.
-              </p>
-            </div>
+            <p className="relative z-10 mt-8 border-t border-white/10 pt-4 text-xs text-white/50">
+              © {new Date().getFullYear()} GradLogic Technologies. All rights reserved.
+            </p>
           </section>
 
-          {/* Right Panel: Content (LoginPage) */}
-          <main className="flex items-center justify-center p-6 bg-white/40 sm:p-10 lg:p-12 overflow-hidden">
-            <div className="w-full max-w-sm">
-              <div className="mb-6 lg:hidden text-center">
-                <div className="flex items-center justify-center gap-2">
-                  <Logo size={32} />
-                  <span className="text-lg font-bold tracking-tight">Grad<span className="text-indigo-500">Logic</span></span>
-                </div>
+          <main className="max-h-[92dvh] overflow-y-auto bg-white/60 p-5 sm:p-8 lg:p-10 dark:bg-slate-950/40">
+            <div className="mx-auto w-full max-w-md">
+              <div className="mb-5 flex items-center justify-center gap-2 lg:hidden">
+                <Logo size={32} />
+                <span className="text-lg font-bold tracking-tight">
+                  Grad<span className="text-primary-600">Logic</span>
+                </span>
               </div>
               <Outlet />
             </div>
