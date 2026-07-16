@@ -8,6 +8,9 @@ export function connectProctoringSocket(): Socket {
   if (proctoringSocket?.connected) return proctoringSocket;
 
   proctoringSocket = io(`${API_BASE}/proctoring`, {
+    path: "/socket.io/",
+    withCredentials: true,
+    transports: ["websocket", "polling"],
     auth: {
       token: sessionStorage.getItem("accessToken"),
     },
@@ -33,6 +36,9 @@ export function connectGeneralSocket(): Socket {
   if (generalSocket?.connected) return generalSocket;
 
   generalSocket = io(API_BASE, {
+    path: "/socket.io/",
+    withCredentials: true,
+    transports: ["websocket", "polling"],
     auth: {
       token: sessionStorage.getItem("accessToken"),
     },
