@@ -47,8 +47,8 @@ export default function AddCollegePage() {
       toast.error("Invalid college email");
       return false;
     }
-    if (!formData.phone.trim()) {
-      toast.error("Phone is required");
+    if (!/^\+?\d{10,15}$/.test(formData.phone.replace(/[\s\-()]/g, ""))) {
+      toast.error("Enter a valid phone number (10-15 digits)");
       return false;
     }
     if (!formData.address.trim()) {

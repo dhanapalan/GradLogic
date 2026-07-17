@@ -691,15 +691,17 @@ export async function testAiService(serviceKey: string): Promise<{
           if (!key && row.provider !== "ollama") {
             return finish(false, "API key not set");
           }
-          const r = await fetch(row.api_endpoint, {
-            method: "GET",
-            headers: key ? { Authorization: `Bearer ${key}` } : {},
-            signal: AbortSignal.timeout(Math.min(row.timeout_ms || 5000, 10000)),
-          }).catch((e: Error) => ({ ok: false, status: 0, message: e.message }));
-          if ("message" in r && !("ok" in r && (r as Response).ok !== undefined)) {
-            return finish(false, String((r as { message: string }).message));
+          let resp: Response;
+          try {
+            resp = await fetch(row.api_endpoint, {
+              method: "GET",
+              headers: key ? { Authorization: `Bearer ${key}` } : {},
+              signal: AbortSignal.timeout(Math.min(row.timeout_ms || 5000, 10000)),
+            });
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Request failed";
+            return finish(false, msg);
           }
-          const resp = r as Response;
           return finish(
             resp.ok || resp.status === 401 || resp.status === 403,
             resp.ok

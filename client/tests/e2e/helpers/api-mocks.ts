@@ -219,20 +219,6 @@ export async function mockMyDrives(page: Page, drives = [DRIVE_PUBLISHED]) {
     );
 }
 
-// ── Student registration ───────────────────────────────────────────────────────
-
-export async function mockStudentRegister(page: Page, success = true) {
-    await page.route('**/api/auth/register/student', (route) =>
-        route.fulfill({
-            status: success ? 201 : 409,
-            contentType: 'application/json',
-            body: JSON.stringify(success
-                ? { success: true, data: { accessToken: 'tok', user: USERS.student } }
-                : { success: false, error: 'Email already registered' }),
-        })
-    );
-}
-
 // ── Auth injection helper ──────────────────────────────────────────────────────
 
 export async function injectAuth(page: Page, role: 'admin' | 'campusAdmin' | 'student') {

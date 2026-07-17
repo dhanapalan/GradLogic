@@ -1062,7 +1062,6 @@ export async function submitAttempt(
     status,
     submitted_at: submittedAt,
     auto_submitted: status === "expired",
-    total_questions: questions.length,
     ...summarizeQuestions(questions),
     message: opts?.auto
       ? "Time expired. Assessment submitted automatically."

@@ -92,7 +92,17 @@ export type AdminAuditAction =
   | "CAMPUS_BULK_ACTIVATE"
   | "CAMPUS_BULK_BLACKLIST"
   | "college_approved"
-  | "college_rejected";
+  | "college_rejected"
+  | "AI_SERVICE_CREATED"
+  | "AI_SERVICE_UPDATED"
+  | "AI_SERVICE_DELETED"
+  | "AI_SERVICE_KEY_SET"
+  | "AI_SERVICE_KEY_REVOKED"
+  | "ASSESSMENT_ANALYTICS_EXPORT"
+  | "CAMPAIGN_INTEGRITY_REVIEW"
+  | "CAMPAIGN_ATTEMPT_STARTED"
+  | "CAMPAIGN_ATTEMPT_SUBMITTED"
+  | "CAMPAIGN_ATTEMPT_AUTO_SUBMITTED";
 
 // ── Row Types ────────────────────────────────────────────────────────────────
 

@@ -564,8 +564,8 @@ export async function getCalendarEvents(studentId: string, days = 30) {
         id: `drive-${d.drive_id}`,
         title: d.drive_name,
         type: "placement",
-        starts_at: d.scheduled_start,
-        ends_at: d.scheduled_end,
+        starts_at: new Date(d.scheduled_start).toISOString(),
+        ends_at: d.scheduled_end ? new Date(d.scheduled_end).toISOString() : null,
         href: `/app/student-portal/tests`,
       });
     }

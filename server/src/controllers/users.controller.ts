@@ -5,6 +5,8 @@ import {
   ensureUserRoleEnum,
   isValidUserRoleFilter,
 } from "../utils/ensureUserRoleEnum.js";
+import { sendUserInvitationEmail } from "../services/email.service.js";
+import { logger } from "../config/logger.js";
 
 /**
  * List all users with filtering, search, and pagination
@@ -388,11 +390,17 @@ export const createUser = async (req: Request, res: Response) => {
     const finalCollegeId = isCollegeRole && college_id ? college_id : null;
 
     const result = await query(
-      `INSERT INTO users (full_name, name, email, password, role, phone, college_id, is_active, status)
-       VALUES ($1, $1, $2, $3, $4::user_role, $5, $6, TRUE, 'active')
+      `INSERT INTO users (full_name, name, email, password, role, phone, college_id, is_active, status, must_change_password)
+       VALUES ($1, $1, $2, $3, $4::user_role, $5, $6, TRUE, 'active', TRUE)
        RETURNING id, full_name, email, phone, role, status, college_id, created_at`,
       [full_name, email, hashedPassword, role, phone ?? null, finalCollegeId]
     );
+
+    try {
+      await sendUserInvitationEmail({ name: full_name, email, role, temporaryPassword: password });
+    } catch (emailErr) {
+      logger.error("Failed to send user invitation email", { email, error: emailErr });
+    }
 
     res.status(201).json({
       success: true,

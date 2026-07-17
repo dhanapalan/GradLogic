@@ -13,17 +13,6 @@ import { AuthPayload } from "../../../types/index.js";
 import { env } from "../../../config/env.js";
 import { setupPasswordSchema, passwordSchema } from "../../../validators/password.js";
 
-const studentRegisterSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(200),
-  email: z.string().email("Invalid email"),
-  password: passwordSchema,
-  phone: z.string().optional(),
-  degree: z.string().optional(),
-  specialization: z.string().optional(),
-  passing_year: z.number().int().min(2000).max(2040).optional(),
-  college_name: z.string().optional(),
-});
-
 const companyRegisterSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(200),
   email: z.string().email("Invalid email"),
@@ -80,18 +69,6 @@ export class AuthController {
       userAgent: req.headers["user-agent"],
       ip: req.ip,
     });
-    return { success: true, data: result };
-  }
-
-  @Public()
-  @Throttle(AUTH_THROTTLE)
-  @Post("register/student")
-  async registerStudent(@Body() body: unknown, @Req() req: Request) {
-    const parsed = studentRegisterSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new BadRequestException(zodErrorMessage(parsed.error));
-    }
-    const result = await authService.registerStudent(parsed.data, req.ip ?? undefined);
     return { success: true, data: result };
   }
 

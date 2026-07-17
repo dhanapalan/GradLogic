@@ -798,6 +798,9 @@ export const createCollege = async (
     if (!name || !email || !phone || !address || !city || !state || !tpoName || !tpoEmail) {
       throw new AppError("Missing required fields", 400);
     }
+    if (!/^\+?\d{10,15}$/.test(String(phone).replace(/[\s\-()]/g, ""))) {
+      throw new AppError("Invalid phone number", 400);
+    }
 
     // Check duplicate email
     const existing = await queryOne(
