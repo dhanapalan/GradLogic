@@ -23,17 +23,6 @@ const verifyOtpSchema = z.object({
   otp: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
 });
 
-const studentRegisterSchema = z.object({
-  name:           z.string().min(2, "Name must be at least 2 characters").max(200),
-  email:          z.string().email("Invalid email"),
-  password:       passwordSchema,
-  phone:          z.string().optional(),
-  degree:         z.string().optional(),
-  specialization: z.string().optional(),
-  passing_year:   z.number().int().min(2000).max(2040).optional(),
-  college_name:   z.string().optional(),
-});
-
 const companyRegisterSchema = z.object({
   name:         z.string().min(2, "Name must be at least 2 characters").max(200),
   email:        z.string().email("Invalid email"),
@@ -80,12 +69,10 @@ const twoFactorVerifySchema = z.object({
 router.post("/login", validate(loginSchema), authController.login);
 
 /**
- * POST /api/auth/register/student — public student self-registration
- */
-router.post("/register/student", validate(studentRegisterSchema), authController.registerStudent);
-
-/**
  * POST /api/auth/register/company — public company/HR self-registration
+ *
+ * Students have no self-registration path: their college provisions the
+ * account (bulk import / college admin), so there is no /register/student.
  */
 router.post("/register/company", validate(companyRegisterSchema), authController.registerCompany);
 

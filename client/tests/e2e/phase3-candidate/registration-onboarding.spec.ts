@@ -1,36 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { mockStudentRegister, injectAuth } from '../helpers/api-mocks';
+import { injectAuth } from '../helpers/api-mocks';
 import { USERS } from '../helpers/test-data';
 
-test.describe('Phase 3 – Candidate: Registration & Onboarding (C1–C5)', () => {
+// C1/C2 covered student self-registration, which no longer exists — colleges
+// provision student accounts, so /auth/register is company/HR only.
 
-    // ── C1: Successful registration ───────────────────────────────────────────────
-    test('C1 – [+] Student self-registers with valid email and is redirected to onboarding', async ({ page }) => {
-        await mockStudentRegister(page, true);
-        await page.goto('/auth/register');
-        await page.getByLabel(/name/i).fill('John Doe');
-        await page.getByLabel(/email/i).fill('john.doe@student.mit.edu');
-        await page.getByLabel(/password/i).first().fill('Student@123');
-        await page.getByRole('button', { name: /register|sign up|create account/i }).click();
-        await expect(page).toHaveURL(/onboarding|student-portal/);
-    });
-
-    // ── C2: Duplicate email registration ─────────────────────────────────────────
-    test('C2 – [-] Register with already-used email shows error', async ({ page }) => {
-        await mockStudentRegister(page, false);
-        await page.goto('/auth/register');
-        await page.getByLabel(/name/i).fill('John Doe');
-        await page.getByLabel(/email/i).fill('john.doe@student.mit.edu');
-        await page.getByLabel(/password/i).first().fill('Student@123');
-        await page.getByRole('button', { name: /register|sign up|create account/i }).click();
-        await expect(page.getByText(/already registered|email.*exists/i)).toBeVisible();
-    });
-
-    test('C2 – [-] Register without filling email field shows required validation', async ({ page }) => {
-        await page.goto('/auth/register');
-        await page.getByRole('button', { name: /register|sign up|create account/i }).click();
-        await expect(page.getByText(/email.*required|required/i)).toBeVisible();
-    });
+test.describe('Phase 3 – Candidate: Onboarding (C3–C5)', () => {
 
     // ── C3: Complete onboarding ───────────────────────────────────────────────────
     test('C3 – [+] Student completes onboarding → profile_complete=true, redirected to portal', async ({ page }) => {

@@ -1,11 +1,15 @@
 import { Request, Response, NextFunction } from "express";
 import * as studentService from "../services/student.service.js";
 import { AppError } from "../middleware/errorHandler.js";
+import { effectiveCollegeId } from "../middleware/collegeIsolation.js";
 import { ApiResponse } from "../types/index.js";
 
 /**
  * POST /api/students/register
  * Multipart form: name, email, password, college_id, webcam_photo (file)
+ *
+ * College-scoped callers can only provision into their own college — the
+ * body's college_id is ignored for them. Platform admins may target any.
  */
 export const register = async (
   req: Request,
@@ -16,11 +20,16 @@ export const register = async (
     const { name, email, password, college_id } = req.body;
     const webcamPhoto = req.file; // multer single("webcam_photo")
 
+    const targetCollegeId = await effectiveCollegeId(req, college_id);
+    if (!targetCollegeId) {
+      throw new AppError("college_id is required", 400);
+    }
+
     const result = await studentService.registerStudent({
       name,
       email,
       password,
-      college_id,
+      college_id: targetCollegeId,
       webcamPhoto,
     });
 

@@ -12,6 +12,5 @@ export {
   updatePassword,
   getMicrosoftAuthUrl,
   loginWithMicrosoft,
-  registerStudent,
   registerCompany,
 } from "../../services/auth.service.js";

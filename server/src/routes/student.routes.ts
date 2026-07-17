@@ -107,11 +107,14 @@ const onboardingSchema = z.object({
 
 /**
  * POST /api/students/register
- * Public endpoint — registers a new student.
+ * Provisions a student account. Students never self-register — a college
+ * admin (or platform admin) creates the account on their behalf.
  * Accepts multipart form with an optional webcam_photo file field.
  */
 router.post(
   "/register",
+  authenticate,
+  authorize("college_admin", "college", "college_staff", "super_admin", "hr"),
   imageUpload.single("webcam_photo"),
   validate(registerSchema),
   studentController.register,
