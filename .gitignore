@@ -22,3 +22,14 @@ prisma/bulk_update_student_college_credentials.ts
 # Exclude deploy scripts that may contain real credentials
 deploy/supabase-migrate.sh
 deploy/migrate-db.sh
+
+# Vendored ML model cache / vector DB (large binaries, regenerable)
+ai-engine/question_bank_engine/data/embeddings/
+ai-engine/question_bank_engine/data/chroma_db/
+
+# Scratch / debug output from ad-hoc local testing
+_*.json
+_*.txt
+_*.sql
+*_output.txt
+test-results/
