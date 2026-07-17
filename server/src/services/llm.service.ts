@@ -1,9 +1,12 @@
 // =============================================================================
-// TalentSecure AI — LLM Service (Claude Assessment Generator)
+// TalentSecure AI — LLM Service (Assessment Generator)
 // =============================================================================
-// All AI provider calls go through ai.service.ts — never call the SDK directly.
+// Claude calls go through ai.service.ts; Groq calls (drive question
+// generation only) go through groq.service.ts. Never call either vendor
+// SDK/fetch directly from feature code — always through one of those two.
 
 import { generateJSON } from "./ai.service.js";
+import * as groqService from "./groq.service.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../middleware/errorHandler.js";
 
@@ -314,13 +317,9 @@ Total exam duration: ${durationMinutes} minutes
 Begin generating now. Output ONLY the JSON.`;
 }
 
-// ── Claude Call ──────────────────────────────────────────────────────────────
+// ── Shared validation / normalization (both providers) ──────────────────────
 
-export async function generateDynamicAssessment(
-  weights: DynamicWeight[],
-  totalQuestions: number,
-  durationMinutes: number = 60,
-): Promise<DynamicAssessmentResult> {
+function validateWeights(weights: DynamicWeight[]): void {
   const pctTotal = weights.reduce((s, w) => s + w.percentage, 0);
   if (Math.abs(pctTotal - 100) > 0.5) {
     throw new AppError(
@@ -328,6 +327,79 @@ export async function generateDynamicAssessment(
       400,
     );
   }
+}
+
+function normalizeDynamicAssessmentResult(
+  weights: DynamicWeight[],
+  parsed: DynamicAssessmentResult,
+): DynamicAssessmentResult {
+  if (!Array.isArray(parsed.questions)) {
+    throw new AppError("LLM response missing 'questions' array", 502);
+  }
+
+  // Strip any rogue fields the LLM may have added, and drop MCQs whose
+  // correct_answer isn't a valid index into their own options. Smaller
+  // models are more prone to this than Claude at this batch scale, and an
+  // out-of-range index would silently corrupt the stored answer key.
+  const cleaned: DynamicQuestion[] = [];
+  let droppedCount = 0;
+  for (const q of parsed.questions) {
+    if (q.type === "coding") {
+      cleaned.push({
+        type: q.type,
+        category: q.category,
+        difficulty: q.difficulty,
+        question_text: q.question_text,
+        hidden_test_cases: q.hidden_test_cases,
+      });
+      continue;
+    }
+    const optionsLen = Array.isArray(q.options) ? q.options.length : 0;
+    if (
+      typeof q.correct_answer !== "number" ||
+      q.correct_answer < 0 ||
+      q.correct_answer >= optionsLen
+    ) {
+      droppedCount++;
+      continue;
+    }
+    cleaned.push({
+      type: q.type,
+      category: q.category,
+      difficulty: q.difficulty,
+      question_text: q.question_text,
+      options: q.options,
+      correct_answer: q.correct_answer,
+    });
+  }
+  if (droppedCount > 0) {
+    logger.warn(`Dropped ${droppedCount} MCQ question(s) with an out-of-range correct_answer`);
+  }
+  parsed.questions = cleaned;
+
+  // Rebuild breakdown from actual (post-filter) counts (trust but verify)
+  const countMap = new Map<string, number>();
+  for (const q of parsed.questions) {
+    countMap.set(q.category, (countMap.get(q.category) ?? 0) + 1);
+  }
+  parsed.category_breakdown = weights.map((w) => ({
+    category: w.category,
+    count: countMap.get(w.category) ?? 0,
+    percentage: w.percentage,
+  }));
+  parsed.total_questions = parsed.questions.length;
+
+  return parsed;
+}
+
+// ── Claude Call ──────────────────────────────────────────────────────────────
+
+export async function generateDynamicAssessment(
+  weights: DynamicWeight[],
+  totalQuestions: number,
+  durationMinutes: number = 60,
+): Promise<DynamicAssessmentResult> {
+  validateWeights(weights);
 
   const systemPrompt = buildDynamicSystemPrompt(weights, totalQuestions, durationMinutes);
   const userPrompt = `Category weights:\n${JSON.stringify(weights, null, 2)}\n\nTotal questions: ${totalQuestions}\nDuration: ${durationMinutes} minutes\n\nGenerate now.`;
@@ -341,53 +413,52 @@ export async function generateDynamicAssessment(
       riskLevel: "draft",
     });
 
-    // ── Post-validation & normalization ────────────────────────────────────
-    if (!Array.isArray(parsed.questions)) {
-      throw new AppError("LLM response missing 'questions' array", 502);
-    }
-
-    // Rebuild breakdown from actual counts (trust but verify)
-    const countMap = new Map<string, number>();
-    for (const q of parsed.questions) {
-      countMap.set(q.category, (countMap.get(q.category) ?? 0) + 1);
-    }
-    parsed.category_breakdown = weights.map((w) => ({
-      category: w.category,
-      count: countMap.get(w.category) ?? 0,
-      percentage: w.percentage,
-    }));
-    parsed.total_questions = parsed.questions.length;
-
-    // Strip any rogue fields the LLM may have added
-    parsed.questions = parsed.questions.map((q) => {
-      if (q.type === "coding") {
-        return {
-          type: q.type,
-          category: q.category,
-          difficulty: q.difficulty,
-          question_text: q.question_text,
-          hidden_test_cases: q.hidden_test_cases,
-        } as DynamicCoding;
-      }
-      return {
-        type: q.type,
-        category: q.category,
-        difficulty: q.difficulty,
-        question_text: q.question_text,
-        options: q.options,
-        correct_answer: q.correct_answer,
-      } as DynamicMCQ;
-    });
+    const result = normalizeDynamicAssessmentResult(weights, parsed);
 
     logger.info("Dynamic assessment generated successfully", {
-      totalQuestions: parsed.total_questions,
-      categories: parsed.category_breakdown,
+      totalQuestions: result.total_questions,
+      categories: result.category_breakdown,
     });
 
-    return parsed;
+    return result;
   } catch (err: any) {
     if (err instanceof AppError) throw err;
     logger.error("LLM service error (generate-dynamic)", { error: err.message });
     throw new AppError(`Failed to generate dynamic assessment: ${err.message}`, 500);
+  }
+}
+
+// ── Groq Call (drive question generation only) ──────────────────────────────
+
+export async function generateDynamicAssessmentViaGroq(
+  weights: DynamicWeight[],
+  totalQuestions: number,
+  durationMinutes: number = 60,
+): Promise<DynamicAssessmentResult> {
+  validateWeights(weights);
+
+  const systemPrompt = buildDynamicSystemPrompt(weights, totalQuestions, durationMinutes);
+  const userPrompt = `Category weights:\n${JSON.stringify(weights, null, 2)}\n\nTotal questions: ${totalQuestions}\nDuration: ${durationMinutes} minutes\n\nGenerate now.`;
+
+  logger.info("Generating dynamic assessment via Groq", { weights, totalQuestions });
+
+  try {
+    const parsed = await groqService.generateJSON<DynamicAssessmentResult>(userPrompt, {
+      system: systemPrompt,
+      maxTokens: 8000,
+    });
+
+    const result = normalizeDynamicAssessmentResult(weights, parsed);
+
+    logger.info("Dynamic assessment generated successfully via Groq", {
+      totalQuestions: result.total_questions,
+      categories: result.category_breakdown,
+    });
+
+    return result;
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
+    logger.error("LLM service error (generate-dynamic via Groq)", { error: err.message });
+    throw new AppError(`Failed to generate dynamic assessment via Groq: ${err.message}`, 500);
   }
 }

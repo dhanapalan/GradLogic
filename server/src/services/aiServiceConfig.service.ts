@@ -204,16 +204,31 @@ export async function ensureAiServiceConfigSchema(): Promise<void> {
        NULL, 'VAPI_API_KEY', TRUE, TRUE, '["Voice mock interviews"]'::jsonb, NULL),
       ('resume_extraction', 'Resume & Feedback', 'Resume parsing and feedback', 'anthropic',
        NULL, 'ANTHROPIC_API_KEY', TRUE, TRUE, '["Resume extraction","AI feedback"]'::jsonb, NULL),
-      ('drive_generation', 'Drive Question Fallback', 'Legacy drive question generation', 'openai',
-       NULL, 'OPENAI_API_KEY', TRUE, TRUE,
-       '["Assessment drive question generation (fallback)"]'::jsonb,
-       'Optional — a built-in mock generator is used when unset.'),
+      ('drive_generation', 'Drive Question Generation', 'AI-powered drive question generation', 'groq',
+       'llama-3.3-70b-versatile', 'GROQ_API_KEY', TRUE, TRUE,
+       '["Assessment drive question generation"]'::jsonb,
+       'Optional — a built-in mock generator is used when unset, or after repeated failures.'),
       ('code_execution', 'Code Execution', 'Coding-challenge sandbox', 'judge0',
        NULL, 'JUDGE0_API_KEY', TRUE, TRUE,
        '["Coding-challenge evaluation","Code sandbox execution"]'::jsonb,
        'Self-hosted Judge0 needs no key.')
     ON CONFLICT (service_key) DO NOTHING
   `
+  ).catch(() => {});
+
+  // One-time migration: drive_generation was originally seeded pointing at
+  // OPENAI_API_KEY, but no code ever actually called OpenAI with it — it
+  // only gated whether AI generation was attempted at all (and when true,
+  // silently called a different provider under the hood). Move it to Groq,
+  // the provider actually wired up for this feature. Guarded to only touch
+  // a row still showing the exact untouched legacy values, so a superadmin
+  // who's already customized this row isn't clobbered on the next boot.
+  await query(
+    `UPDATE ai_service_configs
+     SET provider = 'groq', model = 'llama-3.3-70b-versatile', env_var = 'GROQ_API_KEY',
+         updated_at = NOW()
+     WHERE service_key = 'drive_generation'
+       AND provider = 'openai' AND env_var = 'OPENAI_API_KEY' AND model IS NULL`
   ).catch(() => {});
 
   schemaReady = true;
@@ -666,13 +681,13 @@ export async function testAiService(serviceKey: string): Promise<{
         return finish(r.ok, r.ok ? "Anthropic key valid" : `Anthropic returned ${r.status}`);
       }
       case "drive_generation": {
-        const key = envValueFor("OPENAI_API_KEY");
-        if (!key) return finish(false, "OPENAI_API_KEY is not set");
-        const r = await fetch("https://api.openai.com/v1/models", {
+        const key = envValueFor("GROQ_API_KEY");
+        if (!key) return finish(false, "GROQ_API_KEY is not set");
+        const r = await fetch("https://api.groq.com/openai/v1/models", {
           headers: { Authorization: `Bearer ${key}` },
           signal: AbortSignal.timeout(5000),
         });
-        return finish(r.ok, r.ok ? "OpenAI key valid" : `OpenAI returned ${r.status}`);
+        return finish(r.ok, r.ok ? "Groq key valid" : `Groq returned ${r.status}`);
       }
       case "voice_interview": {
         const key = envValueFor("VAPI_API_KEY");

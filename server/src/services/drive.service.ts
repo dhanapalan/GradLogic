@@ -1,7 +1,8 @@
 import { query, queryOne } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { DriveStateMachine } from "../shared/drive-state-machine.js";
-import { generateDynamicAssessment } from "./llm.service.js";
+import { generateDynamicAssessmentViaGroq } from "./llm.service.js";
+import { GroqApiError } from "./groq.service.js";
 import { sendNotification } from "./notification.service.js";
 import {
   sendDriveInviteEmail,
@@ -708,7 +709,7 @@ export async function generateDrive(driveId: string) {
         [pool!.id, driveId],
     );
 
-    // POOL GENERATION: Uses real AI when OpenAI key is configured, otherwise uses mock generator
+    // POOL GENERATION: Uses real AI (Groq) when GROQ_API_KEY is configured, otherwise uses mock generator
     // Fire-and-forget — runs in the background while we return immediately
     (async () => {
         try {
@@ -774,24 +775,81 @@ export async function generateDrive(driveId: string) {
                 }
             }
 
-            const useAI = !!env.OPENAI_API_KEY;
+            // Drive question generation is Groq's dedicated slot (configured
+            // via superadmin → AI Services → Drive Question Generation).
+            // Claude has its own separate slot (resume_extraction) for
+            // resume parsing / feedback / learning plans — kept independent
+            // so the two features can be configured and fail independently.
+            const useGroq = !!env.GROQ_API_KEY;
             let generated = 0;
+            let fellBackToMock = false;
 
-            if (useAI) {
+            // Shared mock generator — used directly when no AI key is set, and
+            // as a fallback if AI generation keeps failing, so a drive still
+            // ends up with a usable question pool instead of stalling forever.
+            let mockTemplates: Record<string, MockTemplate[]> | null = null;
+            const difficulties: Array<'Easy' | 'Medium' | 'Hard'> = ['Easy', 'Medium', 'Hard'];
+            const diffWeights = [diffWeightsMap['easy'] || 0.3, diffWeightsMap['medium'] || 0.5, diffWeightsMap['hard'] || 0.2];
+
+            async function generateMockBatch(count: number, indexOffset: number) {
+                if (!mockTemplates) mockTemplates = buildMockQuestionBank();
+                for (let i = 0; i < count; i++) {
+                    const idx = indexOffset + i;
+                    // Pick category based on weights
+                    const catEntry = pickWeighted(categoryWeights);
+                    const category = catEntry.category;
+
+                    // Pick difficulty based on distribution
+                    const rand = Math.random();
+                    const diff = rand < diffWeights[0] ? difficulties[0] : rand < diffWeights[0] + diffWeights[1] ? difficulties[1] : difficulties[2];
+                    const marks = diff === 'Easy' ? 5 : diff === 'Medium' ? 10 : 15;
+
+                    // Pick a template and generate a unique variation
+                    const templates = mockTemplates[category] || mockTemplates['General'];
+                    const template = templates[idx % templates.length];
+                    const questionText = template.textFn(idx);
+                    const options = template.optionsFn(idx);
+                    const correctAnswer = template.correct;
+
+                    await query(
+                        `INSERT INTO drive_pool_questions
+                            (drive_id, pool_id, question_text, difficulty, skill, options, correct_answer, marks)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                        [driveId, pool!.id, questionText, diff, category, JSON.stringify(options), correctAnswer, marks]
+                    );
+                    generated++;
+
+                    // Update progress every 50 questions
+                    if (generated % 50 === 0 || generated === totalQuestions) {
+                        await query(`UPDATE drive_question_pool SET total_generated = $1 WHERE id = $2`, [generated, pool!.id]);
+                    }
+                }
+            }
+
+            if (useGroq) {
                 // ── AI-powered generation in batches ──────────────────────
-                const BATCH_SIZE = 50;
+                // Smaller than Claude's batch size — llama-3.3-70b-versatile's
+                // output-token ceiling on Groq is materially smaller than
+                // Claude's, and large batches (esp. with coding questions'
+                // hidden_test_cases) risk truncation at higher counts.
+                const GROQ_BATCH_SIZE = 25;
+                // Cap consecutive failures (bad/revoked key, provider outage)
+                // instead of retrying every 2s forever with total_generated
+                // stuck at 0 — fall back to mock questions once exceeded.
+                const MAX_CONSECUTIVE_FAILURES = 3;
                 let batchNumber = 0;
+                let consecutiveFailures = 0;
 
                 while (generated < totalQuestions) {
                     batchNumber++;
                     const remaining = totalQuestions - generated;
-                    const batchCount = Math.min(BATCH_SIZE, remaining);
+                    const batchCount = Math.min(GROQ_BATCH_SIZE, remaining);
                     const batchDuration = Math.max(10, Math.round((batchCount / totalQuestions) * durationMinutes));
 
                     logger.info(`Pool generation batch ${batchNumber}: generating ${batchCount} questions (${generated}/${totalQuestions} done)`, { driveId });
 
                     try {
-                        const assessment = await generateDynamicAssessment(categoryWeights, batchCount, batchDuration);
+                        const assessment = await generateDynamicAssessmentViaGroq(categoryWeights, batchCount, batchDuration);
 
                         for (const q of assessment.questions) {
                             const isMCQ = q.type === 'mcq';
@@ -827,11 +885,43 @@ export async function generateDrive(driveId: string) {
                         }
 
                         generated += assessment.questions.length;
+                        consecutiveFailures = 0;
                         await query(`UPDATE drive_question_pool SET total_generated = $1 WHERE id = $2`, [generated, pool!.id]);
                         logger.info(`Pool generation batch ${batchNumber} complete: ${generated}/${totalQuestions}`, { driveId });
                     } catch (batchErr: any) {
-                        logger.error(`Pool generation batch ${batchNumber} failed`, { driveId, error: batchErr.message });
-                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        const upstreamStatus = batchErr instanceof GroqApiError ? batchErr.upstreamStatus : null;
+                        const isAuthFailure = upstreamStatus === 401 || upstreamStatus === 403;
+                        const isRateLimited = upstreamStatus === 429;
+
+                        if (isAuthFailure) {
+                            // Bad/revoked key — will never succeed. Don't waste
+                            // attempts or time on it; fall back immediately.
+                            logger.error(`Pool generation batch ${batchNumber} failed — Groq auth error (${upstreamStatus}), key will never work`, { driveId, error: batchErr.message });
+                            consecutiveFailures = MAX_CONSECUTIVE_FAILURES;
+                        } else if (isRateLimited) {
+                            // Rate limited, not broken — don't count against the
+                            // failure cap; just back off longer than a normal
+                            // retry (honor Retry-After if Groq sent one).
+                            const retryAfterSeconds = batchErr instanceof GroqApiError ? batchErr.retryAfterSeconds : null;
+                            const backoffMs = Math.max(5000, (retryAfterSeconds || 8) * 1000);
+                            logger.warn(`Pool generation batch ${batchNumber} rate-limited by Groq — backing off ${backoffMs}ms`, { driveId });
+                            await new Promise(resolve => setTimeout(resolve, backoffMs));
+                        } else {
+                            consecutiveFailures++;
+                            logger.error(`Pool generation batch ${batchNumber} failed (${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES} consecutive)`, { driveId, error: batchErr.message });
+                        }
+
+                        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                            const remainingAfterFailures = totalQuestions - generated;
+                            logger.warn(`AI generation failed ${consecutiveFailures} times in a row — falling back to mock questions for the remaining ${remainingAfterFailures}`, { driveId });
+                            fellBackToMock = true;
+                            await generateMockBatch(remainingAfterFailures, generated);
+                            break;
+                        }
+
+                        if (!isRateLimited) {
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                        }
                     }
 
                     if (generated < totalQuestions) {
@@ -839,43 +929,9 @@ export async function generateDrive(driveId: string) {
                     }
                 }
             } else {
-                // ── Mock generation (no OpenAI key) ──────────────────────
-                logger.info(`No OPENAI_API_KEY configured — using mock question generator for ${totalQuestions} questions`, { driveId });
-
-                const mockTemplates = buildMockQuestionBank();
-                const difficulties: Array<'Easy' | 'Medium' | 'Hard'> = ['Easy', 'Medium', 'Hard'];
-                const diffWeights = [diffWeightsMap['easy'] || 0.3, diffWeightsMap['medium'] || 0.5, diffWeightsMap['hard'] || 0.2];
-
-                for (let i = 0; i < totalQuestions; i++) {
-                    // Pick category based on weights
-                    const catEntry = pickWeighted(categoryWeights);
-                    const category = catEntry.category;
-
-                    // Pick difficulty based on distribution
-                    const rand = Math.random();
-                    const diff = rand < diffWeights[0] ? difficulties[0] : rand < diffWeights[0] + diffWeights[1] ? difficulties[1] : difficulties[2];
-                    const marks = diff === 'Easy' ? 5 : diff === 'Medium' ? 10 : 15;
-
-                    // Pick a template and generate a unique variation
-                    const templates = mockTemplates[category] || mockTemplates['General'];
-                    const template = templates[i % templates.length];
-                    const questionText = template.textFn(i);
-                    const options = template.optionsFn(i);
-                    const correctAnswer = template.correct;
-
-                    await query(
-                        `INSERT INTO drive_pool_questions
-                            (drive_id, pool_id, question_text, difficulty, skill, options, correct_answer, marks)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                        [driveId, pool!.id, questionText, diff, category, JSON.stringify(options), correctAnswer, marks]
-                    );
-                    generated++;
-
-                    // Update progress every 50 questions
-                    if (generated % 50 === 0 || generated === totalQuestions) {
-                        await query(`UPDATE drive_question_pool SET total_generated = $1 WHERE id = $2`, [generated, pool!.id]);
-                    }
-                }
+                // ── Mock generation (no Groq key) ──────────────────────
+                logger.info(`No GROQ_API_KEY configured — using mock question generator for ${totalQuestions} questions`, { driveId });
+                await generateMockBatch(totalQuestions, 0);
             }
 
             // ── Post-generation: Validate, Deduplicate, Randomize ──────
@@ -1010,7 +1066,8 @@ export async function generateDrive(driveId: string) {
                 `UPDATE assessment_drives SET status = 'PENDING_APPROVAL' WHERE id = $1`,
                 [driveId]
             );
-            logger.info(`Pool generation complete: ${generated} questions, validation=${validationScore}%, duplicates=${duplicateCount} (mode: ${useAI ? 'AI' : 'mock'})`, { driveId });
+            const generationMode = !useGroq ? 'mock' : fellBackToMock ? 'groq+mock-fallback' : 'groq';
+            logger.info(`Pool generation complete: ${generated} questions, validation=${validationScore}%, duplicates=${duplicateCount} (mode: ${generationMode})`, { driveId });
         } catch (error: any) {
             logger.error("Pool generation failed", { driveId, error: error.message });
             await query(`UPDATE drive_question_pool SET generation_status = 'failed' WHERE drive_id = $1`, [driveId]).catch(() => { });
@@ -1925,7 +1982,7 @@ export async function releaseDriveOffer(driveId: string, studentId: string) {
     return { student_id: studentId, status: 'Offer Released' };
 }
 
-// ── Mock Question Bank (used when OPENAI_API_KEY is not set) ─────────────────
+// ── Mock Question Bank (used when GROQ_API_KEY is not set, or as a fallback after repeated AI failures) ─────────────────
 
 interface MockTemplate {
     textFn: (idx: number) => string;
