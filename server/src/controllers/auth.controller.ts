@@ -4,6 +4,11 @@ import * as authService from "../services/auth.service.js";
 import * as twoFactorService from "../services/twoFactor.service.js";
 import { ApiResponse } from "../types/index.js";
 import { env } from "../config/env.js";
+import {
+  clearRefreshCookie,
+  readRefreshCookie,
+  setRefreshCookie,
+} from "../utils/refreshCookie.js";
 
 // ── OAuth CSRF state helpers ──────────────────────────────────────────────────
 // State = base64(nonce + "." + timestamp) signed with HMAC-SHA256.
@@ -49,6 +54,12 @@ export const login = async (
     const result = await authService.loginUser(identifier, password, req.ip, {
       userAgent: req.headers["user-agent"],
     });
+    // Web clients get the refresh token as an httpOnly cookie (not readable
+    // from JS); the body copy remains for mobile/API clients.
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) {
+      setRefreshCookie(res, refreshToken, Boolean(req.body?.rememberMe));
+    }
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -57,7 +68,8 @@ export const login = async (
 
 /**
  * POST /api/auth/refresh
- * Body: { refreshToken }  → rotates tokens and returns a new pair + permissions.
+ * Body: { refreshToken?, rememberMe? } — token may come from the body (mobile,
+ * legacy web sessions) or the httpOnly cookie. Rotates and returns a new pair.
  */
 export const refresh = async (
   req: Request,
@@ -65,11 +77,19 @@ export const refresh = async (
   next: NextFunction,
 ) => {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.body?.refreshToken || readRefreshCookie(req);
+    if (!refreshToken) {
+      res.status(401).json({ success: false, message: "Refresh token is required" });
+      return;
+    }
     const result = await authService.refreshSession(refreshToken, {
       ip: req.ip,
       userAgent: req.headers["user-agent"],
     });
+    const rotated = (result as { refreshToken?: string })?.refreshToken;
+    if (rotated) {
+      setRefreshCookie(res, rotated, Boolean(req.body?.rememberMe));
+    }
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -86,8 +106,9 @@ export const logout = async (
   next: NextFunction,
 ) => {
   try {
-    const { refreshToken } = req.body ?? {};
+    const refreshToken = req.body?.refreshToken || readRefreshCookie(req);
     await authService.logout(refreshToken, req.user?.userId, req.ip);
+    clearRefreshCookie(res);
     res.json({ success: true, message: "Logged out" });
   } catch (err) {
     next(err);
@@ -193,6 +214,8 @@ export const permissions = async (
 export const registerCompany = async (req: Request, res: Response<ApiResponse>, next: NextFunction) => {
   try {
     const result = await authService.registerCompany(req.body, req.ip);
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) setRefreshCookie(res, refreshToken, false);
     res.status(201).json({ success: true, data: result });
   } catch (err) { next(err); }
 };
@@ -249,6 +272,10 @@ export const verifyTwoFactor = async (
     const result = await authService.verifyTwoFactorLogin(challengeToken, code, req.ip, {
       userAgent: req.headers["user-agent"],
     });
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) {
+      setRefreshCookie(res, refreshToken, Boolean(req.body?.rememberMe));
+    }
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -360,6 +387,8 @@ export const microsoftLogin = async (
       return;
     }
     const result = await authService.loginWithMicrosoft(code, req.ip);
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) setRefreshCookie(res, refreshToken, false);
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);

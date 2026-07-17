@@ -12,6 +12,8 @@ const loginSchema = z
     email: z.string().min(1).optional(),
     student_id: z.string().min(1).optional(),
     password: z.string().min(1, "Password is required"),
+    // Controls the refresh cookie's persistence (validate() strips unknown keys).
+    rememberMe: z.boolean().optional(),
   })
   .refine((d) => Boolean(d.email || d.student_id), {
     message: "Email or Student ID is required",
@@ -33,7 +35,10 @@ const companyRegisterSchema = z.object({
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string().min(10, "Refresh token is required"),
+  // Optional: web clients send the token via the httpOnly cookie instead;
+  // the controller 401s when neither body nor cookie has one.
+  refreshToken: z.string().min(10).optional(),
+  rememberMe: z.boolean().optional(),
 });
 
 const logoutSchema = z.object({
@@ -61,6 +66,7 @@ const twoFactorCodeSchema = z.object({
 const twoFactorVerifySchema = z.object({
   challengeToken: z.string().min(10, "2FA session is required"),
   code: z.string().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  rememberMe: z.boolean().optional(),
 });
 
 /**

@@ -1,8 +1,14 @@
 import {
-  Controller, Post, Get, Body, Req, HttpCode, HttpStatus, BadRequestException,
+  Controller, Post, Get, Body, Req, Res, HttpCode, HttpStatus, BadRequestException,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
-import { Request } from "express";
+import { Request, Response } from "express";
+import {
+  clearRefreshCookie,
+  readRefreshCookie,
+  setRefreshCookie,
+} from "../../../utils/refreshCookie.js";
 import crypto from "crypto";
 import { z } from "zod";
 import * as authService from "../../../services/auth.service.js";
@@ -57,8 +63,9 @@ export class AuthController {
   @Post("login")
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body() body: { email?: string; student_id?: string; password?: string },
+    @Body() body: { email?: string; student_id?: string; password?: string; rememberMe?: boolean },
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const identifier = (body.email || body.student_id || "").trim();
     const password = body.password || "";
@@ -69,18 +76,26 @@ export class AuthController {
       userAgent: req.headers["user-agent"],
       ip: req.ip,
     });
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) setRefreshCookie(res, refreshToken, Boolean(body.rememberMe));
     return { success: true, data: result };
   }
 
   @Public()
   @Throttle(AUTH_THROTTLE)
   @Post("register/company")
-  async registerCompany(@Body() body: unknown, @Req() req: Request) {
+  async registerCompany(
+    @Body() body: unknown,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const parsed = companyRegisterSchema.safeParse(body);
     if (!parsed.success) {
       throw new BadRequestException(zodErrorMessage(parsed.error));
     }
     const result = await authService.registerCompany(parsed.data, req.ip ?? undefined);
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) setRefreshCookie(res, refreshToken, false);
     return { success: true, data: result };
   }
 
@@ -104,21 +119,34 @@ export class AuthController {
   @Public()
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body() body: { refreshToken?: string }, @Req() req: Request) {
-    if (!body.refreshToken) throw new BadRequestException("Refresh token is required");
-    const result = await authService.refreshSession(body.refreshToken, {
+  async refresh(
+    @Body() body: { refreshToken?: string; rememberMe?: boolean },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = body.refreshToken || readRefreshCookie(req);
+    if (!refreshToken) throw new UnauthorizedException("Refresh token is required");
+    const result = await authService.refreshSession(refreshToken, {
       ip: req.ip ?? undefined,
       userAgent: req.headers["user-agent"],
     });
+    const rotated = (result as { refreshToken?: string })?.refreshToken;
+    if (rotated) setRefreshCookie(res, rotated, Boolean(body.rememberMe));
     return { success: true, data: result };
   }
 
   @Public()
   @Post("logout")
   @HttpCode(HttpStatus.OK)
-  async logout(@Body() body: { refreshToken?: string }, @Req() req: Request) {
+  async logout(
+    @Body() body: { refreshToken?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const actorId = (req as Request & { user?: AuthPayload }).user?.userId;
-    await authService.logout(body?.refreshToken, actorId, req.ip ?? undefined);
+    const refreshToken = body?.refreshToken || readRefreshCookie(req) || undefined;
+    await authService.logout(refreshToken, actorId, req.ip ?? undefined);
+    clearRefreshCookie(res);
     return { success: true, message: "Logged out" };
   }
 
@@ -202,8 +230,9 @@ export class AuthController {
   @Post("2fa/verify")
   @HttpCode(HttpStatus.OK)
   async verifyTwoFactor(
-    @Body() body: { challengeToken?: string; code?: string },
+    @Body() body: { challengeToken?: string; code?: string; rememberMe?: boolean },
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ) {
     if (!body.challengeToken || !body.code) {
       throw new BadRequestException("2FA session and code are required");
@@ -214,6 +243,8 @@ export class AuthController {
       req.ip ?? undefined,
       { userAgent: req.headers["user-agent"], ip: req.ip },
     );
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) setRefreshCookie(res, refreshToken, Boolean(body.rememberMe));
     return { success: true, data: result };
   }
 
@@ -269,12 +300,18 @@ export class AuthController {
   @Throttle(AUTH_THROTTLE)
   @Post("microsoft")
   @HttpCode(HttpStatus.OK)
-  async microsoftLogin(@Body() body: { code: string; state: string }, @Req() req: Request) {
+  async microsoftLogin(
+    @Body() body: { code: string; state: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     if (!body.code) throw new BadRequestException("Authorization code is required");
     if (!body.state || !verifyOAuthState(body.state)) {
       throw new BadRequestException("Invalid or expired OAuth state. Please try signing in again.");
     }
     const result = await authService.loginWithMicrosoft(body.code, req.ip ?? undefined);
+    const refreshToken = (result as { refreshToken?: string })?.refreshToken;
+    if (refreshToken) setRefreshCookie(res, refreshToken, false);
     return { success: true, data: result };
   }
 }

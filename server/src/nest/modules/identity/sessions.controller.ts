@@ -10,14 +10,18 @@ import {
   revokeSessionById,
 } from "../../../services/token.service.js";
 import { recordAuditEvent } from "../../../services/adminAudit.service.js";
+import { readRefreshCookie } from "../../../utils/refreshCookie.js";
 
 @Controller("api/sessions")
 export class SessionsController {
   @Get()
   async list(@CurrentUser() user: AuthPayload, @Req() req: Request) {
-    // Prefer header only — avoid refresh tokens in query strings (logs/Referer).
+    // Header or httpOnly cookie only — never query strings (logs/Referer).
     const header = req.headers["x-refresh-token"];
-    const current = typeof header === "string" ? header : undefined;
+    const current =
+      (typeof header === "string" && header ? header : undefined) ??
+      readRefreshCookie(req) ??
+      undefined;
     const data = await listActiveSessions(user.userId, current);
     return { success: true, data };
   }

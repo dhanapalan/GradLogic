@@ -55,7 +55,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       const { resetToken } = await studentAuthService.verifyOtp(email, form.otp.trim());
-      navigate(`/auth/reset-password?token=${encodeURIComponent(resetToken)}`);
+      // Router state, not a ?token= query param — keeps the reset token out of
+      // the URL bar, browser history and any proxy/Referer logs.
+      navigate("/auth/reset-password", { state: { token: resetToken } });
     } catch (err) {
       toast.error(parseApiError(err).message);
     } finally {

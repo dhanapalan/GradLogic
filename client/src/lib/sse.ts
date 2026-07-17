@@ -1,4 +1,5 @@
 import { baseURL } from "./api";
+import { getAccessToken } from "../stores/authStore";
 
 /**
  * Shared SSE-over-fetch helper. `fetch` (not axios, not EventSource) because
@@ -13,7 +14,7 @@ export async function postSSE(
   onEvent: (event: any) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const token = sessionStorage.getItem("accessToken");
+  const token = getAccessToken();
   const res = await fetch(`${baseURL}${path}`, {
     method: "POST",
     headers: {

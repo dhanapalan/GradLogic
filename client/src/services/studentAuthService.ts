@@ -39,6 +39,8 @@ const studentAuthService = {
     const { data } = await api.post("/auth/login", {
       email: identifier,
       password: payload.password,
+      // Lets the server decide the refresh cookie's persistence.
+      rememberMe: Boolean(payload.rememberMe),
     });
     const body = data.data;
     if (body?.requires2FA) {

@@ -27,7 +27,7 @@ const clientUrls = Array.from(new Set(clientUrlCandidates));
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
-  PORT: parseInt(process.env.PORT || "5000", 10),
+  PORT: parseInt(process.env.PORT || "5050", 10),
   CLIENT_URL: clientUrls[0] || defaultClientUrl,
   CLIENT_URLS: clientUrls,
   AI_ENGINE_URL: process.env.AI_ENGINE_URL || "http://localhost:8000",
@@ -42,8 +42,14 @@ export const env = {
   // Redis
   REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
 
-  // JWT
-  JWT_SECRET: process.env.JWT_SECRET || "dev-jwt-secret-talentsecure-2026",
+  // JWT — production must supply a real secret; the dev fallback would let
+  // anyone who has read the repo forge tokens.
+  JWT_SECRET: (() => {
+    if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+      throw new Error("JWT_SECRET must be set in production (refusing to start with the dev fallback secret).");
+    }
+    return process.env.JWT_SECRET || "dev-jwt-secret-talentsecure-2026";
+  })(),
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   // Short-lived access token; refresh tokens keep sessions alive with rotation.
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || "1h",
@@ -54,6 +60,12 @@ export const env = {
 
   // API Controls
   DISABLE_RATE_LIMIT: process.env.DISABLE_RATE_LIMIT === "true",
+  /** General API rate limit per IP per 15 minutes (login uses a separate stricter limit). */
+  RATE_LIMIT_MAX: parseInt(
+    process.env.RATE_LIMIT_MAX ||
+      (process.env.NODE_ENV === "production" ? "2000" : "100"),
+    10
+  ),
 
   // MinIO / S3
   S3_ENDPOINT: process.env.S3_ENDPOINT || "http://localhost:9000",
@@ -74,9 +86,16 @@ export const env = {
   VAPI_PUBLIC_KEY: process.env.VAPI_PUBLIC_KEY || "",    // exposed to client
   VAPI_WEBHOOK_SECRET: process.env.VAPI_WEBHOOK_SECRET || "",
 
-  // OpenAI (kept for backward compat — prefer ANTHROPIC_API_KEY)
+  // OpenAI — legacy. No code path in server/src calls OpenAI anymore; these
+  // are only still read by the unrouted (dead) AI-services controller in
+  // superadmin.controller.ts. Kept so that file still compiles.
   OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
   OPENAI_MODEL: process.env.OPENAI_MODEL || "gpt-4o",
+
+  // Groq — drive/assessment question generation (fast, cheap; falls back to
+  // mock generator if unset, or after repeated failures)
+  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
+  GROQ_MODEL: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
 
   // Judge0 (code execution sandbox)
   JUDGE0_API_URL: process.env.JUDGE0_API_URL || "http://localhost:2358",

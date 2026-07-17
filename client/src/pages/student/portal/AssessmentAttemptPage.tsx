@@ -23,7 +23,7 @@ import studentAssessmentsService, {
 } from "../../../services/studentAssessmentsService";
 import assessmentWorkspaceService from "../../../services/assessmentWorkspaceService";
 import { useCampaignIntegrity } from "../../../hooks/useCampaignIntegrity";
-import { useAuthStore } from "../../../stores/authStore";
+import { getAccessToken, useAuthStore } from "../../../stores/authStore";
 import WorkspaceHeader, { formatTime } from "./assessment-workspace/WorkspaceHeader";
 import QuestionNavigator from "./assessment-workspace/QuestionNavigator";
 import QuestionRenderer from "./assessment-workspace/QuestionRenderer";
@@ -385,7 +385,7 @@ export default function AssessmentAttemptPage() {
         visit: true,
         current_index: indexRef.current,
       });
-      const token = sessionStorage.getItem("accessToken");
+      const token = getAccessToken();
       try {
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (token) headers.Authorization = `Bearer ${token}`;

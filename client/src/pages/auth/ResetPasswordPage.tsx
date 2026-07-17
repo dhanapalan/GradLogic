@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { Lock, ArrowRight, Loader2, Eye, EyeOff, ArrowLeft, ShieldAlert } from "lucide-react";
@@ -12,8 +12,21 @@ const PASSWORD_RULE =
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
-  const token = params.get("token") ?? "";
+  const location = useLocation();
   const navigate = useNavigate();
+  // OTP flow passes the token via router state; emailed links use ?token=.
+  const stateToken = (location.state as { token?: string } | null)?.token ?? "";
+  const queryToken = params.get("token") ?? "";
+  const token = stateToken || queryToken;
+
+  // Emailed link: immediately move the token from the URL into router state so
+  // it doesn't linger in the address bar / browser history.
+  useEffect(() => {
+    if (queryToken) {
+      navigate("/auth/reset-password", { replace: true, state: { token: queryToken } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { register, handleSubmit, watch, formState: { errors } } = useForm<ResetForm>();
