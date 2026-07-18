@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Search, Pencil, Package } from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
+import ConfirmModal from "../../../components/superadmin/ConfirmModal";
 import CollegeModulesPanel from "../../../components/superadmin/CollegeModulesPanel";
 import collegeService, { College, CollegeStudent } from "../../../services/collegeService";
 import { formatCourseYears } from "../../../lib/courseYears";
@@ -24,6 +25,14 @@ export default function CollegeDetailPage() {
   const [activeTab, setActiveTab] = useState<"students" | "modules">(
     searchParams.get("tab") === "modules" ? "modules" : "students"
   );
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    tone: "default" | "danger";
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -90,31 +99,43 @@ export default function CollegeDetailPage() {
     }
   };
 
-  const toggleCollegeActive = async () => {
+  const runConfirm = async () => {
+    if (!confirmDialog) return;
+    setConfirmBusy(true);
+    try {
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
+    } finally {
+      setConfirmBusy(false);
+    }
+  };
+
+  const toggleCollegeActive = () => {
     if (!id || !college) return;
     const deactivate = college.status === "active";
-    if (
-      !confirm(
-        deactivate
-          ? "Deactivate this college? It can be reactivated later."
-          : "Activate this college?"
-      )
-    ) {
-      return;
-    }
-    try {
-      if (deactivate) {
-        await collegeService.deactivateCollege(id);
-        setCollege({ ...college, status: "suspended" });
-        toast.success("College deactivated");
-      } else {
-        const updated = await collegeService.activateCollege(id);
-        setCollege(updated);
-        toast.success("College activated");
-      }
-    } catch {
-      toast.error("Action failed");
-    }
+    setConfirmDialog({
+      title: deactivate ? "Deactivate college" : "Activate college",
+      message: deactivate
+        ? "Deactivate this college? It can be reactivated later."
+        : "Activate this college?",
+      confirmLabel: deactivate ? "Deactivate" : "Activate",
+      tone: deactivate ? "danger" : "default",
+      onConfirm: async () => {
+        try {
+          if (deactivate) {
+            await collegeService.deactivateCollege(id);
+            setCollege({ ...college, status: "suspended" });
+            toast.success("College deactivated");
+          } else {
+            const updated = await collegeService.activateCollege(id);
+            setCollege(updated);
+            toast.success("College activated");
+          }
+        } catch {
+          toast.error("Action failed");
+        }
+      },
+    });
   };
 
   return (
@@ -297,6 +318,19 @@ export default function CollegeDetailPage() {
         </div>
       </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmDialog}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmLabel={confirmDialog?.confirmLabel}
+        tone={confirmDialog?.tone}
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onCancel={() => {
+          if (!confirmBusy) setConfirmDialog(null);
+        }}
+      />
     </div>
   );
 }
