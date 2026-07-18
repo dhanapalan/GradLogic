@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import collegeService from "../../../services/collegeService";
+import { Check, Copy } from "lucide-react";
+import collegeService, { CreateCollegeResult } from "../../../services/collegeService";
 
 interface CollegeFormData {
   name: string;
@@ -18,6 +19,8 @@ interface CollegeFormData {
 export default function AddCollegePage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState<CreateCollegeResult | null>(null);
+  const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState<CollegeFormData>({
     name: "",
     email: "",
@@ -81,11 +84,11 @@ export default function AddCollegePage() {
 
     setLoading(true);
     try {
-      await collegeService.createCollege(formData);
+      const result = await collegeService.createCollege(formData);
       toast.success("College added successfully!");
-      setTimeout(() => {
-        navigate("/app/superadmin/colleges");
-      }, 1500);
+      // Show the one-time TPO password instead of navigating away immediately —
+      // it's never retrievable again after this response.
+      setCreated(result);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to add college");
       console.error(error);
@@ -93,6 +96,78 @@ export default function AddCollegePage() {
       setLoading(false);
     }
   };
+
+  const copyPassword = async () => {
+    if (!created) return;
+    try {
+      await navigator.clipboard.writeText(created.temporary_password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Couldn't copy — select and copy the password manually");
+    }
+  };
+
+  if (created) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">College created</h2>
+          <p className="text-gray-500 mt-1">
+            Save the TPO's login below now — the password can't be shown again after you leave this page.
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200/70 shadow-admin-card p-8 space-y-6">
+          <div>
+            <div className="text-sm font-medium text-gray-700 mb-1">College</div>
+            <div className="text-lg font-semibold text-gray-900">{created.name}</div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">TPO Name</div>
+              <div className="text-gray-900">{created.tpo_name}</div>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Login Email</div>
+              <div className="text-gray-900">{created.tpo_email}</div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-medium text-gray-700 mb-1">Temporary Password</div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm font-mono text-gray-900">
+                {created.temporary_password}
+              </code>
+              <button
+                type="button"
+                onClick={copyPassword}
+                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                title="Copy password"
+              >
+                {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              They'll be required to set a new password on first login.
+            </p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <button
+              type="button"
+              onClick={() => navigate("/app/superadmin/colleges")}
+              className="px-6 py-2 bg-navy-900 text-white rounded-lg font-medium hover:bg-navy-800 transition-colors"
+            >
+              Done — Go to Colleges
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">

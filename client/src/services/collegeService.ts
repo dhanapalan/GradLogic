@@ -40,6 +40,13 @@ export interface CreateCollegeInput {
   studentLimit: number;
 }
 
+export interface CreateCollegeResult extends College {
+  tpo_name: string;
+  tpo_email: string;
+  /** One-time — never retrievable again after this response. */
+  temporary_password: string;
+}
+
 export interface CollegeRequest {
   id: string;
   name: string;
@@ -91,7 +98,7 @@ class CollegeService {
   /**
    * Create new college
    */
-  async createCollege(data: CreateCollegeInput): Promise<College> {
+  async createCollege(data: CreateCollegeInput): Promise<CreateCollegeResult> {
     try {
       const response = await api.post("/superadmin/colleges", data);
       return response.data?.data;

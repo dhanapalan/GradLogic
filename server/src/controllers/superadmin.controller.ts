@@ -1,10 +1,18 @@
 import { Request, Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 import { pool, query, queryOne } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
 import { ApiResponse } from "../types/index.js";
 import { env } from "../config/env.js";
 import { assignDefaultModulesToCollege } from "../services/platformModules.service.js";
 import * as apiKeyStore from "../services/apiKeyStore.service.js";
+
+// Matches the pattern already used for student temp passwords
+// (collegeStudentBulk.service.ts / college.service.ts).
+function generateTemporaryPassword(): string {
+  return `Tsai!${randomBytes(6).toString("base64url")}`;
+}
 
 // ────────────────────────────────────────────────────────────────────
 // METRICS ENDPOINTS
@@ -791,6 +799,7 @@ export const createCollege = async (
   res: Response<ApiResponse>,
   next: NextFunction
 ) => {
+  const client = await pool.connect();
   try {
     const { name, email, phone, address, city, state, tpoName, tpoEmail, studentLimit } = req.body;
 
@@ -811,6 +820,16 @@ export const createCollege = async (
       throw new AppError("College with this email already exists", 409);
     }
 
+    // The TPO becomes the college_admin login — it needs its own unique
+    // users.email, separate from the college's own contact email above.
+    const existingTpo = await queryOne(
+      "SELECT id FROM users WHERE email = $1",
+      [tpoEmail]
+    );
+    if (existingTpo) {
+      throw new AppError("A user with this TPO email already exists", 409);
+    }
+
     // college_code is NOT NULL + unique — derive a slug from the name and
     // suffix it if the slug is already taken.
     const baseCode = name
@@ -827,19 +846,46 @@ export const createCollege = async (
       collegeCode = `${baseCode}-${Date.now().toString(36)}`;
     }
 
-    const result = await pool.query(
+    const tempPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    await client.query("BEGIN");
+
+    const collegeResult = await client.query(
       `INSERT INTO colleges (college_code, name, email, phone, address, city, state, status, created_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', NOW())
        RETURNING *`,
       [collegeCode, name, email, phone, address, city, state]
     );
+    const college = collegeResult.rows[0];
+
+    // Create the TPO's login — this is the college_admin account they use
+    // to sign in and manage this college. must_change_password forces them
+    // through a reset on first login, same as bulk-imported students.
+    await client.query(
+      `INSERT INTO users
+          (role, name, email, password, college_id, is_active, is_profile_complete, must_change_password)
+       VALUES
+          ('college_admin', $1, $2, $3, $4, TRUE, FALSE, TRUE)`,
+      [tpoName, tpoEmail, hashedPassword, college.id]
+    );
+
+    await client.query("COMMIT");
 
     res.status(201).json({
       success: true,
-      data: result.rows[0],
+      data: {
+        ...college,
+        tpo_name: tpoName,
+        tpo_email: tpoEmail,
+        temporary_password: tempPassword,
+      },
     });
   } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
     next(error);
+  } finally {
+    client.release();
   }
 };
 
