@@ -74,6 +74,23 @@ export default function ExamPlayerPage() {
     const { driveId } = useParams<{ driveId: string }>();
     const navigate = useNavigate();
 
+    // Mobile responsive state
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+
+    // Handle window resize
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            if (mobile && sidebarOpen) {
+                setSidebarOpen(false);
+            }
+        };
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, [sidebarOpen]);
+
     // State
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, { selected: string[]; flagged?: boolean }>>({});
@@ -465,9 +482,23 @@ export default function ExamPlayerPage() {
     const questionAnswer = answers[currentQuestion?.id] || { selected: [], flagged: false };
 
     return (
-        <div className="flex h-screen bg-gray-50 overflow-hidden">
+        <div className="flex h-screen bg-gray-50 overflow-hidden flex-col md:flex-row">
+            {/* Mobile sidebar overlay */}
+            {sidebarOpen && isMobile && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* ── Question Navigation Sidebar ── */}
-            <div className="w-[280px] bg-white border-r border-gray-200 flex flex-col z-10 relative">
+            <div className={`${
+                isMobile
+                    ? `fixed left-0 top-0 h-screen w-[280px] transform transition-transform duration-300 ${
+                        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    } z-40`
+                    : "w-[280px] relative z-10"
+            } bg-white border-r border-gray-200 flex flex-col`}>
                 {/* Header */}
                 <div className="p-4 border-b border-gray-100 flex-shrink-0">
                     <h2 className="font-black text-gray-900 text-sm truncate">{session.drive_name}</h2>
@@ -484,8 +515,8 @@ export default function ExamPlayerPage() {
                 </div>
 
                 {/* Question Grid */}
-                <div className="flex-1 overflow-y-auto p-4">
-                    <div className="grid grid-cols-5 gap-2">
+                <div className="flex-1 overflow-y-auto p-3 md:p-4">
+                    <div className={`grid ${isMobile ? "grid-cols-4 gap-1.5" : "grid-cols-5 gap-2"}`}>
                         {questions.map((q, i) => {
                             const status = getQuestionStatus(q.id);
                             const isCurrent = i === currentIndex;
@@ -570,26 +601,37 @@ export default function ExamPlayerPage() {
             </div>
 
             {/* ── Main Content ── */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {/* Top Bar: Timer + Submit */}
-                <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-gray-400">Question {currentIndex + 1} of {questions.length}</span>
-                        <span className={`text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${currentQuestion?.difficulty_level === "easy" ? "bg-emerald-50 text-emerald-600" :
+                <div className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-3 md:px-6 flex-shrink-0 gap-2 md:gap-3 flex-wrap md:flex-nowrap">
+                    {isMobile && (
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0 md:hidden"
+                            title="Toggle question navigator"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    )}
+                    <div className="flex items-center gap-1 md:gap-3 min-w-0 flex-1">
+                        <span className="text-xs md:text-sm font-bold text-gray-400 whitespace-nowrap">Q{currentIndex + 1}/{questions.length}</span>
+                        <span className={`text-[10px] md:text-xs font-black uppercase tracking-widest px-1.5 md:px-2 py-0.5 rounded-full flex-shrink-0 ${currentQuestion?.difficulty_level === "easy" ? "bg-emerald-50 text-emerald-600" :
                             currentQuestion?.difficulty_level === "medium" ? "bg-amber-50 text-amber-600" :
                                 "bg-red-50 text-red-600"
                             }`}>
-                            {currentQuestion?.difficulty_level}
+                            {currentQuestion?.difficulty_level?.[0]?.toUpperCase()}
                         </span>
-                        <span className="text-xs font-bold text-gray-400">
-                            {currentQuestion?.marks} marks
+                        <span className="text-[10px] md:text-xs font-bold text-gray-400 flex-shrink-0">
+                            {currentQuestion?.marks}m
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4 flex-wrap md:flex-nowrap">
                         {isMock && sectionTimeLeft != null && (
                             <div
-                                className={`flex items-center gap-2 px-3 py-2 rounded-xl font-black text-xs ${
+                                className={`hidden md:flex items-center gap-2 px-3 py-2 rounded-xl font-black text-xs ${
                                     sectionTimeLeft <= 60
                                         ? "bg-red-50 text-red-600"
                                         : "bg-violet-50 text-violet-700"
@@ -601,27 +643,29 @@ export default function ExamPlayerPage() {
                             </div>
                         )}
                         {/* Overall timer */}
-                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm ${timeLeft <= 300 ? "bg-red-50 text-red-600 animate-pulse" :
+                        <div className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 rounded-xl font-black text-xs md:text-sm flex-shrink-0 ${timeLeft <= 300 ? "bg-red-50 text-red-600 animate-pulse" :
                             timeLeft <= 600 ? "bg-amber-50 text-amber-600" :
                                 "bg-gray-100 text-gray-700"
                             }`}>
-                            <Clock className="h-4 w-4" />
-                            {formatTime(timeLeft)}
+                            <Clock className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                            <span className="hidden md:inline">{formatTime(timeLeft)}</span>
+                            <span className="md:hidden">{Math.floor(timeLeft / 60)}m</span>
                         </div>
 
                         {/* Submit */}
                         <button
                             onClick={() => handleSubmit()}
-                            className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-black text-sm hover:bg-indigo-700 transition-all"
+                            className="flex items-center gap-1 md:gap-2 bg-indigo-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg md:rounded-xl font-black text-xs md:text-sm hover:bg-indigo-700 transition-all flex-shrink-0"
                         >
-                            <Send className="h-4 w-4" />
-                            Submit
+                            <Send className="h-3 w-3 md:h-4 md:w-4" />
+                            <span className="hidden md:inline">Submit</span>
+                            <span className="md:hidden">✓</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Question Area */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 relative flex flex-col bg-white">
+                <div className="flex-1 overflow-y-auto p-3 md:p-6 lg:p-8 relative flex flex-col bg-white">
 
                     {/* Violation Alert Toast */}
                     {violationAlert && (

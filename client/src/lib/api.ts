@@ -3,7 +3,12 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { authActions, getAccessToken, getRefreshToken } from "../stores/authStore";
+import {
+  authActions,
+  clearLegacyTokenStorage,
+  getAccessToken,
+  getRefreshToken,
+} from "../stores/authStore";
 
 // In dev: relative "/api" is proxied by Vite → localhost:5050
 // In staging (Docker): http://localhost:5050
@@ -13,7 +18,9 @@ const VITE_API_URL =
   import.meta.env.VITE_API_URL || (isLocalhost ? "http://localhost:5050" : "https://api.gradlogic.atherasys.com");
 const baseURL = VITE_API_URL.endsWith("/") ? `${VITE_API_URL}api` : `${VITE_API_URL}/api`;
 
-const api = axios.create({ baseURL });
+// withCredentials so the httpOnly refresh cookie rides along on /api/auth/*
+// and /api/sessions (the cookie is path-scoped server-side).
+const api = axios.create({ baseURL, withCredentials: true });
 
 // Attach access token to every request
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -45,17 +52,42 @@ function forceLogout() {
 }
 
 async function performRefresh(): Promise<string | null> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
+  // Normally the refresh token travels in the httpOnly cookie; a body token is
+  // only present for sessions started on an older build (storage copy).
+  const legacyRefreshToken = getRefreshToken();
   try {
     // Bare axios (not `api`) so this request skips the interceptors below.
-    const { data } = await axios.post(`${baseURL}/auth/refresh`, { refreshToken });
+    const { data } = await axios.post(
+      `${baseURL}/auth/refresh`,
+      {
+        refreshToken: legacyRefreshToken || undefined,
+        rememberMe: authActions.getState().rememberMe,
+      },
+      { withCredentials: true }
+    );
     const payload = data?.data ?? data;
     if (!payload?.accessToken) return null;
     authActions.setTokens(payload.accessToken, payload.refreshToken, payload.permissions);
+    // The rotated refresh token is now cookie-only; drop any legacy copy.
+    clearLegacyTokenStorage();
     return payload.accessToken as string;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Restore the session before first render: if we have a persisted user but no
+ * access token (page reload — the token lives only in memory), silently
+ * exchange the httpOnly refresh cookie for a new pair. Clears stale session
+ * context if the refresh is rejected.
+ */
+export async function bootstrapSession(): Promise<void> {
+  const { user } = authActions.getState();
+  if (getAccessToken() || !user) return;
+  const token = await performRefresh();
+  if (!token && navigator.onLine) {
+    authActions.logout();
   }
 }
 
@@ -72,8 +104,10 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // No refresh token available → straight to login.
-    if (!getRefreshToken()) {
+    // The refresh token lives in an httpOnly cookie we cannot see, so we
+    // can't pre-check its presence — only attempt a refresh if this looked
+    // like an authenticated session at all.
+    if (!getAccessToken() && !getRefreshToken()) {
       forceLogout();
       return Promise.reject(error);
     }

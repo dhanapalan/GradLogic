@@ -382,17 +382,6 @@ export async function loginWithMicrosoft(code: string, ip?: string) {
 // PUBLIC SELF-REGISTRATION
 // =============================================================================
 
-export interface StudentRegisterInput {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-  degree?: string;
-  specialization?: string;
-  passing_year?: number;
-  college_name?: string;   // free-text; we find-or-create the college
-}
-
 export interface CompanyRegisterInput {
   name: string;              // contact person name
   email: string;
@@ -400,73 +389,6 @@ export interface CompanyRegisterInput {
   company_name: string;
   industry?: string;
   headquarters?: string;
-}
-
-/**
- * Self-registration for students.
- * Creates user + student_details + optionally find-or-create a college.
- */
-export async function registerStudent(input: StudentRegisterInput, ip?: string) {
-  const email = input.email.toLowerCase().trim();
-
-  const existing = await queryOne("SELECT id FROM users WHERE email = $1", [email]);
-  if (existing) throw new AppError("An account with this email already exists", 409);
-
-  const hashed = await bcrypt.hash(input.password, 12);
-
-  // Find or create college by name (if provided)
-  let collegeId: string | null = null;
-  if (input.college_name?.trim()) {
-    const existingCollege = await queryOne<{ id: string }>(
-      "SELECT id FROM colleges WHERE LOWER(name) = LOWER($1) LIMIT 1",
-      [input.college_name.trim()]
-    );
-    if (existingCollege) {
-      collegeId = existingCollege.id;
-    } else {
-      const slug = input.college_name.trim().toLowerCase().replace(/[^a-z0-9]/g, "_").slice(0, 40);
-      const code = `${slug}_${Date.now()}`.slice(0, 50);
-      const newCollege = await queryOne<{ id: string }>(
-        "INSERT INTO colleges (name, college_code, is_active) VALUES ($1,$2,TRUE) RETURNING id",
-        [input.college_name.trim(), code]
-      );
-      collegeId = newCollege?.id ?? null;
-    }
-  }
-
-  const user = await queryOne<{ id: string; role: string }>(
-    `INSERT INTO users (name, email, password, role, college_id, status, is_active)
-     VALUES ($1,$2,$3,'student',$4,'Active',TRUE) RETURNING id, role`,
-    [input.name.trim(), email, hashed, collegeId]
-  );
-  if (!user) throw new AppError("Registration failed", 500);
-
-  // Create student_details row
-  if (collegeId) {
-    await queryOne(
-      `INSERT INTO student_details (user_id, college_id, degree, specialization, passing_year, phone_number)
-       VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (user_id) DO NOTHING`,
-      [user.id, collegeId, input.degree ?? null, input.specialization ?? null, input.passing_year ?? null, input.phone ?? null]
-    );
-  }
-
-  const payload: AuthPayload = {
-    userId: user.id,
-    email,
-    role: "student",
-    college_id: collegeId,
-  };
-  const tokens = await issueTokens(payload, { ip });
-  const permissions = await getPermissionsForRole("student");
-
-  logLogin(user.id, email, "student", ip).catch(() => { });
-
-  return {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-    permissions,
-    user: { id: user.id, role: "student", name: input.name.trim(), email, college_id: collegeId, is_profile_complete: false, must_change_password: false },
-  };
 }
 
 /**

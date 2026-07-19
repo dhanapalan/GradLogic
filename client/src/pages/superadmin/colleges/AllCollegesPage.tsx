@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Eye, Package, Pencil, Plus, Power, PowerOff, Search, UserPlus, Users } from "lucide-react";
 import toast from "react-hot-toast";
 import StatusBadge from "../../../components/superadmin/StatusBadge";
+import ConfirmModal from "../../../components/superadmin/ConfirmModal";
 import collegeService, { College } from "../../../services/collegeService";
 
 const STATUS_FILTERS = ["all", "active", "pending", "suspended"] as const;
@@ -14,6 +15,14 @@ export default function AllCollegesPage() {
   const [actionCollegeId, setActionCollegeId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_FILTERS)[number]>("all");
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    message: string;
+    confirmLabel: string;
+    tone: "default" | "danger";
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const loadColleges = useCallback(async () => {
     setLoading(true);
@@ -35,25 +44,42 @@ export default function AllCollegesPage() {
     return () => clearTimeout(debounce);
   }, [loadColleges]);
 
-  const toggleCollegeStatus = async (college: College) => {
-    const suspend = college.status === "active";
-    if (!confirm(`${suspend ? "Suspend" : "Activate"} ${college.name}?`)) return;
-
-    setActionCollegeId(college.id);
+  const runConfirm = async () => {
+    if (!confirmDialog) return;
+    setConfirmBusy(true);
     try {
-      if (suspend) {
-        await collegeService.deactivateCollege(college.id);
-        toast.success("College suspended");
-      } else {
-        await collegeService.activateCollege(college.id);
-        toast.success("College activated");
-      }
-      await loadColleges();
-    } catch {
-      toast.error("College status update failed");
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
     } finally {
-      setActionCollegeId(null);
+      setConfirmBusy(false);
     }
+  };
+
+  const toggleCollegeStatus = (college: College) => {
+    const suspend = college.status === "active";
+    setConfirmDialog({
+      title: suspend ? "Suspend college" : "Activate college",
+      message: `${suspend ? "Suspend" : "Activate"} ${college.name}?`,
+      confirmLabel: suspend ? "Suspend" : "Activate",
+      tone: suspend ? "danger" : "default",
+      onConfirm: async () => {
+        setActionCollegeId(college.id);
+        try {
+          if (suspend) {
+            await collegeService.deactivateCollege(college.id);
+            toast.success("College suspended");
+          } else {
+            await collegeService.activateCollege(college.id);
+            toast.success("College activated");
+          }
+          await loadColleges();
+        } catch {
+          toast.error("College status update failed");
+        } finally {
+          setActionCollegeId(null);
+        }
+      },
+    });
   };
 
   return (
@@ -214,6 +240,19 @@ export default function AllCollegesPage() {
           <p className="text-gray-500">No colleges found</p>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmDialog}
+        title={confirmDialog?.title || ""}
+        message={confirmDialog?.message || ""}
+        confirmLabel={confirmDialog?.confirmLabel}
+        tone={confirmDialog?.tone}
+        busy={confirmBusy}
+        onConfirm={runConfirm}
+        onCancel={() => {
+          if (!confirmBusy) setConfirmDialog(null);
+        }}
+      />
     </div>
   );
 }

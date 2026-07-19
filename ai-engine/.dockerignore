@@ -7,3 +7,13 @@ __pycache__
 .github
 models
 *.md
+
+# question_bank_engine is a separate service run from its own local venv —
+# that venv (and its runtime ChromaDB/embedding-cache data) was being swept
+# into the build context and then COPY'd wholesale into this image, bloating
+# it by 1GB+ per build and, on a disk-constrained host, failing the build
+# outright while unpacking it. Anchored explicitly (not just "venv"/"data")
+# since bare patterns weren't reliably excluding this nested path.
+**/venv
+**/.venv
+question_bank_engine/data

@@ -18,7 +18,7 @@ import { logger } from "../config/logger.js";
 export const MANAGED_SERVICE_KEYS = {
   voice_interview: "VAPI_API_KEY",
   resume_extraction: "ANTHROPIC_API_KEY",
-  drive_generation: "OPENAI_API_KEY",
+  drive_generation: "GROQ_API_KEY",
   code_execution: "JUDGE0_API_KEY",
 } as const;
 

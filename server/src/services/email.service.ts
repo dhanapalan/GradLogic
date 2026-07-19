@@ -175,6 +175,32 @@ export async function sendCampusAdminInvitation({
 }
 
 // =============================================================================
+// PLATFORM USER INVITATION (superadmin "Invite user" — any role)
+// =============================================================================
+
+export async function sendUserInvitationEmail({
+  name, email, role, temporaryPassword,
+}: { name: string; email: string; role: string; temporaryPassword: string }) {
+  const loginUrl = `${env.CLIENT_URL}/login`;
+  const roleLabel = role.replace(/_/g, " ");
+  const subject = `Welcome to GradLogic — your ${roleLabel} account`;
+  const text = `Hi ${name}, an account has been created for you on GradLogic as ${roleLabel}. Email: ${email}, Temporary Password: ${temporaryPassword}. Login: ${loginUrl}. You will be asked to set a new password on first login.`;
+  const html = emailHtml(
+    `Welcome to GradLogic`,
+    `<p>Hi <strong>${esc(name)}</strong>,</p>
+     <p>An account has been created for you as <strong>${esc(roleLabel)}</strong>.</p>
+     <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:16px 0;">
+       <p style="margin:0;font-size:13px;color:#64748b;">Login credentials:</p>
+       <p style="margin:8px 0 0;"><strong>Email:</strong> ${esc(email)}</p>
+       <p style="margin:4px 0 0;"><strong>Temporary Password:</strong> <code style="background:#e2e8f0;padding:2px 6px;border-radius:4px;">${esc(temporaryPassword)}</code></p>
+     </div>
+     <p style="font-size:13px;color:#64748b;">You will be asked to change your password on first login.</p>`,
+    loginUrl, "Sign In"
+  );
+  return sendEmail({ to: email, subject, text, html, template: "user_invite" });
+}
+
+// =============================================================================
 // DRIVE INVITE
 // =============================================================================
 

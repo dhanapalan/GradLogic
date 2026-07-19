@@ -6,13 +6,15 @@ import {
 } from "../services/token.service.js";
 import { recordAuditEvent } from "../services/adminAudit.service.js";
 import { ApiResponse } from "../types/index.js";
+import { readRefreshCookie } from "../utils/refreshCookie.js";
 
 function currentRefreshToken(req: Request): string | null {
   const body = (req.body ?? {}) as { refreshToken?: string };
   const header = req.headers["x-refresh-token"];
   if (typeof body.refreshToken === "string" && body.refreshToken) return body.refreshToken;
   if (typeof header === "string" && header) return header;
-  return null;
+  // Web clients: the refresh token lives in an httpOnly cookie.
+  return readRefreshCookie(req);
 }
 
 export async function listSessions(req: Request, res: Response<ApiResponse>, next: NextFunction) {

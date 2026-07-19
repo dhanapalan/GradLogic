@@ -148,10 +148,9 @@ export default function StudentOnboardingWizard() {
       return trigger(["career_goals"]);
     }
     if (step === 5) {
-      if (!resumeFile) {
-        toast.error("Resume (PDF/DOCX) is required");
-        return false;
-      }
+      // Optional — a resume-writing service (with ATS support) is offered
+      // separately, so students without one yet shouldn't be blocked here.
+      if (!resumeFile) return true;
       const okType = [
         "application/pdf",
         "application/msword",
@@ -191,10 +190,6 @@ export default function StudentOnboardingWizard() {
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   const submitOnboarding = handleSubmit(async (values) => {
-    if (!resumeFile) {
-      toast.error("Resume/CV upload is required");
-      return;
-    }
     setLoading(true);
     try {
       await studentOnboardingService.acceptPolicy();
@@ -222,7 +217,7 @@ export default function StudentOnboardingWizard() {
       if (values.linkedin_url?.trim()) payload.append("linkedin_url", values.linkedin_url.trim());
       if (values.github_url?.trim()) payload.append("github_url", values.github_url.trim());
       if (photoFile) payload.append("profile_photo", photoFile);
-      payload.append("resume", resumeFile);
+      if (resumeFile) payload.append("resume", resumeFile);
 
       const result = await studentOnboardingService.completeOnboarding(payload);
 
@@ -485,8 +480,13 @@ export default function StudentOnboardingWizard() {
             <div className="space-y-4">
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
                 <Upload className="mx-auto h-8 w-8 text-slate-400" />
-                <p className="mt-2 text-sm font-medium text-slate-800">Upload resume (PDF or DOCX)</p>
-                <p className="mt-1 text-xs text-slate-500">Max 2MB · AI parsing will be enabled later</p>
+                <p className="mt-2 text-sm font-medium text-slate-800">
+                  Upload resume (PDF or DOCX) — optional
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Max 2MB · AI parsing will be enabled later. Don't have one yet? Skip this — resume
+                  writing with ATS support is available separately.
+                </p>
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"

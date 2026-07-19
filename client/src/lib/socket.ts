@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import { getAccessToken } from "../stores/authStore";
 
 const API_BASE = import.meta.env.VITE_API_URL || "https://api.gradlogic.atherasys.com";
 
@@ -12,7 +13,7 @@ export function connectProctoringSocket(): Socket {
     withCredentials: true,
     transports: ["websocket", "polling"],
     auth: {
-      token: sessionStorage.getItem("accessToken"),
+      token: getAccessToken(),
     },
   });
 
@@ -40,7 +41,7 @@ export function connectGeneralSocket(): Socket {
     withCredentials: true,
     transports: ["websocket", "polling"],
     auth: {
-      token: sessionStorage.getItem("accessToken"),
+      token: getAccessToken(),
     },
   });
 

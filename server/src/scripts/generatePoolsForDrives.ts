@@ -2,8 +2,8 @@ import { env } from "../config/env.js";
 import { pool } from "../config/database.js";
 import { generateDrive } from "../services/drive.service.js";
 
-// Force mock generation for seeding to avoid OpenAI issues/costs
-(env as any).OPENAI_API_KEY = "";
+// Force mock generation for seeding to avoid real Groq API costs
+(env as any).GROQ_API_KEY = "";
 
 async function run() {
     console.log("🌊 Starting Pool Generation (FORCED MOCK MODE)...");

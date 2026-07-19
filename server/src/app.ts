@@ -92,6 +92,9 @@ import collegeModulesRoutes from "./routes/college.modules.routes.js";
 
 const app = express();
 
+// Behind host nginx — required so rate limits use real client IP, not 127.0.0.1
+app.set("trust proxy", 1);
+
 // ── Security ─────────────────────────────────────────────────────────────────
 // cross-origin: SPA on gradlogic.* calls API on api.gradlogic.* (Socket.IO + XHR)
 app.use(
@@ -110,12 +113,21 @@ app.use(
 );
 
 // ── Rate Limiting ────────────────────────────────────────────────────────────
+// Admin/college portals fire many parallel GETs; 100/15min was blocking normal use.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: env.RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
+  skip: (req) => {
+    if (req.method === "OPTIONS") return true;
+    if (req.path === "/api/health" || req.originalUrl.startsWith("/api/health")) return true;
+    // Authenticated portal traffic — login brute-force still uses authLimiter below.
+    const auth = req.headers.authorization;
+    if (typeof auth === "string" && auth.startsWith("Bearer ")) return true;
+    return false;
+  },
 });
 
 // Strict limiter for auth endpoints — prevents brute-force credential attacks

@@ -1,6 +1,13 @@
 // =============================================================================
 // TalentSecure AI — Auth Store (React 18 useSyncExternalStore)
-// Secure token handling with optional Remember Me (localStorage).
+//
+// Token handling: the access token lives in memory only and the refresh token
+// lives in an httpOnly cookie set by the server — neither is persisted to
+// web storage, so nothing sensitive is readable from DevTools/XSS. On page
+// load, lib/api.ts#bootstrapSession silently refreshes via the cookie.
+// Storage keeps only non-credential session context (user profile,
+// permission keys, Remember Me flag). Legacy token keys left by older builds
+// are still read once for migration, then scrubbed.
 // =============================================================================
 
 import { useSyncExternalStore } from "react";
@@ -53,7 +60,9 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
-function readToken(key: string): string | null {
+// Legacy-only read: current builds never write token keys to storage, but
+// sessions started on an older build (and E2E seeding) may still have them.
+function readLegacyToken(key: string): string | null {
   return storage().getItem(key) ?? sessionStorage.getItem(key) ?? localStorage.getItem(key);
 }
 
@@ -62,10 +71,18 @@ function clearBoth(key: string) {
   localStorage.removeItem(key);
 }
 
+/** Remove token copies persisted by older builds (post-migration cleanup). */
+export function clearLegacyTokenStorage() {
+  clearBoth(ACCESS_KEY);
+  clearBoth(REFRESH_KEY);
+}
+
+const legacyAccessToken = readLegacyToken(ACCESS_KEY);
+
 let state: AuthState = {
-  isAuthenticated: !!readToken(ACCESS_KEY),
+  isAuthenticated: !!legacyAccessToken,
   user: readJson<AuthUser | null>(USER_KEY, null),
-  token: readToken(ACCESS_KEY),
+  token: legacyAccessToken,
   permissions: readJson<string[]>(PERMS_KEY, []),
   rememberMe: localStorage.getItem(REMEMBER_KEY) === "1",
 };
@@ -92,26 +109,29 @@ export function useAuthStore<T>(selector: (s: AuthState) => T): T {
   return selector(snap);
 }
 
+/**
+ * Legacy sessions only: the refresh token now lives in an httpOnly cookie the
+ * client cannot read. This returns a storage copy left by an older build (or
+ * null), which /auth/refresh and /auth/logout still accept in the body.
+ */
 export function getRefreshToken(): string | null {
-  return readToken(REFRESH_KEY);
+  return readLegacyToken(REFRESH_KEY);
 }
 
 export function getAccessToken(): string | null {
-  return readToken(ACCESS_KEY);
+  return state.token;
 }
 
 function persistAll(
-  accessToken: string,
   user: AuthUser | null,
-  refreshToken: string | undefined,
   permissions: string[],
   rememberMe: boolean
 ) {
   const store = rememberMe ? localStorage : sessionStorage;
   const other = rememberMe ? sessionStorage : localStorage;
   [ACCESS_KEY, REFRESH_KEY, USER_KEY, PERMS_KEY].forEach((k) => other.removeItem(k));
-  store.setItem(ACCESS_KEY, accessToken);
-  if (refreshToken) store.setItem(REFRESH_KEY, refreshToken);
+  // Tokens are intentionally NOT written to storage.
+  clearLegacyTokenStorage();
   if (user) store.setItem(USER_KEY, JSON.stringify(user));
   store.setItem(PERMS_KEY, JSON.stringify(permissions));
   if (rememberMe) localStorage.setItem(REMEMBER_KEY, "1");
@@ -122,11 +142,13 @@ export const authActions = {
   login(
     accessToken: string,
     user: AuthUser,
-    refreshToken?: string,
+    _refreshToken?: string,
     permissions: string[] = [],
     rememberMe = false
   ) {
-    persistAll(accessToken, user, refreshToken, permissions, rememberMe);
+    // The refresh token argument is ignored: the server delivers it as an
+    // httpOnly cookie, and we never persist tokens to web storage.
+    persistAll(user, permissions, rememberMe);
     state = {
       isAuthenticated: true,
       user,
@@ -137,11 +159,11 @@ export const authActions = {
     emitChange();
   },
 
-  setTokens(accessToken: string, refreshToken?: string, permissions?: string[]) {
+  setTokens(accessToken: string, _refreshToken?: string, permissions?: string[]) {
     const rememberMe = state.rememberMe || localStorage.getItem(REMEMBER_KEY) === "1";
     const store = rememberMe ? localStorage : sessionStorage;
-    store.setItem(ACCESS_KEY, accessToken);
-    if (refreshToken) store.setItem(REFRESH_KEY, refreshToken);
+    // Access token stays in memory; rotated refresh token arrives via cookie.
+    clearLegacyTokenStorage();
     const nextPerms = permissions ?? state.permissions;
     if (permissions) store.setItem(PERMS_KEY, JSON.stringify(permissions));
     state = { ...state, isAuthenticated: true, token: accessToken, permissions: nextPerms, rememberMe };
