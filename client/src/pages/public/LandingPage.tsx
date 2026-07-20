@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { HeroSection } from "./home/HeroSection";
 import { HighlightsSection } from "./home/HighlightsSection";
+import { PortalsSection } from "./home/PortalsSection";
 import { ReadinessSection } from "./home/ReadinessSection";
 import { WhySection } from "./home/WhySection";
 import { WorkflowSection } from "./home/WorkflowSection";
@@ -25,6 +26,9 @@ export default function LandingPage() {
   return (
     <div className="bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <HeroSection />
+      {/* Directly after the hero: choosing a portal is the primary action for
+          both returning users and first-time visitors sizing up the platform. */}
+      <PortalsSection />
       <HighlightsSection />
       <ReadinessSection />
       <WhySection />

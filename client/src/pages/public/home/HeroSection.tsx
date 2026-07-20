@@ -3,12 +3,12 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { HeroIllustration } from "./HeroIllustration";
 
-const LOGIN_CTAS = [
-  { label: "Student Login", href: "/auth/login?role=student" },
-  { label: "Faculty Login", href: "/auth/login?role=faculty" },
-  { label: "College Login", href: "/auth/login?role=college" },
-  { label: "Recruiter Login", href: "/auth/login?role=recruiter" },
-] as const;
+/**
+ * The four per-role login buttons that used to sit here were removed: the
+ * portal chooser directly below the hero does the same job with room to
+ * explain what each portal is for, and duplicating them pushed the hero's
+ * primary CTA into a row of six competing buttons.
+ */
 
 export function HeroSection() {
   const reduce = useReducedMotion();
@@ -63,18 +63,15 @@ export function HeroSection() {
               to="/contact"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
-              Get Started
+              Request access
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
-            {LOGIN_CTAS.map((cta) => (
-              <Link
-                key={cta.label}
-                to={cta.href}
-                className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-primary-700 dark:hover:bg-slate-800"
-              >
-                {cta.label}
-              </Link>
-            ))}
+            <a
+              href="#portals"
+              className="inline-flex h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 transition hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-primary-700 dark:hover:bg-slate-800"
+            >
+              Sign in to your portal
+            </a>
           </motion.div>
         </div>
 

@@ -11,6 +11,68 @@ export const HOME_NAV = [
 ] as const;
 
 /**
+ * Portal chooser cards on the home page.
+ *
+ * Faculty is folded into the College card rather than given its own: faculty
+ * sign in through the same campus portal, and a fifth card would break the
+ * four-column grid for a role that shares an entry point.
+ */
+export const PORTAL_CARDS = [
+  {
+    id: "student",
+    title: "Student Portal",
+    summary: "Learn, practise, and become placement ready.",
+    features: [
+      "AI learning paths",
+      "Practice & mock tests",
+      "Mock interviews",
+      "Placement readiness score",
+    ],
+    cta: "Student login",
+    href: "/auth/login?role=student",
+  },
+  {
+    id: "college",
+    title: "College Portal",
+    summary: "For placement cells, college admins and faculty.",
+    features: [
+      "Student management",
+      "Question banks",
+      "Assessment campaigns",
+      "Analytics & reports",
+    ],
+    cta: "College login",
+    href: "/auth/login?role=college",
+  },
+  {
+    id: "recruiter",
+    title: "Recruiter Portal",
+    summary: "Hire from campus with verified readiness data.",
+    features: [
+      "Campus hiring drives",
+      "Candidate search",
+      "Interview scheduling",
+      "Shortlisting & offers",
+    ],
+    cta: "Recruiter login",
+    href: "/auth/login?role=recruiter",
+  },
+  {
+    id: "admin",
+    title: "Platform Administration",
+    summary: "Operate GradLogic across every tenant.",
+    features: [
+      "Tenant management",
+      "College approvals",
+      "AI configuration",
+      "Global question bank",
+    ],
+    cta: "Admin login",
+    href: "/auth/login?role=super_admin",
+  },
+] as const;
+
+/**
  * Grouped into four phases rather than ten flat steps: the flat list needed a
  * horizontal scrollbar that hid the last four steps (including the outcome the
  * whole section is meant to sell) and gave "Learning" the same visual weight
