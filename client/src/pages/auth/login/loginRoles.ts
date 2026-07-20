@@ -60,17 +60,10 @@ export const LOGIN_ROLES: LoginRole[] = [
   },
 ];
 
-export const LOGIN_ROLE_STORAGE_KEY = "gradlogic.lastLoginRole";
-
-export function readStoredLoginRole(): LoginRoleId {
-  const raw = localStorage.getItem(LOGIN_ROLE_STORAGE_KEY);
-  if (LOGIN_ROLES.some((r) => r.id === raw)) return raw as LoginRoleId;
-  return "student";
-}
-
-export function storeLoginRole(id: LoginRoleId) {
-  localStorage.setItem(LOGIN_ROLE_STORAGE_KEY, id);
-}
+/*
+ * The stored-role helpers were removed with the login role selector: the
+ * subdomain now determines the portal, so there is no user choice to persist.
+ */
 
 /** Dummy hooks for future OAuth / OTP / magic-link connectivity. */
 export const authProvidersApi = {

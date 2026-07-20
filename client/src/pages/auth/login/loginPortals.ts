@@ -110,6 +110,42 @@ export function isUnknownPortal(portal: LoginPortal): boolean {
 }
 
 /**
+ * Absolute login URL for a portal, derived from the current host so it works
+ * unchanged in dev (exam.localhost:5173) and production
+ * (exam.gradlogic.atherasys.com) without a build-time env var.
+ *
+ * Returns a relative path if the portal id is unknown, so a bad id degrades to
+ * "the login page on this host" rather than a broken absolute URL.
+ */
+export function portalLoginUrl(portalId: string): string {
+  const entry = PORTALS.find((p) => p.portal.id === portalId);
+  if (!entry) return "/auth/login";
+
+  const { protocol, hostname, port } = window.location;
+
+  // Strip an existing portal prefix so campus. -> exam. works, not exam.campus.
+  let base = hostname;
+  for (const p of PORTALS) {
+    if (base.startsWith(p.prefix)) {
+      base = base.slice(p.prefix.length);
+      break;
+    }
+  }
+
+  const host = `${entry.prefix}${base}`;
+  return `${protocol}//${host}${port ? `:${port}` : ""}/auth/login`;
+}
+
+/**
+ * Backend role names this portal expects, flattened across its roles.
+ * Used only to notice when someone signs in at a portal that isn't theirs —
+ * never to authorise: the account's own role decides what it can reach.
+ */
+export function portalExpectedRoles(portal: LoginPortal): string[] {
+  return portalRoles(portal).flatMap((r) => r.expectedRoles);
+}
+
+/**
  * Roles a portal offers, in the order the portal declares them — the first
  * entry becomes the default selection, so campus.* leads with College Admin
  * rather than whichever role happens to come first in LOGIN_ROLES.

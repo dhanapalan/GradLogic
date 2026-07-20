@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import {
@@ -18,11 +18,10 @@ import {
 } from "../../components/ProtectedRoute";
 import { cn } from "../../lib/utils";
 import {
-  readStoredLoginRole,
-  storeLoginRole,
-  type LoginRoleId,
-} from "./login/loginRoles";
-import { isUnknownPortal, portalRoles, resolveLoginPortal } from "./login/loginPortals";
+  isUnknownPortal,
+  portalExpectedRoles,
+  resolveLoginPortal,
+} from "./login/loginPortals";
 
 type LoginForm = {
   identifier: string;
@@ -34,28 +33,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  // Which portal this hostname represents (exam./campus./admin.), and the
-  // roles it offers. Resolved once — the hostname cannot change mid-session.
+  // Which portal this hostname represents (exam./campus./admin.).
+  // Resolved once — the hostname cannot change mid-session.
   const portal = useMemo(() => resolveLoginPortal(), []);
-  const availableRoles = useMemo(() => portalRoles(portal), [portal]);
-
-  const [role, setRole] = useState<LoginRoleId>(() => {
-    const allowed = portalRoles(resolveLoginPortal());
-    const isAllowed = (id: string | null) => allowed.some((r) => r.id === id);
-
-    const fromQuery = params.get("role") as LoginRoleId | null;
-    if (fromQuery && isAllowed(fromQuery)) return fromQuery;
-
-    // A stored role from another portal must not leak in — someone who last
-    // signed in as Super Admin on admin.* should still land on Student at exam.*
-    const stored = readStoredLoginRole();
-    if (isAllowed(stored)) return stored;
-
-    return allowed[0].id;
-  });
 
   const {
     register,
@@ -74,14 +56,6 @@ export default function LoginPage() {
     setFocus("identifier");
   }, [setFocus]);
 
-  useEffect(() => {
-    storeLoginRole(role);
-  }, [role]);
-
-  const activeRole = useMemo(
-    () => availableRoles.find((r) => r.id === role) ?? availableRoles[0],
-    [role, availableRoles]
-  );
 
   const onSubmit = async (form: LoginForm) => {
     setLoading(true);
@@ -110,15 +84,19 @@ export default function LoginPage() {
         return;
       }
 
+      // The account's real role decides where it lands. Flag only the case
+      // where someone signed in at a portal that isn't theirs — they still
+      // get in, but the redirect would otherwise look like a bug.
       const userRole = String(result.user?.role || "").toLowerCase();
+      const expected = portalExpectedRoles(portal);
       if (
-        activeRole.expectedRoles.length &&
-        !activeRole.expectedRoles.some((r) => userRole.includes(r) || r === userRole)
+        expected.length &&
+        userRole &&
+        !expected.some((r: string) => userRole.includes(r) || r === userRole)
       ) {
-        toast(
-          `Signed in as ${userRole.replace(/_/g, " ")}. Opening your portal…`,
-          { icon: "ℹ️" }
-        );
+        toast(`Signed in as ${userRole.replace(/_/g, " ")}. Opening your portal…`, {
+          icon: "ℹ️",
+        });
       }
 
       setTimeout(() => {
@@ -176,53 +154,8 @@ export default function LoginPage() {
           Welcome back
         </h2>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {availableRoles.length === 1 ? (
-            portal.tagline ?? activeRole.hint
-          ) : (
-            <>
-              Sign in as{" "}
-              <span className="font-semibold text-slate-700 dark:text-slate-200">
-                {activeRole.label}
-              </span>
-              {" — "}
-              {activeRole.hint}
-            </>
-          )}
+          {portal.tagline ?? "Sign in to continue."}
         </p>
-      </div>
-
-      {/* Role selector — wraps to as many rows as needed so every role stays
-          visible. The previous horizontal-scroll strip clipped the first tab
-          mid-word and hid roles behind a scrollbar. */}
-      {/* Hidden entirely on single-role portals (e.g. exam.* = Student only):
-          a selector with one option is pure friction. */}
-      <div
-        role="tablist"
-        aria-label="Login role"
-        className={cn(
-          "mb-5 grid gap-1.5",
-          availableRoles.length === 1 && "hidden",
-          availableRoles.length === 2 ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"
-        )}
-      >
-        {availableRoles.map((r) => (
-          <button
-            key={r.id}
-            type="button"
-            role="tab"
-            aria-selected={role === r.id}
-            onClick={() => setRole(r.id)}
-            className={cn(
-              "rounded-lg border px-2 py-2 text-xs font-semibold transition",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
-              role === r.id
-                ? "border-primary-500 bg-primary-50 text-primary-700 dark:border-primary-400 dark:bg-primary-950/50 dark:text-primary-300"
-                : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
-            )}
-          >
-            {r.label}
-          </button>
-        ))}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">

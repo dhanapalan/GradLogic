@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Link } from "react-router-dom";
 import { ArrowRight, Building2, GraduationCap } from "lucide-react";
 import { PORTAL_CARDS } from "./constants";
+import { portalLoginUrl } from "../../auth/login/loginPortals";
 
 const ICONS = {
   student: GraduationCap,
@@ -71,8 +71,10 @@ export function PortalsSection() {
                   ))}
                 </ul>
 
-                <Link
-                  to={card.href}
+                {/* A plain anchor, not <Link>: each portal is a different
+                    origin, so this is a real navigation, not a client route. */}
+                <a
+                  href={portalLoginUrl(card.portal)}
                   className="mt-6 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-slate-800 transition group-hover:border-primary-600 group-hover:bg-primary-600 group-hover:text-white dark:border-slate-700 dark:text-slate-100"
                 >
                   {card.cta}
@@ -80,7 +82,7 @@ export function PortalsSection() {
                     className="h-4 w-4 transition group-hover:translate-x-0.5"
                     aria-hidden
                   />
-                </Link>
+                </a>
               </motion.div>
             );
           })}

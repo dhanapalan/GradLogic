@@ -30,7 +30,7 @@ export const PORTAL_CARDS = [
       "Placement readiness score",
     ],
     cta: "Student login",
-    href: "/auth/login?role=student",
+    portal: "exam",
   },
   {
     id: "college",
@@ -43,7 +43,7 @@ export const PORTAL_CARDS = [
       "Analytics & reports",
     ],
     cta: "College login",
-    href: "/auth/login?role=college",
+    portal: "campus",
   },
 ] as const;
 
