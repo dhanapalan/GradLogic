@@ -1,0 +1,46 @@
+# =============================================================================
+# AI Question Bank Engine — RAG + question generation (FastAPI, port 8001)
+# =============================================================================
+# Separate image from ai-engine on purpose: this service needs the heavy RAG
+# stack (torch via sentence-transformers, chromadb, langchain) that the main
+# engine has no use for. Bundling them would add GBs to every ai-engine build.
+#
+# Build context is ./ai-engine (same as ai-engine), so question_bank_engine/
+# is a subdirectory here.
+# =============================================================================
+
+FROM python:3.12-slim AS builder
+WORKDIR /app
+
+# build-essential is needed by a few wheels that lack prebuilt aarch64/musl
+# variants; dropped from the runtime stage below.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY question_bank_engine/requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+FROM python:3.12-slim
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
+COPY question_bank_engine/ ./question_bank_engine/
+
+# Writable dirs for ChromaDB + the embedding-model cache. Both are mounted as
+# volumes in compose — without them the ~90MB model re-downloads every restart.
+RUN mkdir -p /app/question_bank_engine/data /app/question_bank_engine/logs
+
+EXPOSE 8001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=180s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+# start-period is long: first boot downloads the sentence-transformers model
+# before the app can serve, and marking it unhealthy mid-download would loop.
+
+CMD ["uvicorn", "question_bank_engine.api:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "1"]

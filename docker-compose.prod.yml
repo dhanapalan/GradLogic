@@ -124,6 +124,41 @@ services:
     networks:
       - talentsecure
 
+  # ── AI Question Bank Engine (RAG + question generation) ────────────────────
+  # Opt-in — only starts when you pass --profile question-bank:
+  #   docker compose --profile question-bank up -d
+  # Kept behind a profile because the image carries the full torch/RAG stack
+  # (multi-GB) and the first boot downloads the embedding model.
+  question-bank:
+    profiles: ["question-bank"]
+    build:
+      context: ./ai-engine
+      dockerfile: ../docker/Dockerfile.question-bank
+    container_name: talentsecure-question-bank
+    env_file:
+      - ./ai-engine/question_bank_engine/.env
+    environment:
+      # Explicit overrides win over env_file — these must reflect container
+      # networking, not the host-venv values the .env was written for.
+      ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 8001
+      API_RELOAD: "false"
+      EMBEDDING_CACHE: /app/question_bank_engine/data/embeddings
+      REDIS_URL: ${REDIS_URL}
+    volumes:
+      - questionbankdata:/app/question_bank_engine/data
+    # Bound to loopback: reached by the api container over the compose network,
+    # never directly from the internet.
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - talentsecure
+
   # ── Judge0 CE (Code Execution Sandbox) ─────────────────────────────────────
   # Opt-in — only starts when you pass --profile judge0:
   #   docker compose --profile judge0 up
@@ -200,6 +235,12 @@ volumes:
   miniodata:
     external: true
     name: talentsecure-ai_miniodata
+
+  # Not external: this one is new, so let compose create it on first up.
+  # Holds the ChromaDB index and the cached embedding model (~90MB+), both of
+  # which are expensive to rebuild/redownload on every restart.
+  questionbankdata:
+    name: talentsecure-ai_questionbankdata
 
   judge0pgdata:
     external: true
