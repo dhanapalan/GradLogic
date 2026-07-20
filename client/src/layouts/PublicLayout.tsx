@@ -85,10 +85,10 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
               Login
             </Link>
             <Link
-              to="/auth/register"
+              to="/contact"
               className="hidden rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 sm:inline-flex"
             >
-              Register
+              Request access
             </Link>
             <button
               type="button"
@@ -128,10 +128,10 @@ export default function PublicLayout({ children }: { children?: ReactNode }) {
                 Login
               </Link>
               <Link
-                to="/auth/register"
+                to="/contact"
                 className="flex-1 rounded-xl bg-primary-600 py-2.5 text-center text-sm font-semibold text-white"
               >
-                Register
+                Request access
               </Link>
             </div>
           </div>

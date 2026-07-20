@@ -60,7 +60,7 @@ export function HeroSection() {
             transition={{ delay: 0.15 }}
           >
             <Link
-              to="/auth/register"
+              to="/contact"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition hover:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2"
             >
               Get Started

@@ -17,7 +17,7 @@ const TIERS = [
             "Basic analytics",
         ],
         cta: "Get Started",
-        href: "/auth/register",
+        href: "/contact",
         highlight: false,
     },
     {
