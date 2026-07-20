@@ -22,7 +22,7 @@ import {
   storeLoginRole,
   type LoginRoleId,
 } from "./login/loginRoles";
-import { portalRoles, resolveLoginPortal } from "./login/loginPortals";
+import { isUnknownPortal, portalRoles, resolveLoginPortal } from "./login/loginPortals";
 
 type LoginForm = {
   identifier: string;
@@ -141,6 +141,28 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // An unrecognised host gets no sign-in form at all — not a form that fails
+  // on submit. Nothing here reveals which portals exist.
+  if (isUnknownPortal(portal)) {
+    return (
+      <div className="animate-in fade-in duration-500 text-center">
+        <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+          Portal not found
+        </h2>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          This address isn&apos;t a recognised GradLogic portal. Please use the
+          link your college or administrator provided.
+        </p>
+        <a
+          href="https://gradlogic.atherasys.com"
+          className="mt-5 inline-block rounded-xl bg-primary-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-700"
+        >
+          Go to GradLogic
+        </a>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -319,15 +341,12 @@ export default function LoginPage() {
         Encrypted connection · MFA-ready · Account lockout protection
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
-        <p>
-          New to GradLogic?{" "}
-          <Link to="/auth/register" className="font-bold text-primary-600 hover:underline dark:text-primary-400">
-            Register
-          </Link>
-        </p>
+      {/* Self-service registration removed: accounts are provisioned by the
+          college or platform admin, so a public "Register" link only led users
+          into a flow they are not permitted to complete. */}
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
         <Link to="/contact" className="font-semibold hover:text-slate-800 dark:hover:text-slate-200">
-          Need help?
+          Need help signing in?
         </Link>
       </div>
     </div>

@@ -56,17 +56,57 @@ const PORTALS: Array<{ prefix: string; portal: LoginPortal }> = [
   },
 ];
 
-/** Main domain and local dev: every role, unchanged from today's behaviour. */
+/** Main domain and local dev: every role. */
 const DEFAULT_PORTAL: LoginPortal = {
   id: "main",
   name: null,
   roles: ALL_ROLES,
 };
 
+/**
+ * Returned for a hostname that is neither the apex domain nor a known portal
+ * subdomain. Rendering a working sign-in form on an arbitrary subdomain would
+ * expose the full role list on any host that happens to point at this app.
+ */
+const UNKNOWN_PORTAL: LoginPortal = {
+  id: "unknown",
+  name: null,
+  roles: [],
+};
+
+/**
+ * Hosts that legitimately serve the all-roles login.
+ *
+ * Listed explicitly rather than inferred from label count: the production
+ * apex is gradlogic.atherasys.com, which has three labels and would be
+ * indistinguishable from an arbitrary subdomain by counting alone.
+ */
+const MAIN_HOSTS = new Set([
+  "gradlogic.atherasys.com",
+  "www.gradlogic.atherasys.com",
+  "localhost",
+  "127.0.0.1",
+]);
+
+function isMainHost(host: string): boolean {
+  if (MAIN_HOSTS.has(host)) return true;
+  // *.localhost keeps subdomain testing working in development.
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  // Bare IPv4 — direct-to-server access during deployment checks.
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
+}
+
 export function resolveLoginPortal(hostname?: string): LoginPortal {
   const host = (hostname ?? window.location.hostname).toLowerCase();
+
   const match = PORTALS.find((p) => host.startsWith(p.prefix));
-  return match ? match.portal : DEFAULT_PORTAL;
+  if (match) return match.portal;
+
+  return isMainHost(host) ? DEFAULT_PORTAL : UNKNOWN_PORTAL;
+}
+
+export function isUnknownPortal(portal: LoginPortal): boolean {
+  return portal.id === "unknown";
 }
 
 /**
