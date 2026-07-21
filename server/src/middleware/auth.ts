@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { env } from "../config/env.js";
 import { AppError } from "./errorHandler.js";
 import { AuthPayload, UserRole } from "../types/index.js";
@@ -101,13 +102,21 @@ export const authorize = (...roles: UserRole[]) => {
  * Verify AI Engine service API key (x-api-key header).
  * Used for machine-to-machine calls from the AI engine.
  */
+/** Constant-time string compare — avoids leaking the key via response timing. */
+const timingSafeEqualStr = (a: string, b: string): boolean => {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+};
+
 export const authenticateService = (
   req: Request,
   _res: Response,
   next: NextFunction,
 ): void => {
   const apiKey = req.headers["x-api-key"] as string;
-  if (!apiKey || apiKey !== env.AI_ENGINE_API_KEY) {
+  if (!apiKey || !timingSafeEqualStr(apiKey, env.AI_ENGINE_API_KEY)) {
     return next(new AppError("Invalid service API key", 401));
   }
   next();

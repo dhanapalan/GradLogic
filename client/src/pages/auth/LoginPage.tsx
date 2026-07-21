@@ -180,7 +180,7 @@ export default function LoginPage() {
                 "focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-slate-950 dark:text-white dark:border-slate-700",
                 errors.identifier ? "border-rose-300 ring-1 ring-rose-300" : "border-slate-200"
               )}
-              placeholder="you@college.edu or STU12345"
+              placeholder="you@college.edu or your Student ID"
               aria-invalid={Boolean(errors.identifier)}
               aria-describedby={errors.identifier ? "identifier-error" : undefined}
             />

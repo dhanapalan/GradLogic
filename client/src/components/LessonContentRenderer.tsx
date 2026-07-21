@@ -11,6 +11,7 @@
 // =============================================================================
 
 import { useRef, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { FileText, Code2, Video, Mic, Calendar, ExternalLink, BookOpen } from "lucide-react";
 
 interface Props {
@@ -295,16 +296,19 @@ function TextContent({ text, contentUrl }: { text?: string | null; contentUrl?: 
       {text ? (
         <div className="prose prose-slate max-w-none">
           {isHTML ? (
-            /* Render raw HTML (sanitise in production with DOMPurify) */
+            /* Raw HTML content — sanitised with DOMPurify to strip <script>,
+               event handlers, and other XSS vectors before render. */
             <div
               className="text-sm text-slate-700 leading-relaxed space-y-3"
-              dangerouslySetInnerHTML={{ __html: text }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(text) }}
             />
           ) : (
-            /* Markdown / plain text — converted with the escaped-input renderer above */
+            /* Markdown / plain text. Input is HTML-escaped, but the markdown
+               link rule still emits <a href> from the raw URL, so a
+               javascript: URI would survive escaping — DOMPurify strips it. */
             <div
               className="text-sm text-slate-700 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: markdownToHtml(text!) }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(markdownToHtml(text!)) }}
             />
           )}
         </div>

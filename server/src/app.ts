@@ -151,6 +151,14 @@ if (!env.DISABLE_RATE_LIMIT) {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Body-parser JSON syntax errors surface as 500 by default; return a clean 400.
+app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && typeof err === "object" && (err as { type?: string }).type === "entity.parse.failed") {
+    return res.status(400).json({ success: false, error: "Malformed JSON in request body" });
+  }
+  next(err);
+});
+
 // ── Logging ──────────────────────────────────────────────────────────────────
 if (env.NODE_ENV !== "test") {
   app.use(morgan("short"));
