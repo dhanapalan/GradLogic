@@ -8,6 +8,7 @@
 #   ./deploy.sh api            # only rebuild/restart the API
 #   ./deploy.sh client         # only rebuild/restart the client (nginx)
 #   ./deploy.sh ai-engine      # only rebuild/restart the AI engine
+#   ./deploy.sh question-bank  # only build/restart the AI question-bank engine (:8001)
 #   ./deploy.sh migrate        # only apply pending DB migrations
 #
 # Overridable via environment:
@@ -15,6 +16,10 @@
 #   HEALTH_URL=http://127.0.0.1:5050/api/health
 #   NO_PULL=1                  # skip 'git pull' (deploy current working tree)
 #   PROFILE=judge0             # also start the opt-in judge0 sandbox
+#   PROFILE=question-bank      # include the question-bank engine in an 'all' deploy
+#                              # (it is opt-in: the image is multi-GB and first boot
+#                              #  downloads the embedding model). Needed on 'all' so
+#                              #  --remove-orphans doesn't stop a running instance.
 # =============================================================================
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -27,6 +32,16 @@ DB_CONTAINER="talentsecure-postgres"
 
 COMPOSE="docker compose -f $COMPOSE_FILE"
 [ -n "${PROFILE:-}" ] && COMPOSE="$COMPOSE --profile $PROFILE"
+
+# The question-bank engine is an opt-in profiled service. When it's the target,
+# auto-enable its profile so compose can see the service (otherwise it reports
+# "no such service: question-bank").
+if [ "$TARGET" = "question-bank" ]; then
+  case " $COMPOSE " in
+    *" --profile question-bank "*) ;;
+    *) COMPOSE="$COMPOSE --profile question-bank" ;;
+  esac
+fi
 
 log()  { echo -e "\n\033[1;36m==>\033[0m $*"; }
 ok()   { echo -e "  \033[1;32m✓\033[0m $*"; }
@@ -81,13 +96,13 @@ fi
 if [ "$TARGET" = "all" ]; then
   log "Building images…"; $COMPOSE build
   log "Starting all services…"; $COMPOSE up -d --remove-orphans
-elif [ "$TARGET" = "api" ] || [ "$TARGET" = "client" ] || [ "$TARGET" = "ai-engine" ]; then
+elif [ "$TARGET" = "api" ] || [ "$TARGET" = "client" ] || [ "$TARGET" = "ai-engine" ] || [ "$TARGET" = "question-bank" ]; then
   log "Building $TARGET…"; $COMPOSE build "$TARGET"
   log "Restarting $TARGET…"; $COMPOSE up -d "$TARGET"
 elif [ "$TARGET" = "migrate" ]; then
   : # handled below
 else
-  die "Unknown target '$TARGET' (use: all | api | client | ai-engine | migrate)"
+  die "Unknown target '$TARGET' (use: all | api | client | ai-engine | question-bank | migrate)"
 fi
 
 # ── 4. Apply DB migrations (idempotent) ──────────────────────────────────────
@@ -134,6 +149,22 @@ if [ "$TARGET" = "all" ] || [ "$TARGET" = "api" ]; then
       warn "API health check failed (last status: $code) — recent logs:"
       $COMPOSE logs --tail 40 api || true
       die "deploy finished but API is not healthy"
+    fi
+  done
+fi
+
+# ── 5b. Question-bank health check ───────────────────────────────────────────
+# Its first boot downloads the sentence-transformers model, so allow longer and
+# only warn (never die) if it's still starting.
+if [ "$TARGET" = "question-bank" ]; then
+  QB_HEALTH="http://127.0.0.1:8001/health"
+  log "Waiting for question-bank health ($QB_HEALTH)…"
+  for i in $(seq 1 60); do
+    code=$(curl -s -o /dev/null -w '%{http_code}' "$QB_HEALTH" || echo 000)
+    if [ "$code" = "200" ]; then ok "question-bank healthy"; break; fi
+    sleep 3
+    if [ "$i" = "60" ]; then
+      warn "question-bank not healthy yet (last status: $code) — first boot downloads the embedding model and can take minutes. Check: $COMPOSE logs --tail 40 question-bank"
     fi
   done
 fi

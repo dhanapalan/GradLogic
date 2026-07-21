@@ -33,3 +33,14 @@ _*.txt
 _*.sql
 *_output.txt
 test-results/
+
+# Python virtualenvs (any location — the question-bank engine keeps one)
+venv/
+
+# Vercel local project link/config (client deploys via Vercel)
+.vercel/
+
+# Editor swap/backup files (e.g. vim's ..env.swp seen on the server)
+*.swp
+*.swo
+*~
