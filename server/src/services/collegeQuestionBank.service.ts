@@ -850,7 +850,6 @@ export async function importQuestionsFromExcel(
           marks,
           correct_answer,
           status: "draft",
-          force: true,
           options:
             qType === "short_answer"
               ? []

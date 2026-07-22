@@ -14,6 +14,7 @@ const COLLEGE_ROLES = new Set(["college_admin", "college", "college_staff"]);
  * no Campus Portal and keep using these pages unchanged.
  */
 const STUDENT_ROUTE_REDIRECTS: { match: RegExp; to: (pathname: string) => string }[] = [
+  { match: /^\/app\/students\/bulk-import$/, to: () => "/app/college-portal/students" },
   { match: /^\/app\/students\/[^/]+\/edit$/, to: (p) => p.replace(/^\/app\/students\/([^/]+)\/edit$/, "/app/college-portal/students/$1") },
   { match: /^\/app\/students\/[^/]+$/, to: (p) => p.replace(/^\/app\/students\//, "/app/college-portal/students/") },
   { match: /^\/app\/students$/, to: () => "/app/college-portal/students" },

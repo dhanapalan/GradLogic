@@ -894,11 +894,42 @@ export default function CollegePortalQuestionBankPage() {
               />
             </div>
             {importResult && (
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Stat label="Total" value={importResult.summary.total} />
-                <Stat label="Successful" value={importResult.summary.successful} tone="success" />
-                <Stat label="Failed" value={importResult.summary.failed} tone="danger" />
-                <Stat label="Skipped" value={importResult.summary.skipped} />
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Stat label="Total" value={importResult.summary.total} />
+                  <Stat label="Successful" value={importResult.summary.successful} tone="success" />
+                  <Stat label="Failed" value={importResult.summary.failed} tone="danger" />
+                  <Stat label="Skipped" value={importResult.summary.skipped} />
+                </div>
+                {(importResult.failed.length > 0 || importResult.skipped.length > 0) && (
+                  <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold text-gray-600">Row</th>
+                          <th className="px-3 py-2 font-semibold text-gray-600">Status</th>
+                          <th className="px-3 py-2 font-semibold text-gray-600">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {importResult.failed.map((f) => (
+                          <tr key={`failed-${f.row}`}>
+                            <td className="px-3 py-2 text-gray-700">{f.row}</td>
+                            <td className="px-3 py-2 font-medium text-rose-700">Failed</td>
+                            <td className="px-3 py-2 text-gray-600">{f.error}</td>
+                          </tr>
+                        ))}
+                        {importResult.skipped.map((s) => (
+                          <tr key={`skipped-${s.row}`}>
+                            <td className="px-3 py-2 text-gray-700">{s.row}</td>
+                            <td className="px-3 py-2 font-medium text-amber-700">Skipped</td>
+                            <td className="px-3 py-2 text-gray-600">{s.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
