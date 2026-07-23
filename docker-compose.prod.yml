@@ -78,6 +78,11 @@ services:
       NODE_ENV: production
       PORT: "5050"
       DISABLE_RATE_LIMIT: "false"
+      # Reach the question-bank engine over the compose network by service name.
+      # The code default is host.docker.internal:8001, a dev address that does not
+      # resolve here -- and the engine is bound to loopback, so the host port is
+      # unreachable from inside a container anyway. Both share the talentsecure net.
+      QUESTION_ENGINE_URL: http://question-bank:8001
     ports:
       - "127.0.0.1:5050:5050"
     depends_on:
