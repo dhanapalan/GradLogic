@@ -6,6 +6,7 @@ Retrieval-Augmented Generation for intelligent question generation.
 
 import logging
 import json
+import re
 from typing import List, Dict, Optional
 
 from langchain_groq import ChatGroq
@@ -124,38 +125,151 @@ class QuestionGenerator(RAGEngine):
             context = ""
 
         questions = []
+        rejections = []
+        verify = config.question.verify_answers
+        attempts_allowed = max(1, config.question.verify_max_attempts) if verify else 1
 
         for i in range(count):
-            prompt = self._build_question_prompt(
-                topic=topic,
-                difficulty=difficulty,
-                question_type=question_type,
-                context=context,
-                question_number=i + 1,
-            )
-
-            # Steer away from repeats: show the LLM what it already produced
-            if questions:
-                previous = "\n".join(f"- {q.get('question', '')}" for q in questions)
-                prompt += (
-                    f"\n\nIMPORTANT: You already generated these questions — "
-                    f"create one that tests a DIFFERENT concept or scenario:\n{previous}"
+            # Each question gets several shots: a rejected draft is retried rather
+            # than silently dropped, so `count` still means what the caller asked.
+            for attempt in range(1, attempts_allowed + 1):
+                prompt = self._build_question_prompt(
+                    topic=topic,
+                    difficulty=difficulty,
+                    question_type=question_type,
+                    context=context,
+                    question_number=i + 1,
                 )
 
-            try:
-                response = self.llm.invoke([HumanMessage(content=prompt)])
-                question = self._parse_question_response(response.content, question_type)
+                # Steer away from repeats: show the LLM what it already produced
+                if questions:
+                    previous = "\n".join(f"- {q.get('question', '')}" for q in questions)
+                    prompt += (
+                        f"\n\nIMPORTANT: You already generated these questions — "
+                        f"create one that tests a DIFFERENT concept or scenario:\n{previous}"
+                    )
 
-                if question:
-                    questions.append(question)
-                    self.logger.info(f"Generated question {i + 1}/{count}")
-                else:
+                try:
+                    response = self.llm.invoke([HumanMessage(content=prompt)])
+                    question = self._parse_question_response(response.content, question_type)
+                except Exception as e:
+                    self.logger.error(f"Error generating question {i + 1}: {e}")
+                    rejections.append(f"q{i + 1} attempt {attempt}: {e}")
+                    continue
+
+                if not question:
                     self.logger.warning(f"Failed to parse question {i + 1}")
+                    rejections.append(f"q{i + 1} attempt {attempt}: unparseable response")
+                    continue
 
-            except Exception as e:
-                self.logger.error(f"Error generating question {i + 1}: {e}")
+                reason = self._check_structure(question, question_type)
+                if reason is None and verify:
+                    reason = self._verify_answer(question, question_type)
 
+                if reason:
+                    self.logger.warning(
+                        f"Rejected question {i + 1} "
+                        f"(attempt {attempt}/{attempts_allowed}): {reason}"
+                    )
+                    rejections.append(f"q{i + 1} attempt {attempt}: {reason}")
+                    continue
+
+                question["verified"] = verify
+                questions.append(question)
+                self.logger.info(f"Generated question {i + 1}/{count}")
+                break
+
+        # Read by the engine layer: a caller receiving fewer questions than it
+        # asked for needs to know whether that was a config fault or a quality one.
+        self.last_run_rejections = rejections
         return questions
+
+
+    # ── Self-verification ──────────────────────────────────────────────────
+    # The generator regularly emits a correct_answer that contradicts its own
+    # explanation, or that is not among the options at all. Neither is visible
+    # to JSON parsing, so check structure first, then re-solve independently.
+
+    @staticmethod
+    def _norm(value) -> str:
+        """Loose comparison key: case, spacing and punctuation carry no meaning."""
+        return re.sub(r"[^a-z0-9.]", "", str(value).lower())
+
+    def _check_structure(self, question: Dict, question_type: str) -> Optional[str]:
+        """Cheap structural checks. Returns a rejection reason, or None if sound."""
+        text = (question.get("question") or "").strip()
+        answer = str(question.get("correct_answer") or "").strip()
+
+        if not text:
+            return "empty question text"
+        if not answer:
+            return "no correct_answer"
+
+        if question_type == "multiple_choice":
+            options = question.get("options") or []
+            if len(options) < 2:
+                return "only %d option(s)" % len(options)
+            keys = [self._norm(o) for o in options]
+            if len(set(keys)) != len(keys):
+                return "duplicate options"
+            if self._norm(answer) not in keys:
+                return "correct_answer %r is not among the options" % answer
+
+        return None
+
+    def _verify_answer(self, question: Dict, question_type: str) -> Optional[str]:
+        """Re-solve the question blind. Returns a rejection reason, or None if it agrees."""
+        text = question["question"]
+        claimed = str(question.get("correct_answer", "")).strip()
+        options = question.get("options") or []
+
+        if question_type == "multiple_choice" and options:
+            listed = "\n".join(
+                "%s. %s" % (chr(65 + i), o) for i, o in enumerate(options)
+            )
+            prompt = (
+                "Solve this problem from scratch. Work through the arithmetic step "
+                "by step, then choose the single best option.\n\n"
+                "Question: %s\n\nOptions:\n%s\n\n"
+                "Reply with JSON only, no prose: "
+                '{"working": "<your step-by-step calculation>", '
+                '"answer": "<exact text of the option you chose>"}' % (text, listed)
+            )
+        else:
+            prompt = (
+                "Answer this question from scratch. Work through it step by step.\n\n"
+                "Question: %s\n\n"
+                "Reply with JSON only, no prose: "
+                '{"working": "<your reasoning>", "answer": "<your final answer>"}' % text
+            )
+
+        try:
+            # Deliberately withholds the claimed answer and explanation -- showing
+            # them invites the model to agree rather than re-derive.
+            response = self.llm.invoke([HumanMessage(content=prompt)])
+            start = response.content.find("{")
+            end = response.content.rfind("}") + 1
+            if start == -1 or end <= start:
+                # Unparseable verifier output is not evidence of a bad question.
+                return None
+            verdict = json.loads(response.content[start:end], strict=False)
+        except Exception as e:
+            self.logger.warning("Verification call failed, accepting unverified: %s" % e)
+            return None
+
+        got = str(verdict.get("answer", "")).strip()
+        if not got:
+            return None
+        if self._norm(got) == self._norm(claimed):
+            return None
+
+        # Tolerate the verifier replying "B" where option text was expected.
+        if question_type == "multiple_choice" and len(got) == 1 and got.upper().isalpha():
+            idx = ord(got.upper()) - 65
+            if 0 <= idx < len(options) and self._norm(options[idx]) == self._norm(claimed):
+                return None
+
+        return "verifier answered %r but the question claims %r" % (got, claimed)
 
     def _build_question_prompt(
         self,
