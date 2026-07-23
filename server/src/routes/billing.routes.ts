@@ -823,4 +823,77 @@ router.post(
   }
 );
 
+// ── Webhook ──────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/billing/webhook/stripe
+ * Handle Stripe webhook events for async payment confirmation
+ * Verifies signature and processes payment_intent.succeeded, payment_intent.payment_failed, etc.
+ */
+router.post(
+  "/webhook/stripe",
+  async (req, res, next) => {
+    try {
+      // Import dynamically to avoid requiring Stripe in non-payment environments
+      const stripeService = await import("../services/stripe.service.js").then(m => m.default || m);
+
+      const signature = req.headers["stripe-signature"] as string;
+      if (!signature) {
+        return res.status(400).json({ success: false, error: "Missing Stripe signature" });
+      }
+
+      const result = await stripeService.handleWebhook(req.body, signature);
+      if (!result.processed) {
+        return res.status(400).json({ success: false, error: "Webhook processing failed" });
+      }
+
+      res.json({ success: true, message: "Webhook processed", eventId: result.eventId });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * PUT /api/billing/invoices/:id/download
+ * Generate and download invoice as PDF
+ */
+router.put(
+  "/invoices/:id/download",
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const invoicePdfService = await import("../services/invoicePdf.service.js");
+
+      const user = (req as any).user;
+      const invoiceId = req.params.id;
+
+      // Fetch invoice to verify access
+      const invoice = await queryOne(
+        `SELECT i.* FROM invoices i
+         WHERE i.id = $1 AND i.college_id = $2`,
+        [invoiceId, user.college_id]
+      );
+
+      if (!invoice) {
+        return res.status(404).json({ success: false, error: "Invoice not found or access denied" });
+      }
+
+      // Generate PDF
+      const pdfDoc = await invoicePdfService.generateInvoiceFromDb(invoiceId, user.college_id);
+      if (!pdfDoc) {
+        return res.status(500).json({ success: false, error: "Failed to generate invoice PDF" });
+      }
+
+      // Send PDF
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="invoice-${invoice.invoice_number}.pdf"`);
+      pdfDoc.pipe(res);
+      pdfDoc.end();
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;
