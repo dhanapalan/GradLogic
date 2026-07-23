@@ -54,7 +54,6 @@ const BOTTOM_TABS: {
     icon: ClipboardList,
     matchPrefixes: ["/my-assessments", "/results", "/assessments"],
   },
-  { name: "Coach", href: `${BASE}/placement-coach`, icon: Sparkles, matchPrefixes: ["/placement-coach"] },
 ];
 
 function hrefFeatureKey(href: string): PlatformFeatureKey | null {
@@ -85,10 +84,6 @@ const NAV_GROUPS: {
       { name: "My Assessments", href: `${BASE}/my-assessments`, icon: ClipboardList },
       { name: "Results", href: `${BASE}/results`, icon: BarChart3 },
     ],
-  },
-  {
-    label: "AI",
-    items: [{ name: "AI Coach", href: `${BASE}/placement-coach`, icon: Sparkles }],
   },
   {
     label: "Account",

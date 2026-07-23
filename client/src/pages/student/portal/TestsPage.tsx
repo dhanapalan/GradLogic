@@ -205,22 +205,6 @@ export default function TestsPage() {
           <Empty icon={Trophy} title="No attempts yet" sub="Your completed exams will appear here." />
         ) : (
           <div className="space-y-4">
-            {mockPast.length > 0 && (
-              <div className="rounded-2xl border border-violet-100 bg-violet-50/50 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-violet-900">
-                  <Sparkles className="h-4 w-4 inline mr-1.5 text-violet-600" />
-                  {mockPast.length} mock attempt{mockPast.length === 1 ? "" : "s"} feed your Placement Score.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => navigate(`${BASE}/placement-coach`)}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-violet-700 hover:underline"
-                >
-                  <Target className="h-3.5 w-3.5" />
-                  Placement Coach &amp; AI tips
-                </button>
-              </div>
-            )}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <table className="w-full text-left">
                 <thead>

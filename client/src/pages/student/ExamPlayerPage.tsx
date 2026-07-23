@@ -444,15 +444,6 @@ export default function ExamPlayerPage() {
                         >
                             Results &amp; Evaluation
                         </button>
-                        {session.drive_type === "mock_test" && (
-                            <button
-                                type="button"
-                                onClick={() => navigate("/app/student-portal/placement-coach")}
-                                className="w-full py-3.5 bg-violet-600 text-white rounded-2xl font-black hover:bg-violet-700 transition-all"
-                            >
-                                View Placement Score &amp; AI tips
-                            </button>
-                        )}
                         <button
                             type="button"
                             onClick={() => navigate("/app/student-portal/tests")}

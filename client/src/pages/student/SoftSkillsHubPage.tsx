@@ -148,17 +148,6 @@ export default function SoftSkillsHubPage() {
       {/* Quick actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Link
-          to="/app/student-portal/mock-interview"
-          className="group bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl p-6 text-white hover:shadow-lg transition-shadow"
-        >
-          <MicrophoneIcon className="h-8 w-8 mb-3 opacity-90" />
-          <h3 className="text-lg font-bold">AI Mock Interview</h3>
-          <p className="text-sm text-indigo-100 mt-1">
-            Practice a real voice interview with AI and get scored feedback on communication and confidence.
-          </p>
-          <span className="inline-block mt-3 text-sm font-bold group-hover:underline">Start practicing →</span>
-        </Link>
-        <Link
           to="/app/learn"
           className="group bg-white rounded-xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
         >

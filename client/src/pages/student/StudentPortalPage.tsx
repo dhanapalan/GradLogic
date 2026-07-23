@@ -22,8 +22,6 @@ import {
   GraduationCap,
   Zap,
   TrendingUp,
-  Target,
-  Mic,
   ChevronRight,
   Wallet,
 } from "lucide-react";
@@ -239,29 +237,8 @@ export default function StudentPortalPage() {
           {/* Daily target (set by your college) */}
           <DailyTargetCard />
 
-          {/* Two-zone entry: Career Prep + Learning Portal */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Career Prep zone */}
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-2xl p-5 text-white">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Target className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="font-black text-sm">Career Prep</p>
-                  <p className="text-indigo-200 text-xs">Drives, mock interviews, practice</p>
-                </div>
-              </div>
-              <p className="text-indigo-200 text-xs leading-relaxed mb-4">
-                Take placement drives, practice with AI mock interviews, and track your hiring journey.
-              </p>
-              <Link to="/app/student-portal?tab=exams" className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
-                Go to drives <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            {/* Learning zone */}
-            <Link to="/app/learn" className="block bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white hover:opacity-95 transition-opacity group">
+          {/* Learning Portal */}
+          <Link to="/app/learn" className="block bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white hover:opacity-95 transition-opacity group">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
                   <GraduationCap className="h-5 w-5 text-white" />
@@ -272,13 +249,12 @@ export default function StudentPortalPage() {
                 </div>
               </div>
               <p className="text-emerald-100 text-xs leading-relaxed mb-4">
-                Upskill with courses recommended from your mock interview feedback. Earn certificates on completion.
+                Upskill with courses and programs. Earn certificates on completion.
               </p>
               <span className="inline-flex items-center gap-1.5 bg-white/20 group-hover:bg-white/30 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
                 Open Learning Portal <ChevronRight className="h-3.5 w-3.5" />
               </span>
             </Link>
-          </div>
 
           {/* Two Column: Upcoming + Academic Info */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -506,28 +482,6 @@ export default function StudentPortalPage() {
               ))}
             </div>
           </div>
-
-          {/* ── Voice AI Interview ── */}
-          <Link
-            to="/app/student-portal/mock-interview"
-            className="block group bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 shadow-md hover:shadow-xl hover:scale-[1.01] transition-all duration-300"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Mic className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-white font-black text-sm">AI Mock Interview</p>
-                  <p className="text-indigo-200 text-xs mt-0.5">Voice interview · instant feedback · course recommendations</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-white/80 group-hover:text-white group-hover:translate-x-1 transition-all">
-                <span className="text-xs font-bold hidden sm:block">Start now</span>
-                <ChevronRight className="h-5 w-5" />
-              </div>
-            </div>
-          </Link>
 
           {/* ── Past Results Section ── */}
           {completedDrives.length > 0 && (

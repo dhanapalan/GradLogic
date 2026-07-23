@@ -238,7 +238,6 @@ export default function ResultsAnalyticsPage() {
                 : `${BASE}/practice`,
               icon: Target,
             },
-            { label: "AI Coach", href: `${BASE}/placement-coach`, icon: Sparkles },
             { label: "My Assessments", href: `${BASE}/my-assessments`, icon: TrendingUp },
             { label: "Question Library", href: `${BASE}/question-bank`, icon: Search },
           ].map((a) => (

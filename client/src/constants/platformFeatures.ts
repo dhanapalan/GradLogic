@@ -142,7 +142,6 @@ export const STUDENT_ROUTE_FEATURE_RULES: { prefix: string; feature: PlatformFea
   { prefix: "my-assessments", feature: "tests" },
   { prefix: "results", feature: "tests" },
   { prefix: "question-bank", feature: "question_bank" },
-  { prefix: "placement-coach", feature: "learn" },
   { prefix: "adaptive-learning", feature: "learn" },
   { prefix: "ai-search", feature: "learn" },
   { prefix: "achievements", feature: "gamification" },
@@ -152,7 +151,6 @@ export const STUDENT_ROUTE_FEATURE_RULES: { prefix: string; feature: PlatformFea
   { prefix: "settings", feature: null },
   { prefix: "sessions", feature: null },
   { prefix: "lms", feature: null },
-  { prefix: "mock-interview", feature: "interview_mock" },
   { prefix: "exam", feature: "tests" },
   { prefix: "programs", feature: "learn" },
 ];
@@ -201,7 +199,6 @@ export const STUDENT_NAV_FEATURE_MAP: Record<string, PlatformFeatureKey | null> 
   "question-bank": "question_bank",
   "my-assessments": "tests",
   results: "tests",
-  "placement-coach": "learn",
   notifications: "notifications",
   profile: null,
   settings: null,

@@ -784,7 +784,6 @@ export function QuickActionsWidget() {
     { label: "Continue Learning", href: `${BASE}/my-learning`, icon: BookOpenCheck },
     { label: "Continue Practice", href: `${BASE}/practice`, icon: Target },
     { label: "Upcoming Assessment", href: `${BASE}/my-assessments`, icon: ClipboardCheck },
-    { label: "AI Recommendation", href: `${BASE}/placement-coach`, icon: Sparkles },
   ];
 
   return (

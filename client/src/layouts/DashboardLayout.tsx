@@ -154,7 +154,6 @@ const navigation: NavSection[] = [
       { name: "Exams", href: "/app/student-portal?tab=exams", icon: AcademicCapIcon, roles: ["student"] },
       { name: "Practice Arena", href: "/app/student-portal/practice", icon: PuzzlePieceIcon, roles: ["student"] },
       { name: "Question Bank", href: "/app/student-portal/question-bank", icon: ClipboardDocumentListIcon, roles: ["student"] },
-      { name: "Mock Interview", href: "/app/student-portal/mock-interview", icon: UserCircleIcon, roles: ["student"] },
       { name: "Achievements", href: "/app/student-portal/gamification", icon: TrophyIcon, roles: ["student"] },
     ],
   },

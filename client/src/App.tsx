@@ -178,24 +178,18 @@ const StudentSessionsPage = lazy(() => import("./pages/student/SessionsPage"));
 const PracticePage = lazy(() => import("./pages/student/PracticePage"));
 const VoiceTutorPage = lazy(() => import("./pages/student/VoiceTutorPage"));
 const AdaptiveLearningPage = lazy(() => import("./pages/student/AdaptiveLearningPage"));
-const StudentAiCoachPage = lazy(() => import("./pages/student/portal/ai-coach/AiCoachPage"));
 const AiSearchPage = lazy(() => import("./pages/student/AiSearchPage"));
 const DevelopmentPage = lazy(() => import("./pages/student/DevelopmentPage"));
 const GamificationPage = lazy(() => import("./pages/student/GamificationPage"));
 const MentorDashboardPage = lazy(() => import("./pages/mentor/MentorDashboardPage"));
 const FacultyDashboardPage = lazy(() => import("./pages/faculty/FacultyDashboardPage"));
-const PlacementCellDashboardPage = lazy(() => import("./pages/placement-cell/PlacementCellDashboardPage"));
-const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 
 // ── Learning Portal ───────────────────────────────────────────────────────────
 const LearnHomePage          = lazy(() => import("./pages/learn/LearnHomePage"));
 const LearningPathDetailPage = lazy(() => import("./pages/learn/LearningPathDetailPage"));
 const CertificatePage        = lazy(() => import("./pages/learn/CertificatePage"));
 
-const MockInterviewPage = lazy(() => import("./pages/student/MockInterviewPage"));
 const SoftSkillsHubPage = lazy(() => import("./pages/student/SoftSkillsHubPage"));
-const MockInterviewRoom = lazy(() => import("./pages/student/MockInterviewRoom"));
-const MockInterviewFeedbackPage = lazy(() => import("./pages/student/MockInterviewFeedbackPage"));
 
 const StudentLearningPage = lazy(() => import("./pages/lms/StudentLearningPage"));
 const CourseDetailPage = lazy(() =>
@@ -888,7 +882,6 @@ export default function App() {
               <Route path="practice" element={<PracticePage />} />
               <Route path="voice-tutor/:questionId" element={<VoiceTutorPage />} />
               <Route path="adaptive-learning" element={<AdaptiveLearningPage />} />
-              <Route path="placement-coach" element={<StudentAiCoachPage />} />
               <Route path="ai-search" element={<AiSearchPage />} />
               <Route path="my-assessments" element={<StudentMyAssessmentsPage />} />
               <Route path="my-assessments/:campaignId" element={<StudentAssessmentDetailPage />} />
@@ -918,9 +911,6 @@ export default function App() {
               <Route path="lms/:moduleKey" element={<LmsModulePage portal="student" />} />
               <Route path="soft-skills" element={<SoftSkillsHubPage />} />
               <Route path="development" element={<DevelopmentPage />} />
-              <Route path="mock-interview" element={<MockInterviewPage />} />
-              <Route path="mock-interview/room" element={<MockInterviewRoom />} />
-              <Route path="mock-interview/:sessionId/feedback" element={<MockInterviewFeedbackPage />} />
               <Route path="exam/:driveId/instructions" element={<ExamInstructionsPage />} />
               <Route path="programs/:programId" element={<StudentProgramPage />} />
               <Route path="programs/:programId/modules/:moduleId" element={<ModulePlayerPage />} />
