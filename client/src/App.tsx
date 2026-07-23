@@ -183,6 +183,8 @@ const DevelopmentPage = lazy(() => import("./pages/student/DevelopmentPage"));
 const GamificationPage = lazy(() => import("./pages/student/GamificationPage"));
 const MentorDashboardPage = lazy(() => import("./pages/mentor/MentorDashboardPage"));
 const FacultyDashboardPage = lazy(() => import("./pages/faculty/FacultyDashboardPage"));
+const PlacementCellDashboardPage = lazy(() => import("./pages/placement-cell/PlacementCellDashboardPage"));
+const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 
 // ── Learning Portal ───────────────────────────────────────────────────────────
 const LearnHomePage          = lazy(() => import("./pages/learn/LearnHomePage"));

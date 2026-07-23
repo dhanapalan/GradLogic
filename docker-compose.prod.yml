@@ -236,10 +236,12 @@ volumes:
     external: true
     name: talentsecure-ai_miniodata
 
-  # Not external: this one is new, so let compose create it on first up.
+  # External: the volume already exists under the talentsecure-ai_ name. Without
+  # this compose warns that it was created for a different project on every up.
   # Holds the ChromaDB index and the cached embedding model (~90MB+), both of
   # which are expensive to rebuild/redownload on every restart.
   questionbankdata:
+    external: true
     name: talentsecure-ai_questionbankdata
 
   judge0pgdata:

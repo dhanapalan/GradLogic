@@ -36,7 +36,7 @@ class LLMConfig(BaseSettings):
 
     # Groq (Fast & Cheap - Recommended)
     groq_api_key: str = os.getenv("GROQ_API_KEY", "")
-    groq_model: str = os.getenv("GROQ_MODEL", "mixtral-8x7b-32768")
+    groq_model: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")  # mixtral-8x7b was decommissioned
     groq_temperature: float = float(os.getenv("GROQ_TEMPERATURE", "0.4"))  # lower = better arithmetic accuracy
     groq_max_tokens: int = 2048
 
@@ -139,6 +139,13 @@ class QuestionGenerationConfig(BaseSettings):
 
     # Quality
     validate_questions: bool = True
+
+    # Self-verification: after generating a question, solve it again in a separate
+    # call without showing the claimed answer, and reject on disagreement. Costs
+    # one extra LLM call per attempt but catches the common failure where the
+    # model states an answer inconsistent with its own working.
+    verify_answers: bool = os.getenv("QUESTION_VERIFY", "true").lower() in ("1", "true", "yes")
+    verify_max_attempts: int = int(os.getenv("QUESTION_VERIFY_ATTEMPTS", "2"))
     min_confidence: float = 0.7  # Minimum LLM confidence to accept question
 
     # Subject Categories (Knowledge Base Structure)

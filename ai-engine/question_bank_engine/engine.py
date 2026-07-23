@@ -109,12 +109,20 @@ class QuestionBankEngine:
             use_rag=use_rag,
         )
 
+        # Verification can reject drafts, so generated_count may be below what was
+        # requested. Report both plus the reasons: a caller cannot otherwise tell
+        # a misconfigured model from questions that failed their own check.
+        rejected = getattr(self.question_generator, "last_run_rejections", [])
+
         return {
             "success": True,
             "topic": topic,
             "difficulty": difficulty,
             "question_type": question_type,
+            "requested_count": count,
             "generated_count": len(questions),
+            "rejected_count": len(rejected),
+            "rejections": rejected,
             "questions": questions,
         }
 

@@ -24,6 +24,7 @@ import {
   TrendingUp,
   ChevronRight,
   Wallet,
+  Target,
 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useRef } from "react";
