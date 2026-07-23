@@ -31,6 +31,12 @@ RUN apt-get update \
 COPY --from=builder /install /usr/local
 COPY question_bank_engine/ ./question_bank_engine/
 
+# The modules import their siblings absolutely (`from config import config`),
+# which resolves when run from inside the package dir -- as the local venv does --
+# but not when uvicorn imports `question_bank_engine.api` from /app. Putting the
+# package dir on the path makes both entry styles work without touching the code.
+ENV PYTHONPATH=/app/question_bank_engine
+
 # Writable dirs for ChromaDB + the embedding-model cache. Both are mounted as
 # volumes in compose — without them the ~90MB model re-downloads every restart.
 RUN mkdir -p /app/question_bank_engine/data /app/question_bank_engine/logs
