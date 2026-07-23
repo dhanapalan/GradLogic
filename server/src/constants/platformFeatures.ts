@@ -41,7 +41,8 @@ export type PlatformFeatureKey =
   | "interview_pi"
   | "entrance_cuet"
   | "entrance_gate"
-  | "entrance_cat";
+  | "entrance_cat"
+  | "ai_question_generation";
 
 export interface FeatureCatalogItem {
   key: PlatformFeatureKey;
@@ -57,6 +58,7 @@ export const FEATURE_CATALOG: FeatureCatalogItem[] = [
   { key: "analytics", label: "Analytics & Reports", description: "Performance insights", portal: "college", category: "platform" },
   { key: "settings", label: "Settings", description: "Campus configuration", portal: "college", category: "platform" },
   { key: "question_bank", label: "Question Bank", description: "Practice & assessment questions", portal: "both", category: "platform" },
+  { key: "ai_question_generation", label: "AI Question Generator", description: "Prompt-based question generation for the college question bank", portal: "college", category: "platform" },
   { key: "workflows", label: "Workflows", description: "Structured learning workflows", portal: "college", category: "platform" },
   { key: "soft_skills", label: "Soft Skills Hub", description: "College soft-skills management", portal: "college", category: "platform" },
   { key: "technical_skills", label: "Technical Skills Hub", description: "College technical tracks", portal: "college", category: "platform" },
@@ -66,7 +68,7 @@ export const FEATURE_CATALOG: FeatureCatalogItem[] = [
   { key: "tests", label: "Tests & Mocks", description: "Mock tests and exams", portal: "student", category: "platform" },
   { key: "gamification", label: "Achievements", description: "Badges, streaks, leaderboards", portal: "student", category: "platform" },
   { key: "notifications", label: "Notifications", description: "Campus announcements", portal: "both", category: "platform" },
-  { key: "payments", label: "Payments", description: "Fee collection & billing", portal: "student", category: "platform" },
+  { key: "payments", label: "Payments", description: "Fee collection & billing", portal: "both", category: "platform" },
   { key: "aptitude_practice", label: "Aptitude Practice", description: "Daily aptitude drills", portal: "student", category: "aptitude" },
   { key: "aptitude_tests", label: "Aptitude Mock Tests", description: "Timed aptitude assessments", portal: "both", category: "aptitude" },
   { key: "aptitude_workflows", label: "Aptitude Workflows", description: "Structured aptitude pathways", portal: "college", category: "aptitude" },

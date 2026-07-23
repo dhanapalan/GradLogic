@@ -37,8 +37,6 @@ export default function StudentBulkUploadModal({ open, onClose, onImported }: Pr
   const [importResult, setImportResult] = useState<BulkImportResult | null>(null);
   const [retryRows, setRetryRows] = useState<ValidatedBulkRow[]>([]);
 
-  if (!open) return null;
-
   const reset = () => {
     setStep("upload");
     setFileName("");
@@ -79,6 +77,8 @@ export default function StudentBulkUploadModal({ open, onClose, onImported }: Pr
       toast.error(err?.response?.data?.error ?? "Import failed");
     },
   });
+
+  if (!open) return null;
 
   const onFile = (file: File | undefined) => {
     if (!file) return;

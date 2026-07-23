@@ -39,7 +39,7 @@ router.get(
   campusStudentsController.getAnalytics
 );
 
-router.get("/", authorize(...MANAGE_ROLES, "placement_cell"), campusStudentsController.listStudents);
+router.get("/", authorize(...MANAGE_ROLES, "placement_cell", "instructor"), campusStudentsController.listStudents);
 
 router.post("/", authorize(...WRITE_ROLES), campusStudentsController.createStudent);
 

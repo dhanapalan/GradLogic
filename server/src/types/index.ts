@@ -102,7 +102,9 @@ export type AdminAuditAction =
   | "CAMPAIGN_INTEGRITY_REVIEW"
   | "CAMPAIGN_ATTEMPT_STARTED"
   | "CAMPAIGN_ATTEMPT_SUBMITTED"
-  | "CAMPAIGN_ATTEMPT_AUTO_SUBMITTED";
+  | "CAMPAIGN_ATTEMPT_AUTO_SUBMITTED"
+  | "DEPARTMENT_CREATED"
+  | "DEPARTMENT_UPDATED";
 
 // ── Row Types ────────────────────────────────────────────────────────────────
 

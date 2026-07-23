@@ -21,6 +21,13 @@ router.get("/", notificationController.getUserNotifications);
 // Mark all as read
 router.put("/read-all", notificationController.markAllAsRead);
 
+// Ops/testing: trigger the EOD digest immediately
+router.post(
+  "/run-digest",
+  authorize("super_admin", "college_admin", "college"),
+  notificationController.runDigestNowHandler
+);
+
 // Mark specific notification as read
 router.put("/:id/read", notificationController.markAsRead);
 

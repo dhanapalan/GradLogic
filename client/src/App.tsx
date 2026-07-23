@@ -14,7 +14,7 @@ import {
   getLandingPath,
 } from "./components/ProtectedRoute";
 import { CollegeLegacyFeatureGuard } from "./components/CollegeLegacyFeatureGuard";
-import { StudentFeatureGuard } from "./components/FeatureGuard";
+import { StudentFeatureGuard, CollegeFeatureGuard } from "./components/FeatureGuard";
 import { PermissionGuard } from "./components/PermissionGuard";
 
 // ── Layouts ──────────────────────────────────────────────────────────────────
@@ -58,14 +58,23 @@ const CampusIntegrityPage = lazy(() => import("./pages/college/IntegrityPage"));
 const CampusCommunicationsPage = lazy(() => import("./pages/college/CommunicationsPage"));
 const CampusAdminsPage = lazy(() => import("./pages/college/CampusAdminsPage"));
 const CampusSettingsPage = lazy(() => import("./pages/college/SettingsPage"));
+const CollegePortalDepartmentsSettings = lazy(
+  () => import("./pages/college-portal/DepartmentsSettingsPage")
+);
 const BillingPage = lazy(() => import("./pages/college/BillingPage"));
 const CollegePortalDashboard = lazy(() => import("./pages/college-portal/DashboardPage"));
 const CollegePortalStudents = lazy(() => import("./pages/college-portal/StudentsPage"));
 const CollegePortalStudentDetail = lazy(() => import("./pages/college-portal/StudentDetailPage"));
 const CollegePortalStudentForm = lazy(() => import("./pages/college-portal/StudentFormPage"));
 const CollegePortalAnalytics = lazy(() => import("./pages/college-portal/AnalyticsPage"));
+const CollegePortalEvaluationInsights = lazy(
+  () => import("./pages/college-portal/EvaluationInsightsPage")
+);
 const CollegePortalComingSoon = lazy(() => import("./pages/college-portal/ComingSoonPage"));
 const CollegePortalQuestionBank = lazy(() => import("./pages/college-portal/QuestionBankPage"));
+const CollegePortalAIQuestionGenerator = lazy(
+  () => import("./pages/college-portal/AIQuestionGeneratorPage")
+);
 const CollegePortalAssessments = lazy(
   () => import("./pages/college-portal/AssessmentManagementPage")
 );
@@ -182,13 +191,6 @@ const PlacementPage = lazy(() => import("./pages/hr/PlacementPage"));
 const LearnHomePage          = lazy(() => import("./pages/learn/LearnHomePage"));
 const LearningPathDetailPage = lazy(() => import("./pages/learn/LearningPathDetailPage"));
 const CertificatePage        = lazy(() => import("./pages/learn/CertificatePage"));
-
-// ── Company Portal ────────────────────────────────────────────────────────────
-const CompanyDashboardPage   = lazy(() => import("./pages/company/CompanyDashboardPage"));
-const CompanyCandidatesPage  = lazy(() => import("./pages/company/CompanyCandidatesPage"));
-const CompanyProfilePage     = lazy(() => import("./pages/company/CompanyProfilePage"));
-const JDExtractPage          = lazy(() => import("./pages/company/JDExtractPage"));
-const CampusSetupPage        = lazy(() => import("./pages/company/CampusSetupPage"));
 
 const MockInterviewPage = lazy(() => import("./pages/student/MockInterviewPage"));
 const SoftSkillsHubPage = lazy(() => import("./pages/student/SoftSkillsHubPage"));
@@ -791,6 +793,14 @@ export default function App() {
               <Route path="students/:id" element={<CollegePortalStudentDetail />} />
               <Route path="question-bank" element={<CollegePortalQuestionBank />} />
               <Route
+                path="question-bank/ai-generate"
+                element={
+                  <CollegeFeatureGuard feature="ai_question_generation">
+                    <CollegePortalAIQuestionGenerator />
+                  </CollegeFeatureGuard>
+                }
+              />
+              <Route
                 path="workflows"
                 element={
                   <CollegePortalComingSoon
@@ -816,6 +826,7 @@ export default function App() {
               <Route path="drives" element={<CampusDrivesListPage />} />
               <Route path="drives/:id" element={<CampusDriveDetailPage />} />
               <Route path="analytics" element={<CollegePortalAnalytics />} />
+              <Route path="evaluation-insights" element={<CollegePortalEvaluationInsights />} />
               <Route path="integrity" element={<CampusIntegrityPage />} />
               <Route path="soft-skills" element={<CollegeSkillsPage />} />
               <Route
@@ -828,6 +839,26 @@ export default function App() {
                 }
               />
               <Route path="settings" element={<CampusSettingsPage />} />
+              <Route path="settings/departments" element={<CollegePortalDepartmentsSettings />} />
+              <Route path="results" element={<CampusResultsPage />} />
+              <Route path="insights" element={<CampusInsightsPage />} />
+              <Route path="communications" element={<CampusCommunicationsPage />} />
+              <Route
+                path="billing"
+                element={
+                  <RoleGuard allowed={["college_admin", "college"]}>
+                    <BillingPage />
+                  </RoleGuard>
+                }
+              />
+              <Route
+                path="campus-admins"
+                element={
+                  <RoleGuard allowed={["college_admin", "college"]}>
+                    <CampusAdminsPage />
+                  </RoleGuard>
+                }
+              />
               <Route path="lms/:moduleKey" element={<LmsModulePage portal="college" />} />
             </Route>
 
@@ -1194,47 +1225,6 @@ export default function App() {
                 }
               />
 
-              {/* ── Company Portal ──────────────────────────────────── */}
-              <Route
-                path="company"
-                element={
-                  <RoleGuard allowed={["company", "super_admin", "hr"]}>
-                    <CompanyDashboardPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="company/candidates"
-                element={
-                  <RoleGuard allowed={["company", "super_admin", "hr"]}>
-                    <CompanyCandidatesPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="company/profile"
-                element={
-                  <RoleGuard allowed={["company"]}>
-                    <CompanyProfilePage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="company/campus-setup"
-                element={
-                  <RoleGuard allowed={["company", "super_admin", "hr"]}>
-                    <CampusSetupPage />
-                  </RoleGuard>
-                }
-              />
-              <Route
-                path="company/jd-extract"
-                element={
-                  <RoleGuard allowed={["company", "super_admin", "hr", "engineer"]}>
-                    <JDExtractPage />
-                  </RoleGuard>
-                }
-              />
               {/* LMS — Student */}
               <Route
                 path="lms/catalog"

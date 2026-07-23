@@ -9,7 +9,6 @@ const COLS = [
       { label: "Features", href: "/#features" },
       { label: "Pricing", href: "/pricing" },
       { label: "Colleges", href: "/campus" },
-      { label: "Recruiters", href: "/#recruiters" },
     ],
   },
   {
@@ -41,8 +40,7 @@ export function HomeFooter() {
             </span>
           </Link>
           <p className="mt-3 text-sm leading-relaxed text-slate-400">
-            AI-powered talent development and campus placement platform for colleges, students, and
-            recruiters.
+            AI-powered learning and placement-readiness platform for colleges and students.
           </p>
           <div className="mt-4 flex gap-3">
             <a href="https://linkedin.com" className="rounded-lg p-2 hover:bg-white/10" aria-label="LinkedIn">

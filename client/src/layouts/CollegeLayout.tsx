@@ -8,7 +8,7 @@ import {
   Workflow,
   ClipboardList,
   CalendarRange,
-  Briefcase,
+  PlayCircle,
   BarChart3,
   MessageSquare,
   Code2,
@@ -18,6 +18,8 @@ import {
   Menu,
   X,
   ShieldCheck,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "../stores/authStore";
@@ -37,6 +39,8 @@ const NAV_ITEMS: {
   icon: typeof LayoutDashboard;
   segment: string;
   featureKey: PlatformFeatureKey | null;
+  /** Omit to allow every role this layout already gates for (see RoleGuard above). */
+  roles?: string[];
 }[] = [
   { name: "Dashboard", href: `${BASE}/dashboard`, icon: LayoutDashboard, segment: "dashboard", featureKey: null },
   { name: "Students", href: `${BASE}/students`, icon: Users, segment: "students", featureKey: "students" },
@@ -44,8 +48,10 @@ const NAV_ITEMS: {
   { name: "Workflows", href: `${BASE}/workflows`, icon: Workflow, segment: "workflows", featureKey: "workflows" },
   { name: "Tests & Assessments", href: `${BASE}/assessments`, icon: ClipboardList, segment: "assessments", featureKey: "assessments" },
   { name: "Assessment Campaigns", href: `${BASE}/campaigns`, icon: CalendarRange, segment: "campaigns", featureKey: "assessments" },
-  { name: "Campus Drives", href: `${BASE}/drives`, icon: Briefcase, segment: "drives", featureKey: "assessments" },
+  { name: "Scheduled Tests", href: `${BASE}/drives`, icon: PlayCircle, segment: "drives", featureKey: "assessments" },
   { name: "Analytics & Reports", href: `${BASE}/analytics`, icon: BarChart3, segment: "analytics", featureKey: "analytics" },
+  { name: "Placement Insights", href: `${BASE}/insights`, icon: TrendingUp, segment: "insights", featureKey: "analytics" },
+  { name: "Billing", href: `${BASE}/billing`, icon: Wallet, segment: "billing", featureKey: "payments", roles: ["college_admin", "college"] },
   { name: "Integrity", href: `${BASE}/integrity`, icon: ShieldCheck, segment: "integrity", featureKey: "analytics" },
   { name: "Soft Skills", href: `${BASE}/soft-skills`, icon: MessageSquare, segment: "soft-skills", featureKey: "soft_skills" },
   { name: "Technical Skills", href: `${BASE}/technical-skills`, icon: Code2, segment: "technical-skills", featureKey: "technical_skills" },
@@ -64,7 +70,9 @@ export default function CollegeLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { hasFeature, modules: lmsModules } = usePortalFeatures("college");
 
-  const visibleNav = NAV_ITEMS.filter((item) => hasFeature(item.featureKey));
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => hasFeature(item.featureKey) && (!item.roles || item.roles.includes(user?.role ?? ""))
+  );
 
   useEffect(() => {
     if (!token) window.location.href = "/auth/login";

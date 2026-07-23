@@ -316,7 +316,9 @@ export default function CollegePortalDashboard() {
               <StatsCard
                 title="Learning Completion"
                 value={
-                  summary != null ? `${summary.learning_completion_percent.toFixed(1)}%` : "—"
+                  summary?.learning_completion_percent != null
+                    ? `${summary.learning_completion_percent.toFixed(1)}%`
+                    : "—"
                 }
                 subtitle="Journey progress"
                 icon={<BookOpen className="h-4 w-4" />}

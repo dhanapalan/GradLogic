@@ -24,7 +24,6 @@ import {
   PuzzlePieceIcon,
   SparklesIcon,
   TrophyIcon,
-  BuildingOffice2Icon,
   UserCircleIcon,
   CreditCardIcon,
   MapIcon,
@@ -54,7 +53,6 @@ const navigation: NavSection[] = [
       { name: "CXO Analytics", href: "/app/cxo-analytics", icon: ChartBarIcon, roles: ["cxo", "super_admin"] },
       { name: "Dashboard", href: "/app/college-portal/dashboard", icon: HomeIcon, roles: ["college_admin", "college", "college_staff"] },
       { name: "Student Portal", href: "/app/student-portal", icon: HomeIcon, roles: ["student"] },
-      { name: "Dashboard", href: "/app/company", icon: BuildingOffice2Icon, roles: ["company"] },
       { name: "My Students", href: "/app/mentor", icon: UserGroupIcon, roles: ["mentor"] },
       { name: "Engineer Panel", href: "/app/engineer-panel", icon: WrenchScrewdriverIcon, roles: ["engineer"] },
       { name: "Faculty Dashboard", href: "/app/faculty-dashboard", icon: AcademicCapIcon, roles: ["instructor"] },
@@ -92,7 +90,6 @@ const navigation: NavSection[] = [
     items: [
       { name: "Drives", href: "/app/drives", icon: RocketLaunchIcon, roles: ["super_admin", "hr", "engineer"] },
       { name: "Assessment Rules", href: "/app/assessment-rules", icon: ClipboardDocumentListIcon, roles: ["super_admin", "hr", "engineer"] },
-      { name: "JD Extractor", href: "/app/company/jd-extract", icon: SparklesIcon, roles: ["super_admin", "hr", "engineer"] },
       { name: "Live Monitoring", href: "/app/admin/monitoring", icon: EyeIcon, roles: ["super_admin", "hr", "cxo"] },
     ],
   },
@@ -159,18 +156,6 @@ const navigation: NavSection[] = [
       { name: "Question Bank", href: "/app/student-portal/question-bank", icon: ClipboardDocumentListIcon, roles: ["student"] },
       { name: "Mock Interview", href: "/app/student-portal/mock-interview", icon: UserCircleIcon, roles: ["student"] },
       { name: "Achievements", href: "/app/student-portal/gamification", icon: TrophyIcon, roles: ["student"] },
-    ],
-  },
-
-  // ── Company portal ──────────────────────────────────────────────────────────
-  {
-    title: "Recruiting",
-    items: [
-      { name: "Candidates", href: "/app/company/candidates", icon: UsersIcon, roles: ["company"] },
-      { name: "My Drives", href: "/app/drives", icon: RocketLaunchIcon, roles: ["company"] },
-      { name: "Campus Setup", href: "/app/company/campus-setup", icon: AcademicCapIcon, roles: ["company"] },
-      { name: "JD Extractor", href: "/app/company/jd-extract", icon: SparklesIcon, roles: ["company"] },
-      { name: "Company Profile", href: "/app/company/profile", icon: UserCircleIcon, roles: ["company"] },
     ],
   },
 

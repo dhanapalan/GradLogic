@@ -86,15 +86,14 @@ export function HighlightsSection() {
 
         <div id="placements" className="mt-6 grid gap-5 lg:grid-cols-3">
           <Panel
-            title="Campus Hiring"
+            title="Placement Readiness"
             icon={<Users className="h-5 w-5" />}
-            steps={["Apply", "Track", "Interview", "Offer"]}
+            steps={["Skill Diagnostics", "Practice Sets", "Mock Assessments", "Readiness Score"]}
           />
           <Panel
-            title="Recruiter Portal"
+            title="Placement Cell Toolkit"
             icon={<BookOpen className="h-5 w-5" />}
-            steps={["Search Talent", "Shortlist", "Schedule Interviews", "Hire"]}
-            id="recruiters"
+            steps={["Student Management", "Question Banks", "Assessment Campaigns", "Analytics"]}
           />
           <Panel
             title="Resume Builder"

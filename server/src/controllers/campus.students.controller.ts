@@ -38,6 +38,22 @@ async function resolveCollegeId(req: Request): Promise<string> {
     throw new AppError("Unauthorized: College context missing", 403);
 }
 
+/**
+ * Faculty ("instructor" role) accounts are scoped to a single department —
+ * they should only see student outcomes within it, not the whole college.
+ * Not embedded in the JWT (keeps the token payload/auth flow unchanged), so
+ * this does a small DB lookup for instructor callers only.
+ */
+async function resolveCallerDepartment(req: Request): Promise<string | null> {
+    const user = req.user;
+    if (!user || user.role !== "instructor") return null;
+    const row = await queryOne<{ department: string | null }>(
+        `SELECT department FROM users WHERE id = $1`,
+        [user.userId]
+    );
+    return row?.department?.trim() || null;
+}
+
 
 /**
  * GET /api/campus/students
@@ -47,6 +63,7 @@ async function resolveCollegeId(req: Request): Promise<string> {
 export async function listStudents(req: Request, res: Response, next: NextFunction) {
     try {
         const collegeId = await resolveCollegeId(req);
+        const callerDepartment = await resolveCallerDepartment(req);
         await studentEligibility.ensureEligibilitySchema().catch(() => {});
 
         // Extract query parameters
@@ -93,6 +110,15 @@ export async function listStudents(req: Request, res: Response, next: NextFuncti
 
         const params: any[] = [collegeId];
         let paramIdx = 2;
+
+        // Faculty (instructor) accounts are locked to their own department —
+        // ignore any client-supplied department filter and force it, same
+        // pattern as college-scoped roles being locked to their college_id.
+        if (callerDepartment) {
+            sql += ` AND sd.specialization = $${paramIdx}`;
+            params.push(callerDepartment);
+            paramIdx++;
+        }
 
         if (search) {
             sql += ` AND (u.name ILIKE $${paramIdx} OR sd.student_identifier ILIKE $${paramIdx} OR u.email ILIKE $${paramIdx})`;
@@ -216,6 +242,7 @@ export async function getAnalytics(req: Request, res: Response, next: NextFuncti
 export async function getStudentProfile(req: Request, res: Response, next: NextFunction) {
     try {
         const collegeId = await resolveCollegeId(req);
+        const callerDepartment = await resolveCallerDepartment(req);
         const studentId = req.params.id; // user_id
         await studentForm.ensureStudentFormColumns().catch(() => {});
         await studentEligibility.ensureEligibilitySchema().catch(() => {});
@@ -265,6 +292,9 @@ export async function getStudentProfile(req: Request, res: Response, next: NextF
         `, [studentId, collegeId]);
 
         if (!student) {
+            throw new AppError("Student not found or access denied", 404);
+        }
+        if (callerDepartment && student.department !== callerDepartment) {
             throw new AppError("Student not found or access denied", 404);
         }
 

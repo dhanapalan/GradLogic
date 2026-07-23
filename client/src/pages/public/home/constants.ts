@@ -3,10 +3,9 @@ export const HOME_NAV = [
   { label: "Features", href: "/#features" },
   { label: "AI Learning", href: "/#ai-learning" },
   { label: "Assessments", href: "/#assessments" },
-  { label: "Placements", href: "/#placements" },
+  { label: "Readiness", href: "/#readiness" },
   { label: "Pricing", href: "/pricing" },
   { label: "Colleges", href: "/campus" },
-  { label: "Recruiters", href: "/#recruiters" },
   { label: "Contact", href: "/contact" },
 ] as const;
 
@@ -70,9 +69,9 @@ export const WORKFLOW_PHASES = [
     steps: ["Assessments", "Mock interviews", "Placement readiness"],
   },
   {
-    phase: "Place",
-    summary: "Placement cells run drives and convert readiness into offers.",
-    steps: ["Campus hiring drives", "Job offers"],
+    phase: "Perform",
+    summary: "Every student walks into placement season backed by a live readiness score.",
+    steps: ["Placement readiness score", "Interview-day confidence"],
   },
 ] as const;
 
@@ -86,7 +85,7 @@ export const WHY_FEATURES = [
   { title: "AI Skill Gap Analysis", desc: "Skill heatmaps tied to placement targets." },
   { title: "AI Recommendation Engine", desc: "Courses, practice sets, and next assessments." },
   { title: "ATS Resume Analysis", desc: "Parse, score, and improve resumes for hiring filters." },
-  { title: "Campus Hiring Automation", desc: "Drives, shortlists, interviews, and offers in one flow." },
+  { title: "Gamified Practice", desc: "Streaks, achievements, and leaderboards that make consistent practice stick." },
 ] as const;
 
 export const STATS = [

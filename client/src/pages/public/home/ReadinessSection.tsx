@@ -42,7 +42,7 @@ export function ReadinessSection() {
   const offset = circ - (score / 100) * circ;
 
   return (
-    <section className="border-y border-slate-200 bg-slate-50 py-16 dark:border-slate-800 dark:bg-slate-900/40">
+    <section id="readiness" className="border-y border-slate-200 bg-slate-50 py-16 dark:border-slate-800 dark:bg-slate-900/40">
       <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">

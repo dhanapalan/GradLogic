@@ -10,6 +10,8 @@ import collegeProfileRoutes from "../../../routes/college.profile.routes.js";
 import collegeModulesRoutes from "../../../routes/college.modules.routes.js";
 import campusStudentRoutes from "../../../routes/campus.students.routes.js";
 import campusQuestionsRoutes from "../../../routes/campus.questions.routes.js";
+import campusDepartmentsRoutes from "../../../routes/campus.departments.routes.js";
+import campusEvaluationRollupRoutes from "../../../routes/campus.evaluationRollup.routes.js";
 import campusAssessmentsRoutes from "../../../routes/campus.assessments.routes.js";
 import campusCampaignsRoutes from "../../../routes/campus.campaigns.routes.js";
 import campusAssessmentAnalyticsRoutes from "../../../routes/campus.assessmentAnalytics.routes.js";
@@ -23,6 +25,8 @@ export class CampusLegacyModule implements NestModule {
     // More specific /api/campus/* mounts first (before any bare /api/campus catch-alls)
     applyLegacyRouter(consumer, campusStudentRoutes, "/api/campus/students");
     applyLegacyRouter(consumer, campusQuestionsRoutes, "/api/campus/questions");
+    applyLegacyRouter(consumer, campusDepartmentsRoutes, "/api/campus/departments");
+    applyLegacyRouter(consumer, campusEvaluationRollupRoutes, "/api/campus/evaluation");
     applyLegacyRouter(consumer, campusAssessmentsRoutes, "/api/campus/assessments");
     applyLegacyRouter(consumer, campusCampaignsRoutes, "/api/campus/campaigns");
     applyLegacyRouter(consumer, campusAssessmentAnalyticsRoutes, "/api/campus/assessment-analytics");

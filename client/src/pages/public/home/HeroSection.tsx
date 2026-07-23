@@ -49,8 +49,9 @@ export function HeroSection() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            GradLogic connects colleges, students, and recruiters on one intelligent platform —
-            from personalized AI learning to proctored assessments and confirmed campus offers.
+            GradLogic pairs every student with an AI tutor, coach, and interviewer — turning
+            personalized learning, proctored assessments, and mock interviews into real,
+            measurable placement readiness.
           </motion.p>
 
           <motion.div

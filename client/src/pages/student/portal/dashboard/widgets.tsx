@@ -6,7 +6,7 @@ import {
   ArrowRight,
   Award,
   BookOpenCheck,
-  Briefcase,
+  PlayCircle,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -564,11 +564,11 @@ export function CampusDrivesWidget() {
 
   return (
     <WidgetShell
-      title="Campus drives"
+      title="Scheduled tests"
       loading={q.isLoading}
       error={q.isError}
       empty={!q.data?.length}
-      emptyMessage="No eligible drives right now."
+      emptyMessage="No scheduled tests right now."
       onRetry={() => q.refetch()}
       action={
         <Link to={`${BASE}/tests`} className="text-xs font-bold text-indigo-600 hover:underline">
@@ -584,7 +584,7 @@ export function CampusDrivesWidget() {
                 <p className="text-sm font-bold text-slate-900">{d.company}</p>
                 <p className="text-xs capitalize text-slate-500">{d.role}</p>
               </div>
-              <Briefcase className="h-4 w-4 text-slate-300" />
+              <PlayCircle className="h-4 w-4 text-slate-300" />
             </div>
             <p className="mt-2 text-[11px] text-slate-500">
               Drive: {formatDate(d.drive_date)} · Deadline: {formatDate(d.registration_deadline)}

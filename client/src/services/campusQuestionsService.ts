@@ -82,6 +82,28 @@ export interface ImportSummary {
   skipped: Array<{ row: number; reason: string }>;
 }
 
+export interface AiGeneratedQuestion {
+  question: string;
+  options?: string[];
+  correct_answer: string;
+  category?: string;
+  difficulty?: string;
+  explanation?: string;
+}
+
+export interface AiImportResult {
+  summary: { total: number; successful: number; failed: number; skipped: number };
+  successful: string[];
+  failed: Array<{ index: number; error: string }>;
+  skipped: Array<{ index: number; reason: string }>;
+}
+
+export interface BulkActionResult {
+  summary: { total: number; successful: number; failed: number };
+  successful: string[];
+  failed: Array<{ id: string; error: string }>;
+}
+
 export interface MetaCatalog {
   categories: Array<{ value: string; label: string }>;
   types: Array<{ value: string; label: string }>;
@@ -141,6 +163,19 @@ const campusQuestionsService = {
     a.download = "college_question_import_template.xlsx";
     a.click();
     URL.revokeObjectURL(url);
+  },
+
+  async bulkAction(
+    ids: string[],
+    action: "activate" | "deactivate" | "delete"
+  ): Promise<BulkActionResult> {
+    const { data } = await api.post("/campus/questions/bulk-action", { ids, action });
+    return data.data;
+  },
+
+  async aiImport(questions: AiGeneratedQuestion[]): Promise<AiImportResult> {
+    const { data } = await api.post("/campus/questions/ai-import", { questions });
+    return data.data;
   },
 
   async importExcel(file: File): Promise<ImportSummary> {

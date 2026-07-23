@@ -52,8 +52,8 @@ export function HeroIllustration() {
         <Card
           delay={0.3}
           icon={<Briefcase className="h-5 w-5" />}
-          title="Resume + Offer"
-          subtitle="ATS · Campus hiring"
+          title="Resume + Readiness"
+          subtitle="ATS score · Mock interviews"
           tone="violet"
         />
         <Card

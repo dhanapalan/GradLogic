@@ -37,6 +37,7 @@ import campusStudentsService, {
   type PlacementStatus,
   type RiskLevel,
 } from "../../services/campusStudentsService";
+import campusDepartmentsService from "../../services/campusDepartmentsService";
 import { cn } from "../../lib/utils";
 import { formatCourseYears } from "../../lib/courseYears";
 import StudentBulkUploadModal from "../../components/college-portal/StudentBulkUploadModal";
@@ -53,15 +54,6 @@ const EMPTY_CREATE = {
 };
 
 const BATCH_YEARS = ["2024", "2025", "2026", "2027", "2028"];
-const DEPARTMENTS = [
-  "Computer Science",
-  "Information Technology",
-  "Electronics",
-  "Mechanical",
-  "Civil",
-  "Electrical",
-  "Data Science",
-];
 
 const PERFORMANCE_BANDS = [
   { value: "", label: "All performance" },
@@ -174,6 +166,11 @@ export default function CollegePortalStudentsPage() {
     statusFilter,
     performance,
   };
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ["campus-departments"],
+    queryFn: () => campusDepartmentsService.list(),
+  });
 
   const { data: listData, isLoading } = useQuery({
     queryKey: ["college-portal-students", filters],
@@ -439,9 +436,9 @@ export default function CollegePortalStudentsPage() {
                   }}
                 >
                   <option value="">All departments</option>
-                  {DEPARTMENTS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
                     </option>
                   ))}
                 </Select>

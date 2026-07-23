@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import campusStudentsService from "../../services/campusStudentsService";
+import campusDepartmentsService from "../../services/campusDepartmentsService";
 
 const PLACEMENT_STATUSES = [
   "Not Shortlisted",
@@ -126,6 +127,16 @@ export default function StudentFormPage() {
     queryFn: () => campusStudentsService.get(id!),
     enabled: isEdit,
   });
+
+  const { data: departments = [] } = useQuery({
+    queryKey: ["campus-departments"],
+    queryFn: () => campusDepartmentsService.list(),
+  });
+  const departmentOptions = departments.some((d) => d.name === form.department)
+    ? departments
+    : form.department
+      ? [...departments, { id: "current", name: form.department, college_id: "", is_active: true, created_at: "", updated_at: "" }]
+      : departments;
 
   useEffect(() => {
     if (!data?.overview) return;
@@ -289,7 +300,30 @@ export default function StudentFormPage() {
           <CardTitle className="text-base">Academic Information</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Department *" value={form.department} onChange={set("department")} required />
+          <label className="block text-xs font-medium text-gray-600">
+            Department *
+            <select
+              className="mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+              value={form.department}
+              onChange={set("department")}
+              required
+            >
+              <option value="">Select department…</option>
+              {departmentOptions.map((d) => (
+                <option key={d.id} value={d.name}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            {departments.length === 0 && (
+              <Link
+                to="/app/college-portal/settings/departments"
+                className="mt-1 block text-xs text-admin-accent hover:underline"
+              >
+                No departments configured — add one
+              </Link>
+            )}
+          </label>
           <Field label="Program" value={form.program} onChange={set("program")} />
           <Field label="Batch *" value={form.batch} onChange={set("batch")} required />
           <Field label="Semester" value={form.semester} onChange={set("semester")} />

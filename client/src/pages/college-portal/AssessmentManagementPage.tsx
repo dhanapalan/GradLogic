@@ -313,6 +313,15 @@ export default function AssessmentManagementPage() {
     ]);
   };
 
+  const removeQuestion = (id: string) => {
+    setSelected((prev) => prev.filter((x) => x.question_id !== id));
+  };
+
+  const togglePickerQuestion = (q: CampusQuestion) => {
+    if (selected.some((s) => s.question_id === q.id)) removeQuestion(q.id);
+    else addQuestion(q);
+  };
+
   const moveSelected = (idx: number, dir: -1 | 1) => {
     setSelected((prev) => {
       const next = [...prev];
@@ -772,9 +781,14 @@ export default function AssessmentManagementPage() {
       {/* Question picker */}
       {pickerOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-3">
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+          <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-xl">
             <div className="flex items-center justify-between border-b px-4 py-3">
-              <h3 className="font-semibold">Select Questions (Active only)</h3>
+              <div>
+                <h3 className="font-semibold">Select Questions (Active only)</h3>
+                <p className="text-xs text-gray-500">
+                  {selected.length} selected · click a card to add or remove it
+                </p>
+              </div>
               <button type="button" onClick={() => setPickerOpen(false)}>
                 <X className="h-5 w-5 text-gray-400" />
               </button>
@@ -800,48 +814,73 @@ export default function AssessmentManagementPage() {
                 <option value="hard">Hard</option>
               </Select>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-4">
               {pickerLoading ? (
-                <p className="p-4 text-sm text-gray-500">Loading…</p>
+                <p className="text-sm text-gray-500">Loading…</p>
+              ) : (pickerData?.data ?? []).length === 0 ? (
+                <p className="text-sm text-gray-500">No questions match these filters.</p>
               ) : (
-                <ul className="divide-y">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {(pickerData?.data ?? []).map((q) => {
                     const already = selected.some((s) => s.question_id === q.id);
                     return (
-                      <li
+                      <div
                         key={q.id}
-                        className="flex flex-wrap items-center gap-2 px-4 py-2.5 text-sm"
+                        role="checkbox"
+                        aria-checked={already}
+                        tabIndex={0}
+                        onClick={() => togglePickerQuestion(q)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            togglePickerQuestion(q);
+                          }
+                        }}
+                        className={`cursor-pointer rounded-lg border p-3 text-sm transition-colors ${
+                          already
+                            ? "border-admin-accent bg-admin-accent/5"
+                            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{q.title}</p>
-                          <p className="text-xs text-gray-500">
-                            {q.question_code} · {q.category} · {q.difficulty} · {q.marks} marks ·{" "}
-                            {q.question_type}
-                          </p>
+                        <div className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={already}
+                            readOnly
+                            className="mt-1 shrink-0"
+                            aria-label={`Select ${q.title}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium">{q.title}</p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {q.question_code} · {q.category} · {q.question_type}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <Badge variant="muted">{q.difficulty}</Badge>
+                              <Badge variant="muted">{q.marks} marks</Badge>
+                            </div>
+                          </div>
                         </div>
-                        <Button
+                        <button
                           type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openQPreview(q.id)}
+                          className="mt-2 text-xs font-medium text-admin-accent hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openQPreview(q.id);
+                          }}
                         >
                           Preview
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={already}
-                          onClick={() => addQuestion(q)}
-                        >
-                          {already ? "Added" : "Select"}
-                        </Button>
-                      </li>
+                        </button>
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </div>
-            <div className="flex justify-end border-t px-4 py-3">
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <p className="text-xs text-gray-500">
+                {selected.length} question{selected.length === 1 ? "" : "s"} selected · {totalMarks} marks
+              </p>
               <Button type="button" onClick={() => setPickerOpen(false)}>
                 Done
               </Button>

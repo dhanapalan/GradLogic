@@ -17,7 +17,9 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -39,12 +41,14 @@ import {
   TableRow,
 } from "../../components/ui/table";
 import campusQuestionsService, {
+  type BulkActionResult,
   type CampusQuestion,
   type CollegeQuestionStatus,
   type QuestionOption,
   type QuestionPayload,
 } from "../../services/campusQuestionsService";
 import { useAuthStore } from "../../stores/authStore";
+import { usePortalFeatures } from "../../hooks/usePortalFeatures";
 
 const FALLBACK_META = {
   categories: [
@@ -129,6 +133,7 @@ export default function CollegePortalQuestionBankPage() {
   const role = useAuthStore((s) => s.user?.role ?? "");
   const write = canWrite(role);
   const manage = canManage(role);
+  const { hasFeature } = usePortalFeatures("college");
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -150,6 +155,9 @@ export default function CollegePortalQuestionBankPage() {
     ReturnType<typeof campusQuestionsService.importExcel>
   > | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkResult, setBulkResult] = useState<BulkActionResult | null>(null);
 
   const { data: meta } = useQuery({
     queryKey: ["campus-questions-meta"],
@@ -288,6 +296,53 @@ export default function CollegePortalQuestionBankPage() {
     }
   };
 
+  const pageIds = rows.map((q) => q.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  const bulkMutation = useMutation({
+    mutationFn: (action: "activate" | "deactivate" | "delete") =>
+      campusQuestionsService.bulkAction(Array.from(selectedIds), action),
+    onSuccess: (res) => {
+      setBulkResult(res);
+      setSelectedIds(new Set());
+      invalidate();
+      toast.success(`${res.summary.successful} of ${res.summary.total} question(s) updated`);
+    },
+    onError: (err: { response?: { data?: { error?: string } } }) => {
+      toast.error(err?.response?.data?.error || "Bulk action failed");
+    },
+  });
+
+  const runBulkAction = (action: "activate" | "deactivate" | "delete") => {
+    if (!selectedIds.size) return;
+    if (
+      action === "delete" &&
+      !confirm(`Soft-delete ${selectedIds.size} question(s)? They cannot be permanently removed.`)
+    ) {
+      return;
+    }
+    setBulkResult(null);
+    bulkMutation.mutate(action);
+  };
+
   const importMutation = useMutation({
     mutationFn: (file: File) => campusQuestionsService.importExcel(file),
     onSuccess: (res) => {
@@ -315,6 +370,14 @@ export default function CollegePortalQuestionBankPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {write && hasFeature("ai_question_generation") && (
+            <Link to="/app/college-portal/question-bank/ai-generate">
+              <Button variant="outline" type="button">
+                <Sparkles className="h-4 w-4" />
+                Generate with AI
+              </Button>
+            </Link>
+          )}
           {manage && (
             <Button variant="outline" type="button" onClick={() => setImportOpen(true)}>
               <Upload className="h-4 w-4" />
@@ -426,10 +489,73 @@ export default function CollegePortalQuestionBankPage() {
             </div>
           )}
 
+          {manage && selectedIds.size > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-admin-accent/20 bg-admin-accent/5 px-3 py-2">
+              <span className="text-sm font-medium text-gray-700">
+                {selectedIds.size} selected
+              </span>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkMutation.isPending}
+                  onClick={() => runBulkAction("activate")}
+                >
+                  Activate
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkMutation.isPending}
+                  onClick={() => runBulkAction("deactivate")}
+                >
+                  Deactivate
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkMutation.isPending}
+                  onClick={() => runBulkAction("delete")}
+                  className="text-rose-600 hover:bg-rose-50"
+                >
+                  Soft Delete
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedIds(new Set())}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {bulkResult && (bulkResult.failed.length > 0) && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+              {bulkResult.failed.length} question(s) failed to update:{" "}
+              {bulkResult.failed.map((f) => f.error).join("; ")}
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-lg border border-gray-100">
             <Table>
               <TableHeader>
                 <TableRow>
+                  {manage && (
+                    <TableHead className="w-8">
+                      <input
+                        type="checkbox"
+                        checked={allPageSelected}
+                        onChange={toggleSelectAllOnPage}
+                        aria-label="Select all on page"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead>Question ID</TableHead>
                   <TableHead>Question Title</TableHead>
                   <TableHead className="hidden md:table-cell">Category</TableHead>
@@ -446,20 +572,30 @@ export default function CollegePortalQuestionBankPage() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell colSpan={10}>
+                      <TableCell colSpan={manage ? 11 : 10}>
                         <div className="h-10 animate-pulse rounded bg-gray-100" />
                       </TableCell>
                     </TableRow>
                   ))
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="py-12 text-center text-gray-500">
+                    <TableCell colSpan={manage ? 11 : 10} className="py-12 text-center text-gray-500">
                       No questions match your filters.
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((q) => (
                     <TableRow key={q.id}>
+                      {manage && (
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(q.id)}
+                            onChange={() => toggleSelect(q.id)}
+                            aria-label={`Select ${q.title}`}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="font-mono text-xs text-gray-600">
                         {q.question_code}
                       </TableCell>
@@ -894,11 +1030,42 @@ export default function CollegePortalQuestionBankPage() {
               />
             </div>
             {importResult && (
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Stat label="Total" value={importResult.summary.total} />
-                <Stat label="Successful" value={importResult.summary.successful} tone="success" />
-                <Stat label="Failed" value={importResult.summary.failed} tone="danger" />
-                <Stat label="Skipped" value={importResult.summary.skipped} />
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <Stat label="Total" value={importResult.summary.total} />
+                  <Stat label="Successful" value={importResult.summary.successful} tone="success" />
+                  <Stat label="Failed" value={importResult.summary.failed} tone="danger" />
+                  <Stat label="Skipped" value={importResult.summary.skipped} />
+                </div>
+                {(importResult.failed.length > 0 || importResult.skipped.length > 0) && (
+                  <div className="max-h-56 overflow-y-auto rounded-lg border border-gray-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="sticky top-0 bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 font-semibold text-gray-600">Row</th>
+                          <th className="px-3 py-2 font-semibold text-gray-600">Status</th>
+                          <th className="px-3 py-2 font-semibold text-gray-600">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {importResult.failed.map((f) => (
+                          <tr key={`failed-${f.row}`}>
+                            <td className="px-3 py-2 text-gray-700">{f.row}</td>
+                            <td className="px-3 py-2 font-medium text-rose-700">Failed</td>
+                            <td className="px-3 py-2 text-gray-600">{f.error}</td>
+                          </tr>
+                        ))}
+                        {importResult.skipped.map((s) => (
+                          <tr key={`skipped-${s.row}`}>
+                            <td className="px-3 py-2 text-gray-700">{s.row}</td>
+                            <td className="px-3 py-2 font-medium text-amber-700">Skipped</td>
+                            <td className="px-3 py-2 text-gray-600">{s.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>

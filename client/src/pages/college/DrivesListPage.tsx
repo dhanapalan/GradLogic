@@ -104,8 +104,8 @@ export default function DrivesListPage() {
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Recruitment Drives</h1>
-                    <p className="mt-1 text-slate-500 font-medium">View and manage recruitment drives assigned to your campus.</p>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Scheduled Tests</h1>
+                    <p className="mt-1 text-slate-500 font-medium">View and manage practice, mock, and coding tests scheduled for your campus.</p>
                 </div>
                 <button
                     onClick={exportToCSV}

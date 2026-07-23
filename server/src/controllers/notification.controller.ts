@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import * as notificationService from "../services/notification.service.js";
+import { runDigestNow } from "../queues/notificationDigest.queue.js";
 import { ApiResponse } from "../types/index.js";
 
 // GET /api/notifications
@@ -50,6 +51,17 @@ export const markAllAsRead = async (req: Request, res: Response<ApiResponse>, ne
 
         await notificationService.markAllAsRead(userId);
         res.json({ success: true, message: "All notifications marked as read" });
+    } catch (err) {
+        next(err);
+    }
+};
+
+// POST /api/notifications/run-digest — ops/testing: trigger the EOD assessment
+// digest immediately instead of waiting for the 6pm scheduled run.
+export const runDigestNowHandler = async (_req: Request, res: Response<ApiResponse>, next: NextFunction) => {
+    try {
+        await runDigestNow();
+        res.json({ success: true, message: "Digest job queued" });
     } catch (err) {
         next(err);
     }

@@ -11,24 +11,38 @@ import {
 import api from "../../lib/api";
 import toast from "react-hot-toast";
 import clsx from "clsx";
+import campusDepartmentsService from "../../services/campusDepartmentsService";
 
 interface StaffMember {
     id: string;
     name: string;
     email: string;
     role: string;
+    department: string | null;
     is_active: boolean;
     created_at: string;
 }
 
 function AddStaffModal({ onClose }: { onClose: () => void }) {
     const queryClient = useQueryClient();
-    const [form, setForm] = useState({ name: "", email: "", password: "" });
+    const [form, setForm] = useState({
+        name: "",
+        email: "",
+        password: "",
+        role: "college_staff" as "college_staff" | "instructor",
+        department: "",
+    });
+
+    const { data: departments = [] } = useQuery({
+        queryKey: ["campus-departments"],
+        queryFn: () => campusDepartmentsService.list(),
+        enabled: form.role === "instructor",
+    });
 
     const mutation = useMutation({
         mutationFn: (data: typeof form) => api.post("/colleges/staff", data),
         onSuccess: () => {
-            toast.success("Staff member added successfully.");
+            toast.success(form.role === "instructor" ? "Faculty member added successfully." : "Staff member added successfully.");
             queryClient.invalidateQueries({ queryKey: ["college-staff"] });
             onClose();
         },
@@ -36,6 +50,9 @@ function AddStaffModal({ onClose }: { onClose: () => void }) {
             toast.error(err?.response?.data?.error ?? "Failed to add staff member.");
         },
     });
+
+    const canSubmit =
+        form.name && form.email && form.password && (form.role !== "instructor" || form.department);
 
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -48,6 +65,35 @@ function AddStaffModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <div className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Account Type</label>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setForm((f) => ({ ...f, role: "college_staff" }))}
+                                className={clsx(
+                                    "flex-1 rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors",
+                                    form.role === "college_staff"
+                                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                )}
+                            >
+                                Staff
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setForm((f) => ({ ...f, role: "instructor" }))}
+                                className={clsx(
+                                    "flex-1 rounded-xl border px-3 py-2.5 text-sm font-bold transition-colors",
+                                    form.role === "instructor"
+                                        ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                                        : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                )}
+                            >
+                                Faculty
+                            </button>
+                        </div>
+                    </div>
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Full Name</label>
                         <input
@@ -68,6 +114,28 @@ function AddStaffModal({ onClose }: { onClose: () => void }) {
                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                         />
                     </div>
+                    {form.role === "instructor" && (
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Department</label>
+                            <select
+                                value={form.department}
+                                onChange={(e) => setForm({ ...form, department: e.target.value })}
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                            >
+                                <option value="">Select department…</option>
+                                {departments.map((d) => (
+                                    <option key={d.id} value={d.name}>
+                                        {d.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {departments.length === 0 && (
+                                <p className="mt-1 text-xs text-slate-400">
+                                    No departments configured yet — add one under Settings first.
+                                </p>
+                            )}
+                        </div>
+                    )}
                     <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Temporary Password</label>
                         <input
@@ -89,7 +157,7 @@ function AddStaffModal({ onClose }: { onClose: () => void }) {
                     </button>
                     <button
                         onClick={() => mutation.mutate(form)}
-                        disabled={mutation.isPending || !form.name || !form.email || !form.password}
+                        disabled={mutation.isPending || !canSubmit}
                         className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                         {mutation.isPending ? "Adding..." : "Add Member"}
@@ -213,8 +281,11 @@ export default function CampusAdminsPage() {
                                         <td className="px-6 py-4 text-slate-600 font-medium">{member.email}</td>
                                         <td className="px-6 py-4 text-center">
                                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
-                                                {member.role.replace("_", " ")}
+                                                {member.role === "instructor" ? "faculty" : member.role.replace("_", " ")}
                                             </span>
+                                            {member.role === "instructor" && member.department && (
+                                                <p className="mt-1 text-xs text-slate-400">{member.department}</p>
+                                            )}
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={clsx(

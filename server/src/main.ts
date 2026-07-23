@@ -25,6 +25,8 @@ import { ensureNotificationTable } from "./services/notification.service.js";
 import { ensureUserRoleEnum } from "./utils/ensureUserRoleEnum.js";
 import { startDriveScheduler, stopDriveScheduler } from "./scheduler/driveScheduler.js";
 import { startExamTimerWorker, stopExamTimerWorker } from "./workers/examTimer.worker.js";
+import { startNotificationDigestWorker, stopNotificationDigestWorker } from "./workers/notificationDigest.worker.js";
+import { scheduleDailyDigest } from "./queues/notificationDigest.queue.js";
 
 // Bootstrap module event subscriptions
 import "./modules/learning/index.js";
@@ -79,6 +81,8 @@ async function bootstrap() {
   // 7. Start background workers
   startDriveScheduler();
   startExamTimerWorker();
+  startNotificationDigestWorker();
+  await scheduleDailyDigest();
   logger.info("✓ Background workers started");
 
   // 8. Disable automatic body parser (NestJS) so Express middleware handles it
@@ -113,6 +117,7 @@ async function bootstrap() {
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);
     await stopExamTimerWorker();
+    await stopNotificationDigestWorker();
     stopDriveScheduler();
     await app.close();
     process.exit(0);

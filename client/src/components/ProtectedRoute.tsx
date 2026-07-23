@@ -145,7 +145,9 @@ export const ROLE_HOME: Record<AppRole, string> = {
   student: "/app/student-portal",
   instructor: "/app/faculty-dashboard",
   mentor: "/app/mentor/students",
-  company: "/app/company",
+  // No active portal for the company role — the standalone recruiter/company
+  // portal was retired; fall back to the public site root.
+  company: "/",
   placement_cell: "/app/placement-cell-dashboard",
 };
 

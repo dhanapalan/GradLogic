@@ -76,7 +76,7 @@ async function assertPublicHost(urlStr: string): Promise<void> {
 router.get(
   "/health",
   authenticate,
-  authorize("super_admin", "hr", "engineer"),
+  authorize("super_admin", "hr", "engineer", "college_admin", "college", "instructor"),
   async (_req, res) => {
     try {
       const resp = await fetch(`${ENGINE_URL}/health`, { signal: AbortSignal.timeout(5000) });
@@ -137,7 +137,7 @@ router.post(
 router.post(
   "/generate",
   authenticate,
-  authorize("super_admin", "hr", "engineer"),
+  authorize("super_admin", "hr", "engineer", "college_admin", "college", "instructor"),
   validate(
     z.object({
       topic: z.string().min(3).max(200),

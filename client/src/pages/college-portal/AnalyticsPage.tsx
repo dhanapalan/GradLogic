@@ -19,6 +19,7 @@ import {
   Clock,
   Percent,
   TrendingUp,
+  Sparkles,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import StatsCard from "../../components/superadmin/StatsCard";
@@ -183,6 +184,12 @@ export default function CollegePortalAnalytics() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Link to="/app/college-portal/evaluation-insights">
+            <Button type="button" variant="outline" size="sm">
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              AI Evaluation Summary
+            </Button>
+          </Link>
           <Select
             value={reportType}
             onChange={(e) => setReportType(e.target.value as AnalyticsReportType)}

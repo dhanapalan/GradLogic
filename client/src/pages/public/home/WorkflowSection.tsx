@@ -12,7 +12,7 @@ export function WorkflowSection() {
           Platform workflow
         </h2>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
-          A clear path from enrolment to job offers — designed for students, faculty, and
+          A clear path from day one to interview day — designed for students, faculty, and
           placement cells.
         </p>
 

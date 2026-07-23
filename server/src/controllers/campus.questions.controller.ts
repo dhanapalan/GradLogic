@@ -41,7 +41,7 @@ export async function getMeta(_req: Request, res: Response, next: NextFunction) 
 export async function downloadImportTemplate(req: Request, res: Response, next: NextFunction) {
   try {
     await resolveCollegeId(req);
-    const buf = qb.buildImportTemplateBuffer();
+    const buf = await qb.buildImportTemplateBuffer();
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -148,6 +148,23 @@ export async function duplicateQuestion(req: Request, res: Response, next: NextF
   }
 }
 
+/** POST /api/campus/questions/bulk-action — body: { ids: string[], action: "activate"|"deactivate"|"delete" } */
+export async function bulkAction(req: Request, res: Response, next: NextFunction) {
+  try {
+    const collegeId = await resolveCollegeId(req);
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    const action = getParamAsString(req.body?.action);
+    const data = await qb.bulkUpdateQuestions(collegeId, ids, action, actor(req));
+    res.json({
+      success: true,
+      data,
+      message: `${data.summary.successful} of ${data.summary.total} question(s) updated`,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 /** DELETE /api/campus/questions/:id — soft delete only */
 export async function softDeleteQuestion(req: Request, res: Response, next: NextFunction) {
   try {
@@ -158,6 +175,24 @@ export async function softDeleteQuestion(req: Request, res: Response, next: Next
       actor(req)
     );
     res.json({ success: true, data, message: "Question deactivated (soft delete)" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** POST /api/campus/questions/ai-import — body: { questions: AiGeneratedQuestion[] } */
+export async function aiImportQuestions(req: Request, res: Response, next: NextFunction) {
+  try {
+    const collegeId = await resolveCollegeId(req);
+    const questions = Array.isArray(req.body?.questions) ? req.body.questions : [];
+    if (!questions.length) throw new AppError("No questions to import.", 400);
+    if (questions.length > 50) throw new AppError("Maximum 50 questions per AI import.", 400);
+    const data = await qb.importAiGeneratedQuestions(collegeId, questions, actor(req));
+    res.status(201).json({
+      success: true,
+      data,
+      message: `Imported ${data.summary.successful} of ${data.summary.total} AI-generated question(s) as drafts`,
+    });
   } catch (err) {
     next(err);
   }

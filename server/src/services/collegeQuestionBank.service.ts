@@ -2,6 +2,7 @@
  * Phase 2 Module 03 — College Portal Question Bank.
  */
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { v4 as uuidv4 } from "uuid";
 import { pool, query, queryOne } from "../config/database.js";
 import { AppError } from "../middleware/errorHandler.js";
@@ -722,6 +723,45 @@ export async function softDeleteQuestion(
   return { success: true, id };
 }
 
+const BULK_ACTIONS = ["activate", "deactivate", "delete"] as const;
+export type BulkQuestionAction = (typeof BULK_ACTIONS)[number];
+
+export async function bulkUpdateQuestions(
+  collegeId: string,
+  ids: string[],
+  action: string,
+  actor: { id: string; role: string; ip?: string }
+) {
+  if (!BULK_ACTIONS.includes(action as BulkQuestionAction)) {
+    throw new AppError(`Invalid action. Allowed: ${BULK_ACTIONS.join(", ")}.`, 400);
+  }
+  const uniqueIds = Array.from(new Set(ids.filter((id) => typeof id === "string" && id.trim())));
+  if (!uniqueIds.length) throw new AppError("No questions selected.", 400);
+  if (uniqueIds.length > 200) throw new AppError("Maximum 200 questions per bulk action.", 400);
+
+  const successful: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
+
+  for (const id of uniqueIds) {
+    try {
+      if (action === "delete") {
+        await softDeleteQuestion(collegeId, id, actor);
+      } else {
+        await patchQuestionStatus(collegeId, id, action === "activate" ? "active" : "inactive", actor);
+      }
+      successful.push(id);
+    } catch (e: any) {
+      failed.push({ id, error: e?.message || "Update failed" });
+    }
+  }
+
+  return {
+    summary: { total: uniqueIds.length, successful: successful.length, failed: failed.length },
+    successful,
+    failed,
+  };
+}
+
 export async function duplicateQuestion(
   collegeId: string,
   id: string,
@@ -751,25 +791,153 @@ export async function duplicateQuestion(
   );
 }
 
-export function buildImportTemplateBuffer(): Buffer {
-  const sample = [
-    {
-      Question: "What is 2 + 2?",
-      Category: "Aptitude",
-      Type: "mcq_single",
-      Difficulty: "easy",
-      Marks: 1,
-      "Option A": "3",
-      "Option B": "4",
-      "Option C": "5",
-      "Option D": "6",
-      "Correct Answer": "B",
-    },
+export interface AiGeneratedQuestion {
+  question: string;
+  options?: string[];
+  correct_answer: string;
+  category?: string;
+  difficulty?: string;
+}
+
+/** Maps the AI question engine's broader category set onto the college portal's 5 categories. */
+function mapAiCategory(raw: string | undefined): CollegeCategory {
+  const s = (raw || "").toLowerCase();
+  if (s === "reasoning") return "logical_reasoning";
+  if (s === "aptitude" || s === "maths") return "aptitude";
+  if (["data_structures", "programming", "python_coding", "java_coding", "data_science"].includes(s)) {
+    return "technical";
+  }
+  return "domain";
+}
+
+function mapAiDifficulty(raw: string | undefined): CollegeDifficulty {
+  const s = (raw || "").toLowerCase();
+  if (s === "expert") return "hard";
+  return isDifficulty(s) ? s : "medium";
+}
+
+/**
+ * Imports AI-generated questions (from POST /api/qb-ai/generate) into this
+ * college's question bank, going through the same createQuestion() path as
+ * manual creation — so duplicate-title detection, validation, and audit
+ * logging all apply identically. Lands as 'draft' pending human review,
+ * same as the global question_bank AI import does.
+ */
+export async function importAiGeneratedQuestions(
+  collegeId: string,
+  questions: AiGeneratedQuestion[],
+  actor: { id: string; role: string; ip?: string }
+) {
+  const successful: string[] = [];
+  const failed: Array<{ index: number; error: string }> = [];
+  const skipped: Array<{ index: number; reason: string }> = [];
+
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    try {
+      const options = (q.options || []).map((text, idx) => ({
+        option_label: String.fromCharCode(65 + idx),
+        option_text: text,
+        is_correct: text.trim() === (q.correct_answer || "").trim(),
+        display_order: idx,
+      }));
+      const hasCorrect = options.some((o) => o.is_correct);
+
+      const created = await createQuestion(
+        collegeId,
+        {
+          title: q.question,
+          category: mapAiCategory(q.category),
+          question_type: options.length >= 2 ? "mcq_single" : "short_answer",
+          difficulty: mapAiDifficulty(q.difficulty),
+          marks: 1,
+          correct_answer: options.length >= 2 ? undefined : q.correct_answer,
+          status: "draft",
+          options:
+            options.length >= 2
+              ? hasCorrect
+                ? options
+                : options.map((o, idx) => ({ ...o, is_correct: idx === 0 }))
+              : [],
+        },
+        actor
+      );
+      successful.push(created.id);
+    } catch (e: any) {
+      const msg = e?.message || "Import failed";
+      if (String(msg).toLowerCase().includes("duplicate")) {
+        skipped.push({ index: i, reason: msg });
+      } else {
+        failed.push({ index: i, error: msg });
+      }
+    }
+  }
+
+  return {
+    summary: { total: questions.length, successful: successful.length, failed: failed.length, skipped: skipped.length },
+    successful,
+    failed,
+    skipped,
+  };
+}
+
+// SheetJS Community Edition (the `xlsx` package used for parsing imports)
+// cannot write data-validation dropdowns, so the downloadable template is
+// built with ExcelJS instead — dropdowns are what stop typo'd category/
+// difficulty values from failing bulk import (see E1 in the college module
+// feedback backlog).
+export async function buildImportTemplateBuffer(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Questions");
+
+  sheet.columns = [
+    { header: "Question", key: "question", width: 50 },
+    { header: "Category", key: "category", width: 20 },
+    { header: "Type", key: "type", width: 16 },
+    { header: "Difficulty", key: "difficulty", width: 12 },
+    { header: "Marks", key: "marks", width: 8 },
+    { header: "Option A", key: "optionA", width: 20 },
+    { header: "Option B", key: "optionB", width: 20 },
+    { header: "Option C", key: "optionC", width: 20 },
+    { header: "Option D", key: "optionD", width: 20 },
+    { header: "Correct Answer", key: "correctAnswer", width: 16 },
   ];
-  const ws = XLSX.utils.json_to_sheet(sample);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Questions");
-  return XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+
+  sheet.addRow({
+    question: "What is 2 + 2?",
+    category: CATEGORY_LABELS.aptitude,
+    type: "mcq_single",
+    difficulty: "Easy",
+    marks: 1,
+    optionA: "3",
+    optionB: "4",
+    optionC: "5",
+    optionD: "6",
+    correctAnswer: "B",
+  });
+
+  const categoryOptions = CATEGORIES.map((c) => CATEGORY_LABELS[c]);
+  const typeOptions = [...QUESTION_TYPES];
+  const difficultyOptions = DIFFICULTIES.map((d) => d.charAt(0).toUpperCase() + d.slice(1));
+
+  const dropdown = (options: string[], errorTitle: string) => ({
+    type: "list" as const,
+    allowBlank: true,
+    formulae: [`"${options.join(",")}"`],
+    showErrorMessage: true,
+    errorTitle,
+    error: `Choose one of: ${options.join(", ")}`,
+  });
+
+  const MAX_ROW = 501; // header + up to 500 data rows, matching the import cap
+  for (let row = 2; row <= MAX_ROW; row++) {
+    sheet.getCell(`B${row}`).dataValidation = dropdown(categoryOptions, "Invalid Category");
+    sheet.getCell(`C${row}`).dataValidation = dropdown(typeOptions, "Invalid Type");
+    sheet.getCell(`D${row}`).dataValidation = dropdown(difficultyOptions, "Invalid Difficulty");
+  }
+
+  const buf = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buf);
 }
 
 function cell(row: Record<string, unknown>, ...keys: string[]) {
@@ -850,7 +1018,6 @@ export async function importQuestionsFromExcel(
           marks,
           correct_answer,
           status: "draft",
-          force: true,
           options:
             qType === "short_answer"
               ? []

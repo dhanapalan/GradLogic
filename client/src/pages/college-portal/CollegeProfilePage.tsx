@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
@@ -205,11 +206,25 @@ export default function CollegeProfilePage() {
             Master record for your campus — used across the College Portal
           </p>
         </div>
-        {!canEdit && (
-          <span className="rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-            View only
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <Link to="/app/college-portal/settings/departments">
+            <Button type="button" variant="outline" size="sm">
+              Manage Departments
+            </Button>
+          </Link>
+          {isAdmin && (
+            <Link to="/app/college-portal/campus-admins">
+              <Button type="button" variant="outline" size="sm">
+                Manage Staff &amp; Faculty
+              </Button>
+            </Link>
+          )}
+          {!canEdit && (
+            <span className="rounded-md bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              View only
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Logo */}

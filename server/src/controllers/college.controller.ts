@@ -288,9 +288,9 @@ export const getStaff = async (
     }
 
     const { rows } = await pool.query(
-      `SELECT id, name, email, role, is_active, created_at
+      `SELECT id, name, email, role, department, is_active, created_at
        FROM users
-       WHERE college_id = $1 AND role IN ('college_staff', 'college_admin')
+       WHERE college_id = $1 AND role IN ('college_staff', 'college_admin', 'instructor')
        ORDER BY created_at DESC`,
       [collegeId],
     );
@@ -316,9 +316,24 @@ export const addStaff = async (
       name: z.string().min(1),
       email: z.string().email(),
       password: passwordSchema,
+      role: z.enum(["college_staff", "instructor"]).default("college_staff"),
+      department: z.string().trim().min(1).optional(),
     });
 
-    const { name, email, password } = schema.parse(req.body);
+    const { name, email, password, role, department } = schema.parse(req.body);
+
+    if (role === "instructor") {
+      if (!department) {
+        throw new AppError("Department is required for faculty accounts.", 400);
+      }
+      const dept = await pool.query(
+        `SELECT id FROM college_departments WHERE college_id = $1 AND LOWER(name) = LOWER($2) AND is_active = TRUE`,
+        [collegeId, department],
+      );
+      if (dept.rows.length === 0) {
+        throw new AppError("Unknown department. Add it under Settings → Departments first.", 400);
+      }
+    }
 
     const existing = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
     if (existing.rows.length > 0) {
@@ -327,10 +342,10 @@ export const addStaff = async (
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
-      `INSERT INTO users (name, email, password, role, college_id, is_active, is_profile_complete)
-       VALUES ($1, $2, $3, 'college_staff', $4, TRUE, TRUE)
-       RETURNING id, name, email, role`,
-      [name, email, hashedPassword, collegeId],
+      `INSERT INTO users (name, email, password, role, college_id, department, is_active, is_profile_complete)
+       VALUES ($1, $2, $3, $4, $5, $6, TRUE, TRUE)
+       RETURNING id, name, email, role, department`,
+      [name, email, hashedPassword, role, collegeId, role === "instructor" ? department : null],
     );
 
     res.status(201).json({ success: true, data: rows[0] });
@@ -354,7 +369,7 @@ export const removeStaff = async (
 
     // Ensure they are removing staff from THEIR college
     const staff = await pool.query(
-      "SELECT id FROM users WHERE id = $1 AND college_id = $2 AND role = 'college_staff'",
+      "SELECT id FROM users WHERE id = $1 AND college_id = $2 AND role IN ('college_staff', 'instructor')",
       [id, collegeId],
     );
 
@@ -365,7 +380,7 @@ export const removeStaff = async (
     await pool.query(
       `UPDATE users
        SET is_active = FALSE, status = 'inactive', deleted_at = NOW(), updated_at = NOW()
-       WHERE id = $1 AND college_id = $2 AND role = 'college_staff'`,
+       WHERE id = $1 AND college_id = $2 AND role IN ('college_staff', 'instructor')`,
       [id, collegeId],
     );
 

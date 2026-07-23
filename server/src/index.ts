@@ -11,6 +11,8 @@ import { applyBootOverrides } from "./services/apiKeyStore.service.js";
 import { ensureUserRoleEnum } from "./utils/ensureUserRoleEnum.js";
 import { startDriveScheduler } from "./scheduler/driveScheduler.js";
 import { startExamTimerWorker, stopExamTimerWorker } from "./workers/examTimer.worker.js";
+import { startNotificationDigestWorker, stopNotificationDigestWorker } from "./workers/notificationDigest.worker.js";
+import { scheduleDailyDigest } from "./queues/notificationDigest.queue.js";
 // Bootstrap module event subscriptions (side-effect imports — order matters)
 import "./modules/learning/index.js";
 import "./modules/integrity/index.js";
@@ -61,6 +63,10 @@ async function bootstrap(): Promise<void> {
 
     // 8. Start exam timer worker (BullMQ — auto-submits sessions at server_deadline)
     startExamTimerWorker();
+
+    // 9. Start notification digest worker + schedule the daily 6pm run
+    startNotificationDigestWorker();
+    await scheduleDailyDigest();
   } catch (error) {
     logger.error("Failed to start server:", error);
     process.exit(1);
@@ -71,6 +77,7 @@ async function bootstrap(): Promise<void> {
 const shutdown = async (signal: string) => {
   logger.info(`${signal} received — shutting down gracefully`);
   await stopExamTimerWorker();
+  await stopNotificationDigestWorker();
   server.close(() => {
     logger.info("HTTP server closed");
     process.exit(0);

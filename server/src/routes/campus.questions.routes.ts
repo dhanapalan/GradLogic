@@ -45,6 +45,9 @@ router.post(
   ctrl.importQuestions
 );
 
+router.post("/bulk-action", authorize(...MANAGE_ROLES), ctrl.bulkAction);
+router.post("/ai-import", authorize(...WRITE_ROLES), ctrl.aiImportQuestions);
+
 router.get("/", authorize(...VIEW_ROLES), ctrl.listQuestions);
 router.post("/", authorize(...WRITE_ROLES), ctrl.createQuestion);
 

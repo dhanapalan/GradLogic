@@ -38,8 +38,8 @@ export default function AuthLayout() {
                 </span>
               </h1>
               <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-300">
-                Enterprise-grade access for students, faculty, colleges, recruiters, and platform
-                admins — secured with MFA-ready authentication.
+                Enterprise-grade access for students, faculty, colleges, and platform admins —
+                secured with MFA-ready authentication.
               </p>
             </div>
 
@@ -58,7 +58,7 @@ export default function AuthLayout() {
                 {
                   icon: <ShieldCheck className="h-5 w-5 text-violet-400" />,
                   title: "Trusted Assessments",
-                  desc: "Proctoring, integrity reports, and campus hiring workflows.",
+                  desc: "Proctoring, integrity reports, and tamper-proof exam delivery.",
                 },
               ].map((f) => (
                 <div key={f.title} className="flex gap-3">
