@@ -33,6 +33,9 @@ BACKUP_ROOT="${PROJECT_ROOT}/backups"
 MAX_BACKUP_AGE_DAYS=7
 QUIET=false
 LIVE=true
+# Ports that are deliberately internet-facing. Anything else on 0.0.0.0 fails.
+# Override with --public 80,443,9000 or PUBLIC_PORTS=80,443 in the environment.
+PUBLIC_PORTS="${PUBLIC_PORTS:-80,443}"
 
 # Volumes that must hold real data on a live deploy.
 # Format: "key|marker-file" — the marker proves the volume is initialised.
@@ -47,6 +50,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -b|--backup-dir) BACKUP_ROOT="$2"; shift 2 ;;
     --max-age)       MAX_BACKUP_AGE_DAYS="$2"; shift 2 ;;
+    --public)        PUBLIC_PORTS="$2"; shift 2 ;;
     -q|--quiet)      QUIET=true; shift ;;
     --no-live)       LIVE=false; shift ;;
     -h|--help)       sed -n '2,18p' "$0" | sed 's/^# \?//'; exit 0 ;;
@@ -329,9 +333,14 @@ if [[ "$LIVE" == true ]] && command -v ss >/dev/null 2>&1; then
   public=0
   while read -r port; do
     [[ -z "$port" ]] && continue
-    if ss -tlnH 2>/dev/null | awk '{print $4}' | grep -qE "^(0\.0\.0\.0|\*|\[::\]):${port}$"; then
-      fail "port $port is bound to 0.0.0.0 — reachable from the internet"
-      public=$((public+1))
+    listeners="$(ss -tlnH 2>/dev/null | awk '{print $4}')"
+    if printf '%s\n' "$listeners" | grep -qE "^(0\.0\.0\.0|\*|\[::\]):${port}$"; then
+      if [[ ",${PUBLIC_PORTS}," == *",${port},"* ]]; then
+        ok "port $port is public — declared intentional"
+      else
+        fail "port $port is bound to 0.0.0.0 — reachable from the internet"
+        public=$((public+1))
+      fi
     fi
   done < <(printf '%s\n' "$COMPOSE_CONFIG" | grep -E '^[[:space:]]+published:' | sed 's/[^0-9]//g' | sort -u)
   [[ "$public" -eq 0 ]] && ok "no published port bound to 0.0.0.0"
