@@ -354,19 +354,48 @@ fi
 # ── 9. Redis authentication ───────────────────────────────────────────────────
 section "Redis"
 
-if printf '%s\n' "$COMPOSE_CONFIG" | grep -q 'requirepass'; then
-  ok "redis enforces requirepass"
-  R_URL="$(get_env REDIS_URL)"
-  [[ "$R_URL" == *"@"* ]] \
-    && ok "REDIS_URL carries credentials" \
-    || fail "redis requires a password but REDIS_URL has none — the API cannot connect"
-else
-  if [[ -n "$(get_env REDIS_PASSWORD)" ]]; then
-    warn "REDIS_PASSWORD is set in .env but redis does not enforce requirepass — the password is unused"
-  else
-    warn "redis has no authentication configured"
+# Probe the running instance. The compose file is only a proxy for this and can
+# be wrong in both directions: requirepass may arrive from an override file, a
+# mounted redis.conf, or a CONFIG SET that was never written back to YAML.
+redis_running=false
+if [[ "$LIVE" == true ]]; then
+  docker compose ps --status running --services 2>/dev/null | grep -qx redis && redis_running=true
+fi
+
+if [[ "$redis_running" == true ]]; then
+  unauth="$(docker compose exec -T redis redis-cli PING 2>/dev/null | tr -d '\r\n')"
+  case "$unauth" in
+    PONG)
+      fail "redis accepts unauthenticated commands — anyone reaching the port owns the data" ;;
+    NOAUTH*|*"Authentication required"*)
+      ok "redis enforces authentication (unauthenticated PING is refused)"
+      rp="$(get_env REDIS_PASSWORD)"
+      if [[ -n "$rp" ]]; then
+        authed="$(docker compose exec -T redis redis-cli -a "$rp" PING 2>/dev/null | tr -d '\r\n')"
+        [[ "$authed" == *PONG* ]] \
+          && ok "REDIS_PASSWORD from .env authenticates successfully" \
+          || fail "REDIS_PASSWORD in .env does NOT authenticate — the API will fail on reconnect"
+      else
+        warn "redis requires a password but REDIS_PASSWORD is absent from .env"
+      fi ;;
+    *)
+      fail "redis is not responding to PING (got: ${unauth:-no output})" ;;
+  esac
+
+  # A healthcheck that ignores auth errors reports healthy on a broken instance
+  hc="$(printf '%s\n' "$COMPOSE_CONFIG" \
+    | awk -v svc="  redis:" '$0==svc{f=1;next} f&&/^  [a-zA-Z_-]+:$/{f=0} f' \
+    | grep -o 'redis-cli[^"]*' | head -1)"
+  if [[ "$unauth" != "PONG" && -n "$hc" && "$hc" != *"-a"* ]]; then
+    warn "redis healthcheck runs '${hc}' without credentials — it passes on NOAUTH and proves nothing"
   fi
-  info "needs three coordinated changes: command, healthcheck, and REDIS_URL"
+else
+  # Static fallback when not probing live
+  if printf '%s\n' "$COMPOSE_CONFIG" | grep -q 'requirepass'; then
+    ok "redis declares requirepass in compose"
+  else
+    info "no requirepass in compose — cannot confirm without a live probe (auth may come from an override or mounted conf)"
+  fi
 fi
 
 # ── 10. Live service state ────────────────────────────────────────────────────
@@ -407,20 +436,7 @@ if [[ "$LIVE" == true ]]; then
     fi
   fi
 
-  # Redis — probe without credentials first; an unauthenticated PONG is the finding
-  if [[ "$RUNNING_SERVICES" == *redis* ]]; then
-    unauth="$(docker compose exec -T redis redis-cli PING 2>/dev/null | tr -d '\r\n')"
-    if [[ "$unauth" == "PONG" ]]; then
-      fail "redis accepts unauthenticated commands — anyone who reaches the port owns the data"
-    else
-      authed="$(docker compose exec -T redis redis-cli -a "$(get_env REDIS_PASSWORD)" PING 2>/dev/null | tr -d '\r\n')"
-      if [[ "$authed" == *PONG* ]]; then
-        ok "redis requires authentication and accepts REDIS_PASSWORD"
-      else
-        fail "redis is not responding to PING"
-      fi
-    fi
-  fi
+  # (redis is probed in full under the Redis section above)
 
   # MinIO
   if [[ "$RUNNING_SERVICES" == *minio* ]]; then
