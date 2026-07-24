@@ -569,6 +569,30 @@ else
       info "then:    curl -X POST http://127.0.0.1:8001/documents/ingest-batch -H \"X-API-Key: \$KEY\""
     fi
   fi
+
+  # API -> engine hop. This is what the "Engine Offline" banner actually tests:
+  # the main API proxies /qb-ai/health to QUESTION_ENGINE_URL. The in-code default
+  # is host.docker.internal:8001, which does not resolve on a Linux host and cannot
+  # reach a loopback-bound engine from inside a container. Both share the compose
+  # network, so the correct value is the service name http://question-bank:8001.
+  if [[ "$RUNNING_SERVICES" == *api* ]]; then
+    qe_url="$(dc exec -T api printenv QUESTION_ENGINE_URL 2>/dev/null | tr -d '\r')"
+    if [[ -z "$qe_url" ]]; then
+      fail "api has no QUESTION_ENGINE_URL set — it falls back to host.docker.internal:8001, which fails here"
+      info "set 'QUESTION_ENGINE_URL: http://question-bank:8001' on the api service"
+    elif [[ "$qe_url" == *host.docker.internal* ]]; then
+      fail "QUESTION_ENGINE_URL=$qe_url — host.docker.internal does not resolve on this host; the UI shows 'Engine Offline'"
+      info "use the compose service name: http://question-bank:8001"
+    else
+      ok "api QUESTION_ENGINE_URL = $qe_url"
+      reach="$(dc exec -T api node -e "fetch(process.env.QUESTION_ENGINE_URL+'/health').then(r=>console.log(r.ok?'OK':'HTTP'+r.status)).catch(e=>console.log('FAIL'))" 2>/dev/null | tr -d '\r')"
+      if [[ "$reach" == OK ]]; then
+        ok "api reaches the engine over the compose network"
+      else
+        fail "api cannot reach the engine at $qe_url (${reach:-no response})"
+      fi
+    fi
+  fi
 fi
 
 # ── 11. Backups ───────────────────────────────────────────────────────────────
